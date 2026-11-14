@@ -4,8 +4,8 @@
 const CONFIG = {
   team: ["5조", "김지환", "김현준", "오선호", "조인성", "채재희"], // 역할을 붙이려면 "이름 · 역할"
   service: "", // 비우면 지금 주소(같은 서비스의 /deck)
-  github: "",
-  swagger: "",
+  github: "https://github.com/insung1939/foresight",
+  swagger: "https://foresight-api-yda3.onrender.com/docs",
   api: "/api", // 같은 서비스의 API(Vercel rewrite / vite proxy)
 };
 

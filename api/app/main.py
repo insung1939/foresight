@@ -303,7 +303,7 @@ def ask(gid: str, body: Ask, s: S = Depends(db)):
     g.asked += 1
     log = AiLog(kind="ask", game_id=g.id, case_key=key, question=q, answer=resp["answer"], ok=chk.ok, checks=chk.items,
                 attempts=attempts, latency_ms=usage.latency_ms, tokens_in=usage.tokens_in, tokens_out=usage.tokens_out,
-                model=ai_mod.model_name())
+                model=usage.model or ai_mod.model_name())
     s.add(log)
     s.commit()
     return {**resp, "checks": chk.items, "attempts": attempts, "latencyMs": usage.latency_ms, "logId": log.id,

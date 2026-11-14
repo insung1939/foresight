@@ -14,7 +14,9 @@ DATABASE_URL = os.environ.get("DATABASE_URL") or f"sqlite:///{DATA_DIR / 'geutta
 ALLOWED_ORIGINS = [o.strip() for o in os.environ.get("ALLOWED_ORIGINS", "http://localhost:5175").split(",") if o.strip()]
 
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "").strip()
-GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-2.5-flash").strip()
+GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-3.5-flash").strip()
+# 기본 모델이 바쁘거나(503) 한도(429)·시간 초과면 차례로 넘어갈 모델들(쉼표)
+GEMINI_FALLBACKS = [m.strip() for m in os.environ.get("GEMINI_FALLBACKS", "gemini-3.5-flash-lite").split(",") if m.strip()]
 LLM_TIMEOUT = float(os.environ.get("LLM_TIMEOUT", "25"))
 
 ASK_PER_ROUND = 3  # 라운드당 AI 질문 수

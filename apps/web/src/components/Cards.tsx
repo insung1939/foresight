@@ -467,6 +467,7 @@ const ERR: Record<string, { icon: string; title: string; tip: string }> = {
   busy: { icon: "🔥", title: "AI 서버가 바빠요", tip: "몇 초 뒤 다시 물어봐 주세요." },
   network: { icon: "📡", title: "AI 서버에 연결하지 못했어요", tip: "인터넷 연결을 확인해 주세요." },
   model: { icon: "⚠️", title: "AI가 답을 만들지 못했어요", tip: "질문을 바꿔 다시 물어봐 주세요." },
+  gone: { icon: "⚠️", title: "지금 AI 모델을 쓸 수 없어요", tip: "잠시 뒤 다시 물어봐 주세요." },
 };
 
 /** 호출 실패: 종류별 문구 + 다시 시도까지 남은 시간 */

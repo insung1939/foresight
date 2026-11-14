@@ -14,8 +14,8 @@ export const TEAM = {
   ] as { name: string; role: string; did: string }[],
   links: {
     service: "", // 비우면 지금 열린 주소를 쓴다
-    github: "", // 예: https://github.com/<계정>/foresight
-    swagger: "", // 예: https://<render 앱>.onrender.com/docs
+    github: "https://github.com/insung1939/foresight",
+    swagger: "https://foresight-api-yda3.onrender.com/docs",
   },
 };
 

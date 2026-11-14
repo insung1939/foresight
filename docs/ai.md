@@ -10,7 +10,8 @@
 | **AI 애널리스트** | 플레이어가 AI 카드를 열고 질문할 때(라운드당 3번) | `api/app/ai.py` `ask()` · `POST /v1/games/{id}/ask` |
 | **AI의 판단** | 문제마다 미리 한 번(배치). 결과 공개 때 '🤖 AI' 줄로 비교 | `ai.py` `judge()` · `scripts/ai_judge.py` → `data/ai.json` |
 
-- 모델: 클라우드 Gemini (`GEMINI_MODEL`, 기본 `gemini-2.5-flash`) · 로컬 Ollama `qwen3.5:4b`(수업 3주차). 서버에서만 호출, 키는 `.env` 에만.
+- 모델: 클라우드 Gemini (`GEMINI_MODEL`, 기본 `gemini-3.5-flash`) · 로컬 Ollama `qwen3.5:4b`(수업 3주차). 서버에서만 호출, 키는 `.env` 에만.
+- 모델 대체: 기본 `gemini-3.5-flash` 가 바쁨(503)·한도(429)·시간 초과·모델 없음(404)이면 `GEMINI_FALLBACKS`(기본 `gemini-3.5-flash-lite`)로 넘어간다. 실제 답한 모델을 ai_logs 에 남긴다. (배포 당일 `gemini-3.8-flash` 는 503 이 잦았고 `gemini-2.5-flash` 는 새 사용자에게 막혀 있어 이렇게 정함)
 - 제공자 선택 `LLM_PROVIDER`: `auto`(Gemini 키가 있으면 Gemini, 없으면 켜져 있는 로컬 Ollama) · `gemini` · `ollama`. 배포 서버는 `gemini`.
 - 두 모델 모두 같은 JSON 스키마(Gemini `responseSchema` / Ollama `format`)와 같은 6가지 검증을 거친다 → 같은 평가 묶음으로 비교(`docs/ai-eval.md`).
 - `temperature` 0.2(답변) / 0.1(판단), JSON 스키마 강제(`responseSchema`), 2.5 Flash 는 생각 토큰 0(응답 속도 우선).

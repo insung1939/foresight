@@ -17,7 +17,7 @@ from dataclasses import dataclass, field
 import httpx
 
 from .masking import leaks, mask
-from .settings import GEMINI_API_KEY, GEMINI_MODEL, LLM_PROVIDER, LLM_TIMEOUT, OLLAMA_MODEL, OLLAMA_TIMEOUT, OLLAMA_URL
+from .settings import GEMINI_API_KEY, GEMINI_FALLBACKS, GEMINI_MODEL, LLM_PROVIDER, LLM_TIMEOUT, OLLAMA_MODEL, OLLAMA_TIMEOUT, OLLAMA_URL
 
 API = "https://generativelanguage.googleapis.com/v1beta/models"
 
@@ -160,6 +160,7 @@ class Usage:
     tokens_in: int = 0
     tokens_out: int = 0
     latency_ms: int = 0
+    model: str = ""  # 실제로 답한 모델(대체 모델로 넘어갔으면 그 이름)
 
 
 def _retry_after(r) -> int | None:
@@ -254,18 +255,36 @@ def ollama(system: str, user: str, schema: dict, usage: Usage, temperature: floa
 
 
 def gemini(system: str, user: str, schema: dict, usage: Usage, temperature: float = 0.2) -> dict:
+    """Gemini 호출. 기본 모델이 바쁨(5xx)·한도(429)·시간 초과면 GEMINI_FALLBACKS 로 차례로 넘어간다."""
     if not GEMINI_API_KEY:
         raise LLMUnavailable("AI 연결이 아직 설정되지 않았어요", "unconfigured")  # 키도 로컬 모델도 없을 때
+    last: LLMUnavailable | None = None
+    for model in [GEMINI_MODEL, *[m for m in GEMINI_FALLBACKS if m != GEMINI_MODEL]]:
+        try:
+            out = _gemini_once(model, system, user, schema, usage, temperature)
+            usage.model = model
+            return out
+        except LLMUnavailable as e:
+            if e.kind not in ("busy", "quota", "timeout", "gone"):
+                raise
+            last = e  # 다음 모델로
+    raise last or LLMUnavailable("AI 서버가 바빠요", "busy", 10)
+
+
+def _gemini_once(model: str, system: str, user: str, schema: dict, usage: Usage, temperature: float) -> dict:
     gen = {"temperature": temperature, "responseMimeType": "application/json", "responseSchema": schema, "maxOutputTokens": 1024}
-    if GEMINI_MODEL.startswith("gemini-2.5-flash"):
+    if model.startswith("gemini-2.5-flash"):
         gen["thinkingConfig"] = {"thinkingBudget": 0}  # 응답 속도 우선
+    elif model.startswith("gemini-3"):
+        gen["thinkingConfig"] = {"thinkingLevel": "low"}  # 3.x 는 생각 단계를 낮춰 속도 우선
     body = {"systemInstruction": {"parts": [{"text": system}]},
             "contents": [{"role": "user", "parts": [{"text": user}]}], "generationConfig": gen}
     t = time.perf_counter()
     try:
-        r = httpx.post(f"{API}/{GEMINI_MODEL}:generateContent", json=body, timeout=LLM_TIMEOUT,
+        r = httpx.post(f"{API}/{model}:generateContent", json=body, timeout=LLM_TIMEOUT,
                        headers={"x-goog-api-key": GEMINI_API_KEY})
     except httpx.TimeoutException as e:
+        usage.latency_ms += int((time.perf_counter() - t) * 1000)
         raise LLMUnavailable("답이 너무 오래 걸려요", "timeout") from e
     except httpx.HTTPError as e:
         raise LLMUnavailable("AI 서버에 연결하지 못했어요", "network") from e
@@ -274,6 +293,8 @@ def gemini(system: str, user: str, schema: dict, usage: Usage, temperature: floa
         raise LLMUnavailable("무료 사용량 한도에 걸렸어요", "quota", _retry_after(r))
     if r.status_code in (500, 502, 503, 504):
         raise LLMUnavailable("AI 서버가 바빠요", "busy", _retry_after(r) or 10)
+    if r.status_code == 404:  # 모델이 없어짐(예: 새 사용자에게 막힌 옛 모델) → 대체 모델로
+        raise LLMUnavailable("AI 모델을 쓸 수 없어요", "gone")
     if r.status_code >= 400:
         raise LLMUnavailable(f"모델 오류 {r.status_code}", "model")
     data = r.json()
@@ -281,7 +302,8 @@ def gemini(system: str, user: str, schema: dict, usage: Usage, temperature: floa
     usage.tokens_in += meta.get("promptTokenCount", 0)
     usage.tokens_out += meta.get("candidatesTokenCount", 0)
     try:
-        return json.loads(data["candidates"][0]["content"]["parts"][0]["text"])
+        parts = data["candidates"][0]["content"]["parts"]
+        return json.loads("".join(p.get("text", "") for p in parts if not p.get("thought")))
     except (KeyError, IndexError, json.JSONDecodeError) as e:
         raise ValueError("JSON 형식이 아님") from e
 

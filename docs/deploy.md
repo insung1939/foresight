@@ -21,7 +21,7 @@
 
 ## 3. Vercel (화면)
 - 저장소 연결, Root Directory `apps/web`
-- `apps/web/vercel.json` 의 rewrite 주소를 Render 주소로(기본 `foresight-api.onrender.com`)
+- `apps/web/vercel.json` 의 rewrite 주소를 Render 주소로(지금: `foresight-api-yda3.onrender.com`)
 - 환경 변수(선택): `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`
 
 ## 4. 마무리

@@ -65,10 +65,10 @@ for c in targets[: args.limit or None]:
     with Session() as s:
         s.add(AiLog(kind="judge", case_key=key, answer=json.dumps(res, ensure_ascii=False) if res else None, ok=chk.ok,
                     checks=chk.items, attempts=attempts, latency_ms=usage.latency_ms, tokens_in=usage.tokens_in,
-                    tokens_out=usage.tokens_out, model=ai.model_name()))
+                    tokens_out=usage.tokens_out, model=usage.model or ai.model_name()))
         s.commit()
     if res:
-        done[key] = {**res, "model": ai.model_name(), "at": datetime.now(timezone.utc).isoformat(timespec="seconds")}
+        done[key] = {**res, "model": usage.model or ai.model_name(), "at": datetime.now(timezone.utc).isoformat(timespec="seconds")}
         ok += 1
     else:
         fail += 1

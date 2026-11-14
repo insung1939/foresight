@@ -15,3 +15,6 @@ data/ai.json
 data/ai_eval.json
 apps/web/.env*
 !apps/web/.env.example
+data/ai_local_qwen.json
+data/ai_*.json
+!data/ai_eval_public.json

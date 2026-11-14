@@ -151,7 +151,7 @@ export interface AskResult {
   latencyMs?: number;
   remaining: number;
   error?: string;
-  errorKind?: "unconfigured" | "quota" | "timeout" | "busy" | "network" | "model";
+  errorKind?: "unconfigured" | "quota" | "timeout" | "busy" | "network" | "model" | "gone";
   retryAfter?: number | null;
   logId?: number;
 }
