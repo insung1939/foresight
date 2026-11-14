@@ -373,7 +373,7 @@ function AiChat({
   intro?: string;
   suggestions: string[];
 }) {
-  const storeKey = `geuttae:ask:${gameKey}`;
+  const storeKey = `fs:ask:${gameKey}`;
   const [log, setLog] = useState<QA[]>(() => read<QA[]>(storeKey) ?? []);
   const [text, setText] = useState("");
   const pending = log.some((x) => x.r === null);

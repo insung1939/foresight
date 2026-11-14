@@ -19,8 +19,28 @@ export function write(key: string, value: unknown) {
 }
 
 export const KEYS = {
-  game: "geuttae:game:v1",
-  last: "geuttae:last:v1",
-  coach: "geuttae:coach:v1",
+  game: "fs:game:v1",
+  last: "fs:last:v1",
+  coach: "fs:coach:v1",
   mode: "fs:mode:v1", // 다음 새 게임 모드(free · daily)
 } as const;
+
+/** 예전 이름(geuttae:…)으로 저장된 진행 중 게임·지난 결과·AI 대화를 새 이름(fs:…)으로 한 번 옮긴다.
+ *  서비스 이름을 바꿔도 이용자의 이어하기가 끊기지 않게. */
+export function migrateOldKeys() {
+  try {
+    const ls = window.localStorage;
+    const old: string[] = [];
+    for (let i = 0; i < ls.length; i++) {
+      const k = ls.key(i);
+      if (k && k.startsWith("geuttae:")) old.push(k);
+    }
+    for (const k of old) {
+      const nk = "fs:" + k.slice("geuttae:".length);
+      if (ls.getItem(nk) === null) ls.setItem(nk, ls.getItem(k) ?? "");
+      ls.removeItem(k);
+    }
+  } catch {
+    /* 저장소를 못 쓰면 건너뛴다 */
+  }
+}

@@ -6,11 +6,11 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-ROOT = Path(__file__).resolve().parents[2]  # geuttae/
+ROOT = Path(__file__).resolve().parents[2]  # foresight/
 load_dotenv(ROOT / ".env")
 
 DATA_DIR = Path(os.environ.get("DATA_DIR", ROOT / "data"))
-DATABASE_URL = os.environ.get("DATABASE_URL") or f"sqlite:///{DATA_DIR / 'geuttae.db'}"
+DATABASE_URL = os.environ.get("DATABASE_URL") or f"sqlite:///{DATA_DIR / 'foresight.db'}"
 ALLOWED_ORIGINS = [o.strip() for o in os.environ.get("ALLOWED_ORIGINS", "http://localhost:5175").split(",") if o.strip()]
 
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "").strip()

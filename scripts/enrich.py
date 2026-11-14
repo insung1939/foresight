@@ -53,7 +53,7 @@ bank = json.loads((ROOT / "data" / "bank.json").read_text())
 NAMES: list[str] = json.loads((ROOT / "data" / "names.json").read_text())
 out_path = ROOT / "data" / "extra.json"
 extra: dict = json.loads(out_path.read_text()) if out_path.exists() else {}
-client = httpx.Client(timeout=30, headers={"User-Agent": "Mozilla/5.0 (geuttae class project)"})
+client = httpx.Client(timeout=30, headers={"User-Agent": "Mozilla/5.0 (foresight class project)"})
 
 
 def cached(kind: str, key: str, fetch, binary=False):
