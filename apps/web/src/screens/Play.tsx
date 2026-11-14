@@ -277,6 +277,20 @@ function Replay({ g, game, cash }: { g: G; game: GameState; cash: number }) {
   const [playing, setPlaying] = useState(true);
   const [fast, setFast] = useState(false);
   const [confirm, setConfirm] = useState(false);
+  // '끝까지'를 자동 진행 요청이 오가는 중에 눌러도 놓치지 않게 예약해 둔다(배포 환경은 요청이 0.2~0.3초)
+  const [wantSkip, setWantSkip] = useState(false);
+  const skip = () => {
+    sfx("whoosh");
+    if (g.busy) setWantSkip(true);
+    else g.actions.tick(20);
+  };
+  useEffect(() => {
+    if (wantSkip && !g.busy) {
+      setWantSkip(false);
+      g.actions.tick(20);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [wantSkip, g.busy]);
   const prev = useRef({ day: r.day, value: r.value, price: r.points[r.points.length - 1].p });
   const w = r.eventDay !== null ? (cur.w2 ?? cur.w1 ?? 0) : (cur.w1 ?? 0);
   const holding = w !== 0;
@@ -289,12 +303,12 @@ function Replay({ g, game, cash }: { g: G; game: GameState; cash: number }) {
 
   // 자동 진행
   useEffect(() => {
-    if (!playing || confirm || g.busy) return;
+    if (!playing || confirm || wantSkip || g.busy) return;
     // 실패하면(연결 끊김 등) 자동 진행을 멈춰 오류가 반복되지 않게 → '▶ 재생'으로 이어서
     const id = setTimeout(() => g.actions.tick(1).then((st) => !st && setPlaying(false)), r.day === 0 ? 900 : fast ? 380 : 800);
     return () => clearTimeout(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [playing, confirm, fast, r.day, g.busy]);
+  }, [playing, confirm, fast, r.day, g.busy, wantSkip]);
 
   // 하루가 지날 때: 크게 움직이면 번쩍 + 새벽이
   useEffect(() => {
@@ -383,8 +397,8 @@ function Replay({ g, game, cash }: { g: G; game: GameState; cash: number }) {
           <button className={`btn ghost ${fast ? "on" : ""}`} onClick={() => setFast((x) => !x)} aria-pressed={fast}>
             ⏩ 2배
           </button>
-          <button className="btn ghost" onClick={() => (sfx("whoosh"), g.actions.tick(20))} disabled={!!g.busy}>
-            ⏭ 끝까지
+          <button className="btn ghost" onClick={skip} disabled={wantSkip || g.busy === "skip"}>
+            {wantSkip || g.busy === "skip" ? "⏭ 넘기는 중…" : "⏭ 끝까지"}
           </button>
         </div>
         <BottomBar>
@@ -399,7 +413,7 @@ function Replay({ g, game, cash }: { g: G; game: GameState; cash: number }) {
               {r.day < 1 ? "내일부터 팔 수 있어요" : confirm ? `한 번 더 누르면 팔아요 (${pnl >= 0 ? "+" : "−"}${won(Math.abs(pnl))})` : `💰 지금 팔기 · ${pnl >= 0 ? "익절" : "손절"}`}
             </motion.button>
           ) : (
-            <button className="btn primary block" onClick={() => g.actions.tick(20)} disabled={!!g.busy}>
+            <button className="btn primary block" onClick={skip} disabled={wantSkip || g.busy === "skip"}>
               ⏭ 결과 바로 보기
             </button>
           )}
