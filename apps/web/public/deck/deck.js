@@ -3,7 +3,7 @@
    숫자: data-b="meta 경로"(서버 실시간, 없으면 HTML 의 값 그대로) · data-count(장에 들어오면 올라감). */
 const CONFIG = {
   team: ["5조", "김지환", "김현준", "오선호", "조인성", "채재희"], // 역할을 붙이려면 "이름 · 역할"
-  service: "", // 비우면 지금 주소(같은 서비스의 /deck)
+  service: "https://foresight-rho-teal.vercel.app",
   github: "https://github.com/insung1939/foresight",
   swagger: "https://foresight-api-yda3.onrender.com/docs",
   api: "/api", // 같은 서비스의 API(Vercel rewrite / vite proxy)

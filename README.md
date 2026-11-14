@@ -9,6 +9,16 @@ hindsight(유튜버 언급 뒤 실제 주가를 모은 서비스)의 기록을 �
 같은 정보를 보고 나, 유튜버, AI 중 누가 더 잘 맞힐까? 실제 과거 상황으로 겨루는 투자 판단 게임.
 기획은 `../idea.md`. 데이터는 hindsight(유튜브 언급·주가·공시)에서 **읽기만** 하고, DART 원문·재무와 Google 뉴스를 더한다.
 
+## 주소
+
+| | |
+|---|---|
+| 서비스 | https://foresight-rho-teal.vercel.app |
+| 발표 슬라이드 | https://foresight-rho-teal.vercel.app/deck/index.html (F 전체화면 · P 발표자 화면) |
+| 팀 페이지 | https://foresight-rho-teal.vercel.app/#/team |
+| API 문서(Swagger) | https://foresight-api-yda3.onrender.com/docs |
+| 코드 | https://github.com/insung1939/foresight |
+
 ## 평가 항목별 근거 위치
 
 | 평가 항목 | 어디서 보나 |

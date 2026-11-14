@@ -13,7 +13,7 @@ export const TEAM = {
     { name: "채재희", role: "", did: "" },
   ] as { name: string; role: string; did: string }[],
   links: {
-    service: "", // 비우면 지금 열린 주소를 쓴다
+    service: "https://foresight-rho-teal.vercel.app",
     github: "https://github.com/insung1939/foresight",
     swagger: "https://foresight-api-yda3.onrender.com/docs",
   },
