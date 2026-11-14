@@ -1,0 +1,27 @@
+# Render 블루프린트: FastAPI 서버(무료). 값이 sync:false 인 것은 Render 대시보드에서 직접 넣는다(저장소에 비밀 없음).
+services:
+  - type: web
+    name: foresight-api
+    runtime: python
+    plan: free
+    region: singapore
+    buildCommand: pip install -r api/requirements.txt
+    startCommand: cd api && uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /v1/health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.13.0
+      - key: LLM_PROVIDER
+        value: gemini
+      - key: GEMINI_MODEL
+        value: gemini-2.5-flash
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: DATABASE_URL       # Supabase Postgres (pooler 주소)
+        sync: false
+      - key: DATA_KEY           # data/pack.enc 를 푸는 키
+        sync: false
+      - key: SUPABASE_URL       # 로그인(선택) 토큰 검증
+        sync: false
+      - key: ALLOWED_ORIGINS    # Vercel 주소, 쉼표로 여러 개
+        sync: false

@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>발표자 화면 — Foresight</title>
+<link rel="stylesheet" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<style>
+  :root { --ink: #1d1640; --sub: #514a6b; --line: #e6e2f0; --bg: #f7f5fc; --violet: #7048e8; }
+  * { box-sizing: border-box; margin: 0; }
+  body { font-family: "Pretendard Variable", sans-serif; background: var(--bg); color: var(--ink); height: 100vh; display: grid; grid-template-rows: auto 1fr auto; gap: 18px; padding: 24px 28px; word-break: keep-all; }
+  header { display: flex; align-items: baseline; gap: 18px; }
+  header h1 { font-size: 34px; font-weight: 900; letter-spacing: -.03em; }
+  header .pos { font-size: 22px; color: var(--sub); font-weight: 700; }
+  header .timer { margin-left: auto; font-size: 44px; font-weight: 900; font-variant-numeric: tabular-nums; }
+  header .timer.over { color: #e03131; }
+  main { display: grid; grid-template-columns: 1.4fr 1fr; gap: 22px; min-height: 0; }
+  .notes { background: #fff; border-radius: 20px; padding: 28px 30px; font-size: 30px; line-height: 1.6; overflow: auto; box-shadow: 0 6px 24px rgba(29, 22, 64, .08); }
+  .side { display: flex; flex-direction: column; gap: 18px; }
+  .card { background: #fff; border-radius: 20px; padding: 22px 24px; box-shadow: 0 6px 24px rgba(29, 22, 64, .08); }
+  .card small { display: block; color: var(--sub); font-weight: 700; font-size: 16px; margin-bottom: 6px; }
+  .card b { font-size: 28px; }
+  .steps { display: flex; gap: 8px; margin-top: 10px; }
+  .steps i { width: 16px; height: 16px; border-radius: 50%; background: var(--line); }
+  .steps i.on { background: var(--violet); }
+  .plan { font-size: 18px; line-height: 1.7; color: var(--sub); }
+  footer { display: flex; gap: 10px; }
+  footer button { font: 800 22px "Pretendard Variable"; padding: 14px 26px; border-radius: 14px; border: 0; background: var(--ink); color: #fff; cursor: pointer; }
+  footer button.ghost { background: #fff; color: var(--ink); border: 2px solid var(--line); }
+</style>
+</head>
+<body>
+<header><h1 id="title">발표 화면을 기다리는 중…</h1><span class="pos" id="pos"></span><span class="timer" id="timer">00:00</span></header>
+<main>
+  <div class="notes" id="notes">발표 창(index.html)에서 P 를 누르면 연결돼요.</div>
+  <div class="side">
+    <div class="card"><small>지금 장 단계</small><div class="steps" id="steps"></div></div>
+    <div class="card"><small>다음 장</small><b id="next">—</b></div>
+    <div class="card plan"><small>시간 계획 (15분)</small>표지·문제 2분 → 해결·시연 5분 → 시스템·AI 4분 → 품질·UX 2분 → 실패·랭킹 2분</div>
+  </div>
+</main>
+<footer><button class="ghost" id="prev">← 이전</button><button id="next-btn">다음 →</button><button class="ghost" id="reset">⏱ 시간 초기화</button></footer>
+<script>
+  const ch = new BroadcastChannel("foresight-deck");
+  const $ = (s) => document.querySelector(s);
+  let t0 = Date.now();
+  ch.onmessage = ({ data: d }) => {
+    if (d.cmd) return;
+    $("#title").textContent = d.title || "";
+    $("#pos").textContent = `${d.cur + 1} / ${d.total}`;
+    $("#notes").textContent = d.notes || "(대본 없음)";
+    $("#next").textContent = d.next;
+    $("#steps").innerHTML = d.max ? Array.from({ length: d.max + 1 }, (_, n) => `<i class="${n <= d.step ? "on" : ""}"></i>`).join("") : "<span style='color:#8f89a6'>단계 없음</span>";
+  };
+  ch.postMessage({ cmd: "hello" });
+  $("#prev").onclick = () => ch.postMessage({ cmd: "prev" });
+  $("#next-btn").onclick = () => ch.postMessage({ cmd: "next" });
+  $("#reset").onclick = () => (t0 = Date.now());
+  addEventListener("keydown", (e) => {
+    if (["ArrowRight", "PageDown", " "].includes(e.key)) { e.preventDefault(); ch.postMessage({ cmd: "next" }); }
+    if (["ArrowLeft", "PageUp"].includes(e.key)) { e.preventDefault(); ch.postMessage({ cmd: "prev" }); }
+  });
+  setInterval(() => {
+    const s = Math.floor((Date.now() - t0) / 1000);
+    $("#timer").textContent = `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
+    $("#timer").classList.toggle("over", s > 15 * 60);
+  }, 500);
+</script>
+</body>
+</html>
