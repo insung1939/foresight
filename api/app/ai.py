@@ -240,7 +240,7 @@ def coach(summary: dict) -> tuple[dict, dict, Usage, int]:
     user = f"결산 자료:\n{context}"
     last: dict = {}
     for attempt in (1, 2):
-        resp = llm(COACH_SYSTEM, user, COACH_SCHEMA, usage, temperature=0.5)
+        resp = llm(COACH_SYSTEM, user, COACH_SCHEMA, usage, temperature=0.5, fast=True)  # 결산 화면도 기다리지 않게
         chk = check(resp, context)
         if all(v for k, v in chk.items() if not k.startswith("_")):
             return resp, chk, usage, attempt
@@ -258,7 +258,7 @@ ASK_SYSTEM = """너는 투자 시뮬레이션 게임 '타임슬립 개미'의 �
 - 사라·팔아라 같은 권유, 앞으로 오른다·내린다 같은 예측을 하지 않는다. 사람들이 무엇을 말했는지, 무엇이 나왔는지만 정리한다.
 - 영상 제목을 옮길 때는 작은따옴표로 감싼다(예: '조만간 오른다'는 제목). 따옴표 밖은 너의 말이다.
 - 종목은 자료에 적힌 코드네임(예: '반도체 A')으로만 부른다.
-- 질문에 회사 이름이 나와도 되풀이하지 않고 '그 이름은 말씀드릴 수 없어요'라고만 한다(맞다·아니다도 말하지 않는다).
+- 질문이 회사의 진짜 이름·티커·계열을 물을 때만 '그 이름은 말씀드릴 수 없어요'라고 한다(맞다·아니다도 말하지 않는다). 그 밖의 질문에는 이 문장을 쓰지 않는다.
 - [지금 보고 있는 종목]에 대해 답한다. 제목에 다른 종목이 함께 나와도 그 종목 이야기는 하지 않는다. 답에 그 종목 코드네임을 꼭 쓴다.
 - 2~3문장, 200자 이내, 부드러운 존댓말(~요)."""
 
