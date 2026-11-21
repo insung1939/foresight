@@ -1,9 +1,9 @@
-"""정답이 든 문제 파일을 암호화해 공개 저장소에 넣을 수 있게 묶는다 → data/pack.enc
+"""미래 가격이 든 시즌 팩을 암호화해 공개 저장소에 넣을 수 있게 묶는다 → data/pack.enc
 
     .venv/bin/python scripts/pack_data.py          # 묶기(.env 의 DATA_KEY 사용, 없으면 새로 만들어 .env 에 추가)
     .venv/bin/python scripts/pack_data.py --unpack # 풀기(서버는 시작할 때 자동으로 푼다: api/app/bank.py)
 
-- 공개 GitHub 에는 data/pack.enc(암호문)만 올라가고, 원본 bank·extra·ai.json 은 .gitignore.
+- 공개 GitHub 에는 data/pack.enc(암호문)만 올라가고, 원본 season.json 은 .gitignore.
 - 서버(Render)는 환경 변수 DATA_KEY 로 시작할 때 풀어서 쓴다. 키가 없으면 아무도 정답을 볼 수 없다.
 - 암호: Fernet(AES-128-CBC + HMAC-SHA256, cryptography 라이브러리).
 """
@@ -20,7 +20,7 @@ from dotenv import load_dotenv
 
 ROOT = Path(__file__).resolve().parents[1]
 DATA = ROOT / "data"
-FILES = ["bank.json", "extra.json", "ai.json", "names.json", "quality.json", "text.json", "ai_eval.json"]
+FILES = ["season.json", "rag.json"]  # 시즌 팩(미래 가격 포함) + 개미 비서 색인 — 서버만 갖는다
 
 
 def pack() -> None:

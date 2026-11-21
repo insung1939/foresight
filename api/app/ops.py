@@ -37,9 +37,9 @@ def perf_summary() -> list[dict]:
 
 # ------------------------------------------------------------ 요청 한도
 LIMITS = {  # (규칙 이름, 1분에 허용 횟수) — 한 사람(IP + 기기 표식) 기준
-    "ask": 12,       # AI 질문: 게임당 라운드 3번 제한과 별도로, 여러 게임을 만들어 비용을 쓰는 것을 막는다
+    "ask": 12,       # AI 코치: 판당 한 번(캐시)과 별도로, 여러 판을 만들어 비용을 쓰는 것을 막는다
     "new": 20,       # 새 게임
-    "write": 600,    # 그 밖의 POST(카드·판단·리플레이 하루 진행 — 2배속이면 1분에 160번 안팎)
+    "write": 300,    # 그 밖의 POST(턴 진행 — 빠르게 넘겨도 1분에 60번 안팎)
     "ask_all": 60,   # AI 질문 서버 전체(비용 상한)
 }
 _hits: dict[tuple[str, str], deque] = defaultdict(deque)
@@ -49,9 +49,9 @@ ENABLED = os.environ.get("RATE_LIMIT", "1") != "0"  # 테스트에서만 끈다
 def _rule(method: str, path: str) -> str | None:
     if method != "POST":
         return None
-    if path.endswith("/ask"):
+    if path.endswith("/coach") or path.endswith("/ask"):
         return "ask"
-    if path.rstrip("/") == "/v1/games":
+    if path.rstrip("/") == "/v1/runs":
         return "new"
     return "write"
 
@@ -85,7 +85,7 @@ def reset_limits():
 # ------------------------------------------------------------ 게임별 잠금
 # 같은 게임에 요청이 동시에 오면(연타·스크립트) '확인 → 변경' 사이에 끼어들어 카드 4장 이상, 라운드 중복 기록이 생긴다.
 # 게임 id 별로 한 번에 하나씩만 처리한다(서버 한 대 가정). DB 에는 (game_id, round) 유니크 인덱스로 한 번 더 막는다.
-_GAME_POST = re.compile(r"^/v1/games/([^/]+)/")
+_GAME_POST = re.compile(r"^/v1/runs/([^/]+)/")
 _locks: dict[str, asyncio.Lock] = {}
 
 
@@ -126,6 +126,6 @@ class OpsMiddleware(BaseHTTPMiddleware):
         resp.headers["X-Content-Type-Options"] = "nosniff"
         resp.headers["X-Frame-Options"] = "DENY"
         resp.headers["Referrer-Policy"] = "no-referrer"
-        if request.url.path.startswith("/v1/games"):
+        if request.url.path.startswith("/v1/runs"):
             resp.headers["Cache-Control"] = "no-store"
         return resp

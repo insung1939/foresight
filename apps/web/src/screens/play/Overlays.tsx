@@ -1,0 +1,517 @@
+// 플레이 화면 위에 뜨는 것들: 종목 바텀시트(매매·개미 비서) · 인생 사건 · 리캡 카드 · 큰 주 결과 · 미션 · 첫 판 안내
+import { motion } from "motion/react";
+import { useEffect, useLayoutEffect, useState } from "react";
+import { Owl, Tuber, rivalLine } from "../../components/Characters";
+import { CountUp, Delta, LineChart, Mental, Modal, Sheet, toast } from "../../components/ui";
+import { ApiError, api } from "../../lib/api";
+import { pct, views, won } from "../../lib/format";
+import type { AskOut, Asset, EventCard, View, Week } from "../../lib/types";
+import { MARKET_KO, canBuy, flames, maxBuy, preview, type Order } from "./logic";
+
+// ---------------------------------------------------------------- 종목 시트
+export function AssetSheet({ v, a, orders, runId, onClose, onOrder, onAsked }: { v: View; a: Asset | null; orders: Order[]; runId: string; onClose: () => void; onOrder: (o: Order) => void; onAsked: (left: number) => void }) {
+  const [side, setSide] = useState<"buy" | "sell">("buy");
+  const [qty, setQty] = useState(0);
+  const p = preview(v, orders);
+  const held = a ? (p.qty[a.k] ?? 0) : 0;
+  useEffect(() => {
+    setSide(held && a && canBuy(v, p, a) ? "buy" : held ? "sell" : "buy");
+    setQty(0);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [a?.k]);
+  if (!a) return <Sheet open={false} onClose={onClose} title="">{null}</Sheet>;
+  const block = side === "buy" ? canBuy(v, p, a) : v.skip ? "이번 주는 거래할 수 없어요" : held ? null : "가진 수량이 없어요";
+  const limit = side === "buy" ? maxBuy(v, p, a) : held;
+  const fee = side === "buy" ? v.fees[a.market].buy : v.fees[a.market].sell;
+  const amount = qty * a.price;
+  const pos = v.pos.find((x) => x.k === a.k);
+  const chips = side === "buy" ? [0.1, 0.25, 0.5, 1] : [0.25, 0.5, 1];
+  const hypeUp = a.hype - a.hypePrev;
+  return (
+    <Sheet
+      open
+      onClose={onClose}
+      title={
+        <span className="as-title">
+          {a.code} <span className={`mk m-${a.market}`}>{MARKET_KO[a.market]}</span>
+        </span>
+      }
+      footer={
+        block ? (
+          <p className="inline-alert">{block}</p>
+        ) : (
+          <button
+            className={`btn block ${side === "buy" ? "buy" : "sell"}`}
+            disabled={qty < 1}
+            onClick={() => {
+              onOrder({ k: a.k, q: side === "buy" ? qty : -qty });
+              onClose();
+            }}
+          >
+            {qty < 1 ? "수량을 골라 주세요" : `${qty.toLocaleString()}주 ${side === "buy" ? "사기" : "팔기"} 주문 담기 · ${won(amount)}`}
+          </button>
+        )
+      }
+    >
+      <div className="as-price">
+        <b>{Math.round(a.price).toLocaleString("ko-KR")}</b>
+        <span>
+          지난주 <Delta x={a.chg} />
+        </span>
+      </div>
+      <LineChart series={[{ data: a.hist.map((x) => x / a.hist[0]), label: "12주 전 대비", cls: "line-me", bold: true }]} h={260} xLabel={(i) => (i === 0 ? "12주 전" : "지난주")} />
+
+      <div className="as-facts">
+        <div>
+          <span className="muted small">지난주 유튜브 언급</span>
+          <b>
+            {a.hype}건 {"🔥".repeat(flames(a.hype))}
+          </b>
+          <span className="muted small">{hypeUp > 0 ? `전주보다 ${hypeUp}건 늘었어요` : hypeUp < 0 ? `전주보다 ${-hypeUp}건 줄었어요` : "전주와 같아요"}</span>
+        </div>
+        <div>
+          <span className="muted small">오른다 vs 내린다</span>
+          <b>
+            {a.bull} : {a.bear}
+          </b>
+          <span className="stance" aria-hidden>
+            <i style={{ flex: a.bull || 0.001 }} className="up" />
+            <i style={{ flex: a.bear || 0.001 }} className="down" />
+          </span>
+        </div>
+      </div>
+
+      {a.titles.length > 0 && (
+        <ul className="yt-list compact">
+          {a.titles.map((t, i) => (
+            <li key={i} className="yt">
+              <div className="yt-thumb" aria-hidden>
+                ▶
+              </div>
+              <div className="yt-body">
+                <p className="yt-title">{t.t}</p>
+                <p className="yt-meta">
+                  {t.ch} · 조회 {views(t.v)}
+                </p>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+      {a.disc.length > 0 && (
+        <ul className="disc-list">
+          {a.disc.map((d, i) => (
+            <li key={i}>
+              <span className="tag">공시</span>
+              <span>{d}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+      {!a.titles.length && !a.disc.length && <p className="empty">지난주엔 영상도 공시도 없었어요. 차트만 보고 판단해야 해요.</p>}
+
+      {pos && (
+        <p className="as-held">
+          보유 {pos.qty.toLocaleString()}주 · 평단 {Math.round(pos.cost).toLocaleString()} · <Delta x={pos.gain} />
+        </p>
+      )}
+
+      <Assistant v={v} a={a} runId={runId} onAsked={onAsked} />
+
+      <div className="trade">
+        <div className="seg two" role="tablist" aria-label="사기 또는 팔기">
+          <button role="tab" aria-selected={side === "buy"} className={side === "buy" ? "on buy" : ""} onClick={() => (setSide("buy"), setQty(0))}>
+            사기
+          </button>
+          <button role="tab" aria-selected={side === "sell"} className={side === "sell" ? "on sell" : ""} onClick={() => (setSide("sell"), setQty(0))} disabled={!held}>
+            팔기
+          </button>
+        </div>
+        {!block && (
+          <>
+            <div className="chips">
+              {chips.map((c) => (
+                <button key={c} className={`chip ${qty === Math.floor(limit * c) && qty > 0 ? "on" : ""}`} onClick={() => setQty(Math.max(1, Math.floor(limit * c)))}>
+                  {c === 1 ? (side === "buy" ? "최대" : "전부") : `${c * 100}%`}
+                </button>
+              ))}
+            </div>
+            <div className="stepper">
+              <button className="icon-btn" onClick={() => setQty((q) => Math.max(0, q - 1))} aria-label="1주 줄이기" disabled={qty <= 0}>
+                −
+              </button>
+              <label>
+                <span className="sr-only">수량</span>
+                <input
+                  inputMode="numeric"
+                  value={qty ? qty.toLocaleString() : ""}
+                  placeholder="0"
+                  onChange={(e) => setQty(Math.min(limit, Number(e.target.value.replace(/[^0-9]/g, "")) || 0))}
+                />
+                <span>주</span>
+              </label>
+              <button className="icon-btn" onClick={() => setQty((q) => Math.min(limit, q + 1))} aria-label="1주 늘리기" disabled={qty >= limit}>
+                +
+              </button>
+            </div>
+            <p className="muted small center">
+              {side === "buy" ? `현금 ${won(p.cash)} · 최대 ${limit.toLocaleString()}주` : `보유 ${held.toLocaleString()}주`} · 수수료{side === "sell" && a.market === "KRX" ? "·세금" : ""} {pct(fee, 2)}
+            </p>
+          </>
+        )}
+      </div>
+    </Sheet>
+  );
+}
+
+// ---------------------------------------------------------------- 인생 사건
+export function EventModal({ ev, busy, onChoose }: { ev: EventCard | null; busy: boolean; onChoose: (i: number) => void }) {
+  return (
+    <Modal open={!!ev} label={ev?.title ?? "사건"}>
+      {ev && (
+        <div className="event">
+          <p className="eyebrow">이번 달의 사건</p>
+          <motion.div className="ev-icon" initial={{ rotate: -12, scale: 0.6 }} animate={{ rotate: 0, scale: 1 }} transition={{ type: "spring", stiffness: 260, damping: 12 }} aria-hidden>
+            {ev.icon}
+          </motion.div>
+          <h2>{ev.title}</h2>
+          <p className="ev-body">{ev.body}</p>
+          <div className="ev-choices">
+            {ev.choices.map((c, i) => (
+              <button key={i} className="choice" onClick={() => onChoose(i)} disabled={busy} data-autofocus={i === 0 ? "" : undefined}>
+                <b>{c.label}</b>
+                <span>{c.hint}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </Modal>
+  );
+}
+
+// ---------------------------------------------------------------- 주간 결과
+export function WeekModal({ week, before, after, onNext }: { week: Week | null; before: View | null; after: View | null; onNext: () => void }) {
+  if (!week || !before || !after) return <Modal open={false} label="">{null}</Modal>;
+  const byK = Object.fromEntries(before.assets.map((a) => [a.k, a]));
+  const prevValue = before.value + (after.deposits - before.deposits);
+  const rows = [
+    { name: "🐜 나", twr: after.twr, prev: before.twr, me: true, yt: "" },
+    ...after.rivals.map((r, i) => ({ name: r.name, twr: r.twr, prev: before.rivals[i].twr, me: false, yt: r.name })),
+    { name: "📊 코스피", twr: after.kospi, prev: before.kospi, me: false, yt: "" },
+  ];
+  const rankNow = [...rows].sort((a, b) => b.twr - a.twr);
+  const rankPrev = [...rows].sort((a, b) => b.prev - a.prev);
+  const myNow = rankNow.findIndex((r) => r.me) + 1;
+  const myPrev = rankPrev.findIndex((r) => r.me) + 1;
+  const mine = Object.entries(week.mine).sort((a, b) => b[1] - a[1]);
+  const auto = week.trades.filter((t) => t.auto);
+  const last = after.done;
+  return (
+    <Modal open label={`${week.t + 1}주차 결과`}>
+      <div className={`week ${week.r > 0.0005 ? "good" : week.r < -0.0005 ? "bad" : ""}`}>
+        <p className="eyebrow">
+          {week.t + 1}주차 마감 · {after.season - after.t > 0 ? `${after.season - after.t}주 남음` : "마지막 주"}
+        </p>
+        <p className="wk-ret">
+          <span className={week.r > 0.0005 ? "up" : week.r < -0.0005 ? "down" : ""}>
+            <CountUp to={week.r * 100} format={(n) => `${n > 0 ? "+" : n < 0 ? "−" : ""}${Math.abs(n).toFixed(1)}%`} duration={0.9} />
+          </span>
+        </p>
+        <p className="wk-val">
+          {won(prevValue)} → <b>{won(week.value)}</b>
+        </p>
+
+        {week.panic && <p className="inline-alert danger">😱 멘탈이 바닥나서 가진 걸 모두 팔아 버렸어요(패닉셀). 멘탈 35로 다시 시작해요.</p>}
+
+        <div className="wk-row">
+          <span>멘탈</span>
+          <Mental value={week.mental} />
+          <span className={week.dm >= 0 ? "up" : "down"}>
+            {week.dm >= 0 ? "+" : ""}
+            {week.dm}
+          </span>
+        </div>
+        {week.why.length > 0 && (
+          <p className="wk-why">
+            {week.why.map(([w, d]) => (
+              <span key={w} className={d >= 0 ? "up" : "down"}>
+                {w} {d > 0 ? `+${d}` : d}
+              </span>
+            ))}
+          </p>
+        )}
+
+        {mine.length > 0 && (
+          <ul className="wk-mine">
+            {mine.map(([k, r]) => (
+              <li key={k}>
+                <span>{byK[k]?.code}</span>
+                <Delta x={r} />
+              </li>
+            ))}
+          </ul>
+        )}
+        {auto.length > 0 && <p className="muted small">자동 매매: {auto.map((t) => `${byK[t.k]?.code} ${t.q > 0 ? "매수" : "매도"} ${Math.abs(t.q)}주`).join(", ")}</p>}
+
+        <div className="wk-rank">
+          <p className="sec-title">
+            순위 {myNow}/{rows.length} {myNow < myPrev ? <span className="up">▲{myPrev - myNow}</span> : myNow > myPrev ? <span className="down">▼{myNow - myPrev}</span> : null}
+          </p>
+          <ol>
+            {rankNow.map((r) => (
+              <motion.li key={r.name} layout className={r.me ? "me" : ""}>
+                <span className="wk-who">
+                  {r.yt && <Tuber name={r.yt} size={22} />}
+                  {r.name}
+                </span>
+                <Delta x={r.twr - 1} />
+              </motion.li>
+            ))}
+          </ol>
+        </div>
+
+        {(() => {
+          const top = rows.filter((x) => x.yt).sort((a, b) => Math.abs(b.twr / b.prev - 1) - Math.abs(a.twr / a.prev - 1))[0];
+          return top ? (
+            <p className="rc-line">
+              <Tuber name={top.yt} size={26} /> {rivalLine(top.yt, top.twr / top.prev - 1, after.t)}
+            </p>
+          ) : null;
+        })()}
+        <p className="muted small wk-top">
+          이번 주 1등 종목: <b>{byK[week.top[0][0]]?.code}</b> <Delta x={week.top[0][1]} /> · 꼴찌: <b>{byK[week.bottom[1][0]]?.code}</b> <Delta x={week.bottom[1][1]} />
+        </p>
+
+        <button className="btn primary block" onClick={onNext} data-autofocus>
+          {last ? "결산 보기 🏁" : `${week.t + 2}주차로 ▶`}
+        </button>
+      </div>
+    </Modal>
+  );
+}
+
+// ---------------------------------------------------------------- 첫 판 안내(코치마크 3개)
+const STEPS = [
+  { sel: "[data-tour=hud]", title: "진짜 있었던 시장을 버티는 게임이에요", body: "한 턴 = 실제 1주. 총자산과 😎 멘탈을 지키세요. 멘탈이 0이 되면 다 팔아 버려요. 🎯 미션을 깨면 별을 받아요." },
+  { sel: "[data-tour=market]", title: "종목 이름은 코드네임이에요", body: "기억으로 맞히지 못하게 이름을 가렸어요. 눌러서 차트·유튜브·공시를 보고 사고팔아요. 🦉부엉이 박사(AI)에게 물어볼 수도 있어요." },
+  { sel: "[data-tour=next]", title: "준비되면 다음 주로", body: "주문은 모아 뒀다가 한 번에 체결돼요. 그 주의 실제 가격으로 결과가 나와요. ▶▶는 4주를 그대로 빨리 감아요. 유튜버 라이벌을 이겨 보세요!" },
+];
+
+export function Tour({ onDone }: { onDone: () => void }) {
+  const [i, setI] = useState(0);
+  const [box, setBox] = useState<DOMRect | null>(null);
+  useLayoutEffect(() => {
+    const el = document.querySelector(STEPS[i].sel);
+    if (el) {
+      const top = el.getBoundingClientRect().top + window.scrollY;
+      const tall = el.getBoundingClientRect().height > window.innerHeight * 0.5;
+      if (STEPS[i].sel !== "[data-tour=hud]" && STEPS[i].sel !== "[data-tour=next]") window.scrollTo({ top: tall ? top - 80 : top - window.innerHeight / 3 });
+    }
+    const t = window.setTimeout(() => setBox(el?.getBoundingClientRect() ?? null), 30);
+    return () => window.clearTimeout(t);
+  }, [i]);
+  const s = STEPS[i];
+  const below = box ? box.top < window.innerHeight / 2 : true;
+  return (
+    <div className="tour" role="dialog" aria-modal aria-label="처음 하는 분을 위한 안내" data-ux="Coach Marks · Spotlight">
+      {box && <div className="spot" style={{ top: box.top - 6, left: box.left - 6, width: box.width + 12, height: Math.min(box.height + 12, window.innerHeight * 0.5) }} />}
+      <div className="tour-tip" style={below && box ? { top: Math.min(box.top + Math.min(box.height, window.innerHeight * 0.5) + 18, window.innerHeight - 220) } : { bottom: box ? window.innerHeight - box.top + 18 : 120 }}>
+        <p className="eyebrow">
+          {i + 1} / {STEPS.length}
+        </p>
+        <h3>{s.title}</h3>
+        <p>{s.body}</p>
+        <div className="tour-act">
+          <button className="link" onClick={onDone}>
+            건너뛰기
+          </button>
+          <button className="btn primary" onClick={() => (i < STEPS.length - 1 ? setI(i + 1) : onDone())} autoFocus>
+            {i < STEPS.length - 1 ? "다음" : "시작!"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
+// ---------------------------------------------------------------- 개미 비서(부엉이 박사, 시점 제한 RAG)
+const SUGGEST = ["왜 요즘 화제야?", "유튜버들은 뭐라고 해?", "최근 공시를 정리해 줘"];
+
+function Assistant({ v, a, runId, onAsked }: { v: View; a: Asset; runId: string; onAsked: (left: number) => void }) {
+  const [q, setQ] = useState("");
+  const [busy, setBusy] = useState<0 | 1 | 2>(0);
+  const [res, setRes] = useState<AskOut | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+  const [voted, setVoted] = useState<1 | -1 | null>(null);
+  useEffect(() => {
+    setRes(null);
+    setErr(null);
+    setQ("");
+    setVoted(null);
+  }, [a.k]);
+  const ask = async (question: string) => {
+    if (!question.trim() || busy) return;
+    setBusy(1);
+    setErr(null);
+    setRes(null);
+    setVoted(null);
+    const t = window.setTimeout(() => setBusy((b) => (b ? 2 : 0)), 1200);
+    try {
+      const r = await api.ask(runId, question.trim(), a.k);
+      setRes(r);
+      onAsked(r.left);
+    } catch (e) {
+      setErr((e as ApiError).message);
+    } finally {
+      window.clearTimeout(t);
+      setBusy(0);
+    }
+  };
+  const left = v.asksLeft;
+  return (
+    <section className="assistant" aria-labelledby="ast-h" data-ux="AI Chat · Citations (RAG)">
+      <header>
+        <Owl size={40} talking={!!busy} />
+        <div>
+          <h3 id="ast-h">부엉이 박사에게 묻기</h3>
+          <p className="muted small">지금까지 나온 영상·공시만 찾아서 답해요 · 이번 시즌 {left}번 남음</p>
+        </div>
+      </header>
+      {left > 0 && !res && (
+        <>
+          <div className="chips left">
+            {SUGGEST.map((s) => (
+              <button key={s} className="chip" onClick={() => ask(s)} disabled={!!busy}>
+                {s}
+              </button>
+            ))}
+          </div>
+          <form
+            className="ask-row"
+            onSubmit={(e) => {
+              e.preventDefault();
+              void ask(q);
+            }}
+          >
+            <label className="sr-only" htmlFor="ask-in">
+              질문
+            </label>
+            <input id="ask-in" value={q} maxLength={120} placeholder={`${a.code}에 대해 궁금한 것`} onChange={(e) => setQ(e.target.value)} disabled={!!busy} />
+            <button className="btn primary" disabled={!q.trim() || !!busy}>
+              묻기
+            </button>
+          </form>
+        </>
+      )}
+      {busy > 0 && (
+        <p className="ast-busy" role="status">
+          <span className="dots" aria-hidden>
+            <i />
+            <i />
+            <i />
+          </span>
+          {busy === 1 ? "지난 자료를 찾는 중…(pgvector)" : "찾은 자료로 답을 쓰는 중…(Gemini)"}
+        </p>
+      )}
+      {err && <p className="inline-alert">{err}</p>}
+      {res && (
+        <div className="ast-ans">
+          <p className="bubble">{res.answer}</p>
+          {res.cites.length > 0 && (
+            <ol className="cites" aria-label="근거 자료">
+              {res.cites.map((c) => (
+                <li key={c.id}>
+                  <span className="cite-id">{c.id}</span>
+                  <span>
+                    <b>
+                      {c.kind} · {c.ago}
+                    </b>{" "}
+                    {c.text}
+                    {c.ch && <span className="muted small"> — {c.ch}</span>}
+                  </span>
+                </li>
+              ))}
+            </ol>
+          )}
+          <div className="ast-foot">
+            <span className="muted small">{res.source === "ai" ? `AI(${res.model}) · 검증 통과 · 자료 ${res.searched}건 중 인용` : "AI 답이 검증을 못 넘어 자료만 보여드려요(횟수 차감 없음)"}</span>
+            {res.logId && (
+              <span className="vote">
+                <button className={voted === 1 ? "on" : ""} aria-label="도움 됐어요" onClick={() => (setVoted(1), api.vote(res.logId!, 1).catch(() => {}), toast("고마워요! 🦉"))}>
+                  👍
+                </button>
+                <button className={voted === -1 ? "on" : ""} aria-label="별로예요" onClick={() => (setVoted(-1), api.vote(res.logId!, -1).catch(() => {}))}>
+                  👎
+                </button>
+              </span>
+            )}
+          </div>
+          {left > 0 && (
+            <button className="link" onClick={() => setRes(null)}>
+              다른 질문하기
+            </button>
+          )}
+        </div>
+      )}
+      {left <= 0 && !res && <p className="empty">이번 시즌 질문을 다 썼어요. 다음 시즌에 또 만나요 🦉</p>}
+      <p className="muted small">투자 권유가 아니에요. 사람들이 무엇을 말했는지만 정리해요.</p>
+    </section>
+  );
+}
+
+// ---------------------------------------------------------------- 리캡 카드(평범한 주는 3초만)
+export function Recap({ weeks, before, after, onClose }: { weeks: Week[]; before: View; after: View; onClose: () => void }) {
+  useEffect(() => {
+    const t = window.setTimeout(onClose, weeks.length > 1 ? 5200 : 3600);
+    return () => window.clearTimeout(t);
+  }, [onClose, weeks.length]);
+  const total = weeks.reduce((a, w) => a * (1 + w.r), 1) - 1;
+  const byRival = after.rivals.map((r, i) => ({ name: r.name, r: r.twr / before.rivals[i].twr - 1 }));
+  const loud = [...byRival].sort((a, b) => Math.abs(b.r) - Math.abs(a.r))[0];
+  const dm = after.mental - before.mental;
+  const salary = weeks.reduce((a, w) => a + (w.salary ?? 0), 0);
+  return (
+    <motion.aside className="recap" role="status" initial={{ y: 40, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 30, opacity: 0 }} onClick={onClose} data-ux="Snackbar · Auto-dismiss">
+      <div className="rc-top">
+        <span className="rc-week">{weeks.length > 1 ? `${before.t + 1}~${after.t}주` : `${before.t + 1}주차`} 마감</span>
+        <b className={total > 0.0005 ? "up" : total < -0.0005 ? "down" : ""}>{pct(total)}</b>
+        <span className="muted small">
+          멘탈 {dm >= 0 ? "+" : ""}
+          {dm}
+        </span>
+        {salary > 0 && <span className="tag buy">월급 +{won(salary)}</span>}
+      </div>
+      {loud && (
+        <p className="rc-line">
+          <Tuber name={loud.name} size={24} /> <b>{loud.name}</b> {rivalLine(loud.name, loud.r, after.t)}
+        </p>
+      )}
+      <span className="rc-bar" aria-hidden>
+        <i style={{ animationDuration: weeks.length > 1 ? "5.2s" : "3.6s" }} />
+      </span>
+    </motion.aside>
+  );
+}
+
+// ---------------------------------------------------------------- 시즌 미션
+export function MissionsSheet({ open, onClose, v }: { open: boolean; onClose: () => void; v: View }) {
+  return (
+    <Sheet open={open} onClose={onClose} title="🎯 이번 시즌 미션">
+      <p className="muted small">미션 하나에 ★1, 등급 S·A는 ★2 · B는 ★1을 더 받아요. 별을 모으면 내 방 가구와 개미 옷이 열려요.</p>
+      <ul className="missions">
+        {v.missions.map((m) => (
+          <li key={m.id} className={m.state}>
+            <span className="ms-ic" aria-hidden>
+              {m.icon}
+            </span>
+            <span>{m.label}</span>
+            <b>{m.state === "done" ? "✓ 달성" : m.state === "fail" ? "✕ 실패" : "진행 중"}</b>
+          </li>
+        ))}
+      </ul>
+      <p className="muted small">내 개미 특성: {v.perk}</p>
+    </Sheet>
+  );
+}

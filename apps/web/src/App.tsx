@@ -1,34 +1,36 @@
 import { MotionConfig } from "motion/react";
-import { Suspense, lazy } from "react";
-import { BuddyDock } from "./components/Buddy";
-import { Cheers } from "./components/Cheers";
-import { Aurora, ErrorBoundary, ErrorState, LoadingPage, TopBar } from "./components/ui";
+import { Suspense, lazy, useEffect } from "react";
+import { ErrorBoundary, ErrorState, Loading, Toasts, TopBar, lensIsOn, setLens } from "./components/ui";
 import { useRoute } from "./lib/router";
-import { startAuth } from "./lib/auth";
-import { startSync } from "./lib/sync";
 import Home from "./screens/Home";
 import Play from "./screens/Play";
 
-// 첫 화면(홈·게임)에 필요 없는 페이지는 따로 받는다(코드 분할): 리포트(이미지 저장), 랭킹(QR), 데이터, 팀 페이지
-const Report = lazy(() => import("./screens/Report"));
-const Live = lazy(() => import("./screens/Live"));
+// 첫 화면(홈·플레이)에 필요 없는 페이지는 열 때 따로 받는다(코드 분할)
+const Result = lazy(() => import("./screens/Result"));
+const Rank = lazy(() => import("./screens/Rank"));
 const Data = lazy(() => import("./screens/Data"));
 const Team = lazy(() => import("./screens/Team"));
-const Me = lazy(() => import("./screens/Me"));
-
-startAuth(); // 로그인 설정이 있을 때만 동작
-startSync();
+const Demo = lazy(() => import("./screens/Demo"));
 
 export default function App() {
   const route = useRoute();
+  // 단축키 U: UX 렌즈(발표 때 화면 위에 용어집 용어 표시)
+  useEffect(() => {
+    const on = (e: KeyboardEvent) => {
+      const t = e.target as HTMLElement;
+      if (e.key.toLowerCase() === "u" && !e.metaKey && !e.ctrlKey && !/INPUT|TEXTAREA|SELECT/.test(t.tagName)) setLens(!lensIsOn());
+    };
+    window.addEventListener("keydown", on);
+    return () => window.removeEventListener("keydown", on);
+  }, []);
   let screen;
   if (route === "/") screen = <Home />;
   else if (route === "/play") screen = <Play />;
-  else if (route === "/report") screen = <Report />;
+  else if (route === "/result") screen = <Result />;
+  else if (route === "/rank") screen = <Rank />;
   else if (route === "/data") screen = <Data />;
-  else if (route === "/live") screen = <Live />;
   else if (route === "/team") screen = <Team />;
-  else if (route === "/me") screen = <Me />;
+  else if (route === "/demo") screen = <Demo />;
   else
     screen = (
       <>
@@ -40,12 +42,10 @@ export default function App() {
     );
   return (
     <MotionConfig reducedMotion="user">
-      <Aurora />
       <ErrorBoundary>
-        <Suspense fallback={<LoadingPage route={route} slow={false} />}>{screen}</Suspense>
+        <Suspense fallback={<Loading />}>{screen}</Suspense>
       </ErrorBoundary>
-      {route === "/play" && <BuddyDock />}
-      <Cheers />
+      <Toasts />
     </MotionConfig>
   );
 }

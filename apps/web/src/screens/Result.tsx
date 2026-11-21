@@ -1,0 +1,325 @@
+// 결산(#/result?id=): 등급 → 순위 → 칭호 → 곡선 → 코드네임 정체 공개 → 공유·코치·이름
+import { motion } from "motion/react";
+import { useEffect, useRef, useState } from "react";
+import { CountUp, Delta, ErrorState, LineChart, Loading, TopBar, toast } from "../components/ui";
+import { api, useAsync } from "../lib/api";
+import { dateDot, pct, won } from "../lib/format";
+import { Ant, Owl, Tuber, type CharId } from "../components/Characters";
+import { RoomView } from "../components/Scene";
+import { record } from "../lib/progress";
+import { nextFurniture, unlockedFurniture } from "../lib/room";
+import { go, query } from "../lib/router";
+import { sfx } from "../lib/sfx";
+import { KEYS, read, write } from "../lib/storage";
+import type { Coach, Final } from "../lib/types";
+import { MARKET_KO, weekEmoji } from "./play/logic";
+
+const GRADE_LINE: Record<Final["grade"], string> = {
+  S: "전설의 개미. 유튜버도 코스피도 다 제쳤어요!",
+  A: "1등! 유튜버 라이벌과 코스피를 이겼어요.",
+  B: "벌었고, 꽤 높은 순위예요.",
+  C: "잃지는 않았어요.",
+  D: "조금 잃었어요. 시장이 만만치 않죠?",
+  F: "크게 잃었어요. 다음 판엔 다르게!",
+};
+
+export default function Result() {
+  const id = query().id ?? read<string>(KEYS.last) ?? "";
+  const res = useAsync(() => api.final(id), [id]);
+  if (!id) {
+    go("/");
+    return null;
+  }
+  return (
+    <>
+      <TopBar route="/result" />
+      <main className="page result">
+        {res.status === "loading" && <Loading slow={res.slow} label="결산하는 중…" />}
+        {res.status === "error" && <ErrorState title="결산을 불러오지 못했어요" detail={res.error.message} onRetry={res.retry} />}
+        {res.status === "ready" && <Body f={res.data} id={id} />}
+      </main>
+    </>
+  );
+}
+
+function Body({ f, id }: { f: Final; id: string }) {
+  const demo = query().demo === "1";
+  const [gain] = useState(() => (demo ? { newTitle: false, newMarkets: [], best: false, starsBefore: 0, starsAfter: 0 } : record(id, f)));
+  const [revealed, setRevealed] = useState(false);
+  const [coach, setCoach] = useState<Coach | null>(null);
+  const [coachBusy, setCoachBusy] = useState(false);
+  const [nick, setNick] = useState(f.nickname ?? read<string>(KEYS.nick) ?? "");
+  const card = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    sfx(["S", "A", "B"].includes(f.grade) ? "level" : "tick");
+    if (gain.newTitle) window.setTimeout(() => toast(`새 칭호 획득! ${f.title.icon} ${f.title.name}`, { tone: "ok" }), 1200);
+    for (const m of gain.newMarkets) window.setTimeout(() => toast(`🔓 ${MARKET_KO[m]} 시장이 열렸어요!`, { tone: "ok", ms: 4500 }), 2400);
+    const before = unlockedFurniture(gain.starsBefore);
+    const fresh = unlockedFurniture(gain.starsAfter).filter((x) => !before.includes(x));
+    if (fresh.length) window.setTimeout(() => toast(`🛋️ 내 방에 새 가구 ${fresh.length}개가 들어왔어요!`, { tone: "ok", ms: 4500 }), 3400);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const yts = f.board.filter((b) => b.who === "yt");
+  const beatYt = yts.filter((b) => b.ret < f.ret).length;
+  const shareText = [
+    `타임슬립 개미 ${f.mode === "daily" && f.day ? `${f.day} 오늘의 시드` : "자유 플레이"} 🐜`,
+    `${f.grade} 등급 · ${pct(f.ret)} · ${f.title.icon} ${f.title.name}`,
+    `유튜버 ${yts.length}명 중 ${beatYt}명 이김${f.place ? ` · ${f.place.total}명 중 ${f.place.rank}등` : ""}`,
+    f.weeks.map(weekEmoji).join(""),
+    window.location.origin,
+  ].join("\n");
+
+  const share = async () => {
+    try {
+      if (navigator.share) await navigator.share({ text: shareText });
+      else {
+        await navigator.clipboard.writeText(shareText);
+        toast("결과를 복사했어요. 단톡방에 붙여 넣어 보세요!", { tone: "ok" });
+      }
+    } catch {
+      /* 공유 취소 */
+    }
+  };
+  const saveImage = async () => {
+    if (!card.current) return;
+    try {
+      const { toPng } = await import("html-to-image");
+      const url = await toPng(card.current, { pixelRatio: 2, backgroundColor: "#ffffff" });
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `timeslip-ant-${f.grade}.png`;
+      a.click();
+    } catch {
+      toast("이미지를 만들지 못했어요. 캡처로 저장해 주세요.", { tone: "warn" });
+    }
+  };
+  const askCoach = async () => {
+    setCoachBusy(true);
+    try {
+      setCoach(await api.coach(id));
+    } catch (e) {
+      toast((e as Error).message, { tone: "warn" });
+    } finally {
+      setCoachBusy(false);
+    }
+  };
+  const saveNick = async () => {
+    try {
+      const r = await api.nickname(id, nick);
+      write(KEYS.nick, r.nickname);
+      toast(`'${r.nickname}'(으)로 순위에 올렸어요`, { tone: "ok" });
+    } catch (e) {
+      toast((e as Error).message, { tone: "warn" });
+    }
+  };
+
+  return (
+    <>
+      <div className="res-card" ref={card}>
+        <p className="eyebrow">
+          {f.len}주 결산 · {f.mode === "daily" ? `오늘의 시드 ${f.day}` : f.mode === "practice" ? "연습 시즌" : "자유 플레이"}
+        </p>
+        <div className="res-ant">
+          <Ant char={f.char as CharId} mood={f.ret > 0 ? "happy" : f.ret < -0.1 ? "panic" : "worried"} size={70} bounce />
+        </div>
+        <motion.div className={`grade g-${f.grade}`} initial={{ scale: 2.4, rotate: -14, opacity: 0 }} animate={{ scale: 1, rotate: -6, opacity: 1 }} transition={{ type: "spring", stiffness: 200, damping: 14, delay: 0.2 }}>
+          {f.grade}
+        </motion.div>
+        <p className="res-ret">
+          <span className={f.ret > 0 ? "up" : f.ret < 0 ? "down" : ""}>
+            <CountUp to={f.ret * 100} format={(n) => `${n > 0 ? "+" : n < 0 ? "−" : ""}${Math.abs(n).toFixed(1)}%`} duration={1.4} delay={0.4} />
+          </span>
+        </p>
+        <p className="res-line">{f.grade === "C" && f.ret > 0.0005 ? "벌었어요! 그런데 라이벌들이 더 벌었어요." : GRADE_LINE[f.grade]}</p>
+        <p className="muted small">
+          최종 자산 {won(f.value)} (넣은 돈 {won(f.deposits)})
+        </p>
+
+        <motion.div className="title-badge" initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 1.2 }}>
+          <span className="tb-icon" aria-hidden>
+            {f.title.icon}
+          </span>
+          <span>
+            <b>{f.title.name}</b>
+            <span className="muted small">{f.title.why}</span>
+          </span>
+        </motion.div>
+
+        <ol className="res-board">
+          {f.board.map((b, i) => (
+            <motion.li key={b.name} className={b.who === "me" ? "me" : ""} initial={{ x: -16, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ delay: 1.5 + i * 0.12 }}>
+              <span className="rk">{i + 1}</span>
+              <span className="wk-who">
+                {b.who === "yt" && <Tuber name={b.name} size={22} />}
+                {b.who === "me" ? "🐜 나" : b.who === "yt" ? b.name : `📊 ${b.name}`}
+              </span>
+              <Delta x={b.ret} />
+            </motion.li>
+          ))}
+        </ol>
+        <p className="week-grid big" aria-label="주별 수익">
+          {f.weeks.map((r, i) => (
+            <span key={i} title={`${i + 1}주차 ${pct(r)}`}>
+              {weekEmoji(r)}
+            </span>
+          ))}
+        </p>
+        {f.place && (
+          <p className="res-place">
+            오늘의 시드 <b>{f.place.total.toLocaleString()}명 중 {f.place.rank}등</b> (상위 {Math.max(1, Math.round(f.place.top * 100))}%)
+          </p>
+        )}
+      </div>
+
+      <section className="card stars" aria-labelledby="ms">
+        <h2 id="ms" className="sec-title">
+          ⭐ 이번 시즌 별 +{f.stars}
+        </h2>
+        <ul className="missions">
+          {f.missions.map((m) => (
+            <li key={m.id} className={m.state}>
+              <span className="ms-ic" aria-hidden>
+                {m.icon}
+              </span>
+              <span>{m.label}</span>
+              <b>{m.state === "done" ? "★ 달성" : "✕"}</b>
+            </li>
+          ))}
+          {["S", "A", "B"].includes(f.grade) && (
+            <li className="done">
+              <span className="ms-ic">🏅</span>
+              <span>{f.grade} 등급 보너스</span>
+              <b>★{f.grade === "B" ? 1 : 2}</b>
+            </li>
+          )}
+        </ul>
+        {!demo && (
+          <p className="muted small">
+            모은 별 {gain.starsAfter}개 · {nextFurniture(gain.starsAfter) ? `${nextFurniture(gain.starsAfter)!.stars - gain.starsAfter}개 더 모으면 ${nextFurniture(gain.starsAfter)!.icon} ${nextFurniture(gain.starsAfter)!.name}` : "가구를 다 모았어요!"}
+          </p>
+        )}
+        {!demo && <RoomView char={f.char as CharId} items={unlockedFurniture(gain.starsAfter)} mood={f.ret > 0 ? "happy" : "calm"} height={220} />}
+      </section>
+
+      {f.mode === "practice" && (
+        <div className="practice-done card">
+          <Owl size={48} />
+          <p>
+            <b>연습 끝! 이제 진짜 시즌이에요.</b>
+            <br />
+            <span className="muted small">26주 · 국내·미국 주식 · 유튜버 라이벌 3명 · 내 개미를 골라서 시작해요.</span>
+          </p>
+          <button className="btn primary" onClick={() => go("/")}>
+            진짜 시즌 시작 ▶
+          </button>
+        </div>
+      )}
+
+      <div className="res-actions">
+        <button className="btn primary" onClick={share}>
+          결과 공유
+        </button>
+        <button className="btn ghost" onClick={saveImage}>
+          이미지 저장
+        </button>
+        <button className="btn ghost" onClick={() => go("/")}>
+          한 판 더
+        </button>
+      </div>
+
+      <section className="card" aria-labelledby="reveal">
+        <h2 id="reveal" className="sec-title">
+          🎭 코드네임의 정체
+        </h2>
+        <p className="muted small">
+          실제 기간: <b>{dateDot(f.period.from)} ~ {dateDot(f.period.to)}</b> 주간
+        </p>
+        {!revealed ? (
+          <button
+            className="btn primary block reveal-btn"
+            onClick={() => {
+              setRevealed(true);
+              sfx("flip");
+            }}
+          >
+            정체 공개하기
+          </button>
+        ) : (
+          <ul className="reveal">
+            {f.reveal.map((r, i) => (
+              <motion.li key={r.k} initial={{ rotateX: 90, opacity: 0 }} animate={{ rotateX: 0, opacity: 1 }} transition={{ delay: i * 0.06 }}>
+                <span className="muted small">{r.code}</span>
+                <b>{r.name}</b>
+                <Delta x={r.ret} />
+              </motion.li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <section className="card" aria-labelledby="curve">
+        <h2 id="curve" className="sec-title">
+          📈 26주 동안
+        </h2>
+        <LineChart
+          h={220}
+          series={[
+            { data: f.curves.me, label: "나", cls: "line-me", bold: true },
+            ...f.curves.rivals.map((d, i) => ({ data: d, label: f.rivalNames[i], cls: `line-yt${i + 1}` })),
+            { data: f.curves.index, label: "코스피", cls: "line-ix", dash: true },
+          ]}
+          xLabel={(i) => (i === 0 ? "시작" : "26주")}
+        />
+        <p className="muted small">멘탈 최저 {Math.min(...f.mental)} · 거래 {f.title.stats.trades}번 · 추격 매수 {f.title.stats.fomo}번</p>
+      </section>
+
+      <section className="card coach" aria-labelledby="coach">
+        <h2 id="coach" className="sec-title">
+          <Owl size={30} /> 부엉이 박사의 한마디(AI 코치)
+        </h2>
+        {!coach ? (
+          <>
+            <p className="muted small">내 거래 기록만 보고 습관을 세 줄로 돌아봐 줘요. 종목 추천이나 시장 전망은 하지 않아요.</p>
+            <button className="btn ghost block" onClick={askCoach} disabled={coachBusy}>
+              {coachBusy ? "기록을 읽는 중…" : "코치 부르기"}
+            </button>
+          </>
+        ) : (
+          <>
+            <p className="coach-head">{coach.headline}</p>
+            <ul className="coach-pts">
+              {coach.points.map((x, i) => (
+                <li key={i}>{x}</li>
+              ))}
+            </ul>
+            <p className="coach-tip">💡 {coach.tip}</p>
+            <p className="muted small">{coach.source === "ai" ? `AI(${coach.model}) · 숫자·권유 검증을 통과한 답이에요` : "AI 연결이 안 돼서 규칙으로 만든 답이에요"}</p>
+          </>
+        )}
+      </section>
+
+      {f.mode === "daily" && (
+        <section className="card" aria-labelledby="nick">
+          <h2 id="nick" className="sec-title">
+            🏷️ 순위에 보일 이름
+          </h2>
+          <div className="nick-row">
+            <label className="sr-only" htmlFor="nick-in">
+              이름
+            </label>
+            <input id="nick-in" value={nick} maxLength={12} placeholder="익명 개미" onChange={(e) => setNick(e.target.value)} />
+            <button className="btn primary" onClick={saveNick} disabled={!nick.trim()}>
+              저장
+            </button>
+          </div>
+          <a href="#/rank" className="link">
+            오늘의 순위 보기 →
+          </a>
+        </section>
+      )}
+      <p className="disclaimer">유튜버 성적은 영상 제목 속 &lsquo;오른다&rsquo; 언급을 기계적으로 따라 산 가상 계산이에요. 채널의 실제 운용 성과가 아니에요.</p>
+    </>
+  );
+}

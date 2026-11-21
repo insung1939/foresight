@@ -2,301 +2,387 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Foresight — 그때로 돌아가면, 맞힐 수 있을까?</title>
-<meta name="description" content="hindsight 가 모은 실제 과거로 나·유튜버·AI 의 투자 판단을 겨루는 게임 — 발표 슬라이드">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>타임슬립 개미 — 5조 아이디어 공유</title>
+<meta name="description" content="그때로 돌아가면 부자 될 수 있을까? 실제 과거 시장 26주를 1,000만 원과 폰 하나로 다시 사는 투자 판단 게임 — 5주차 아이디어·UI 프로토타입 발표(5조)">
+<meta name="theme-color" content="#6d4aff">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
+<!-- 캐릭터: 개미(마스코트) · 부엉이 박사(AI 코치) -->
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
   <defs>
-    <linearGradient id="dawn" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#7048e8"/><stop offset="1" stop-color="#f76707"/></linearGradient>
-    <linearGradient id="ob" x1="0" y1="0" x2=".4" y2="1"><stop offset="0" stop-color="#9775fa"/><stop offset="1" stop-color="#6741d9"/></linearGradient>
-    <linearGradient id="obl" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff4e6"/><stop offset="1" stop-color="#ffd8a8"/></linearGradient>
+    <linearGradient id="gBrand" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#6d4aff"/><stop offset=".55" stop-color="#d63384"/><stop offset="1" stop-color="#fd7e14"/></linearGradient>
+    <radialGradient id="gAnt" cx=".35" cy=".3" r=".8"><stop offset="0" stop-color="#7a5cff"/><stop offset="1" stop-color="#2b1d6b"/></radialGradient>
+    <radialGradient id="gOwl" cx=".4" cy=".3" r=".8"><stop offset="0" stop-color="#ffb26b"/><stop offset="1" stop-color="#e8590c"/></radialGradient>
   </defs>
-  <symbol id="mark" viewBox="0 0 28 28"><rect width="28" height="28" rx="8" fill="#1d1640"/><path d="M14 6.5 A7.5 7.5 0 0 0 14 21.5" fill="none" stroke="#fff" stroke-opacity=".45" stroke-width="2.2" stroke-dasharray="2.2 2.4"/><path d="M14 6.5 A7.5 7.5 0 0 1 14 21.5 Z" fill="url(#dawn)"/><circle cx="14" cy="14" r="1.9" fill="#fff"/></symbol>
-  <symbol id="owl" viewBox="0 0 120 120"><ellipse cx="60" cy="112" rx="30" ry="4" fill="#1d1640" opacity=".12"/><ellipse cx="22" cy="76" rx="9" ry="19" fill="#5f3dc4"/><ellipse cx="98" cy="76" rx="9" ry="19" fill="#5f3dc4"/><path d="M30 36 L22 12 L46 28 Z" fill="#7048e8"/><path d="M90 36 L98 12 L74 28 Z" fill="#7048e8"/><ellipse cx="60" cy="68" rx="40" ry="42" fill="url(#ob)"/><ellipse cx="60" cy="86" rx="24" ry="22" fill="url(#obl)"/><g stroke="#ffa94d" stroke-width="2" fill="none" stroke-linecap="round"><path d="M52 82 L56 86 L60 82 L64 86 L68 82"/><path d="M50 92 L54 96 L58 92 L62 96 L66 92 L70 96"/></g><ellipse cx="50" cy="109" rx="6" ry="3.5" fill="#f76707"/><ellipse cx="70" cy="109" rx="6" ry="3.5" fill="#f76707"/><circle cx="44" cy="56" r="15" fill="#fff"/><circle cx="76" cy="56" r="15" fill="#fff"/><circle cx="44" cy="57" r="7" fill="#1d1640"/><circle cx="76" cy="57" r="7" fill="#1d1640"/><circle cx="46" cy="54" r="2.4" fill="#fff"/><circle cx="78" cy="54" r="2.4" fill="#fff"/><g fill="#ff8787" opacity=".45"><ellipse cx="30" cy="70" rx="6" ry="3.5"/><ellipse cx="90" cy="70" rx="6" ry="3.5"/></g><path d="M55 68 L65 68 L60 77 Z" fill="#f76707"/></symbol>
+  <symbol id="ant" viewBox="0 0 120 130">
+    <g fill="none" stroke="#2b1d6b" stroke-width="4" stroke-linecap="round">
+      <path d="M48 26 C42 12 34 8 26 10"/><path d="M72 26 C78 12 86 8 94 10"/>
+      <path d="M44 84 L26 78"/><path d="M76 84 L94 78"/><path d="M46 96 L30 106"/><path d="M74 96 L90 106"/>
+      <path d="M50 116 L44 126"/><path d="M70 116 L76 126"/>
+    </g>
+    <circle cx="25" cy="10" r="6" fill="#fd7e14"/><circle cx="95" cy="10" r="6" fill="#d63384"/>
+    <ellipse cx="60" cy="108" rx="22" ry="15" fill="url(#gAnt)"/>
+    <ellipse cx="60" cy="86" rx="15" ry="12" fill="url(#gAnt)"/>
+    <path d="M60 76 l-6 4 6 18 6 -18z" fill="#fd7e14"/>
+    <circle cx="60" cy="48" r="30" fill="url(#gAnt)"/>
+    <ellipse cx="49" cy="46" rx="8.5" ry="10" fill="#fff"/><ellipse cx="71" cy="46" rx="8.5" ry="10" fill="#fff"/>
+    <circle cx="51" cy="48" r="5" fill="#1d1640"/><circle cx="73" cy="48" r="5" fill="#1d1640"/>
+    <circle cx="53" cy="45.5" r="1.8" fill="#fff"/><circle cx="75" cy="45.5" r="1.8" fill="#fff"/>
+    <ellipse cx="40" cy="60" rx="5.5" ry="3.5" fill="#ff8fb8" opacity=".85"/><ellipse cx="80" cy="60" rx="5.5" ry="3.5" fill="#ff8fb8" opacity=".85"/>
+    <path d="M53 63 Q60 69 67 63" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round"/>
+  </symbol>
+  <symbol id="owl" viewBox="0 0 120 130">
+    <path d="M30 34 L24 10 L46 26Z M90 34 L96 10 L74 26Z" fill="#c2410c"/>
+    <ellipse cx="60" cy="76" rx="40" ry="48" fill="url(#gOwl)"/>
+    <ellipse cx="60" cy="94" rx="24" ry="26" fill="#fff4e6"/>
+    <circle cx="43" cy="56" r="16" fill="#fff"/><circle cx="77" cy="56" r="16" fill="#fff"/>
+    <circle cx="43" cy="56" r="17" fill="none" stroke="#6d4aff" stroke-width="3.5"/><circle cx="77" cy="56" r="17" fill="none" stroke="#6d4aff" stroke-width="3.5"/>
+    <path d="M60 56 h0" stroke="#6d4aff" stroke-width="3.5"/>
+    <circle cx="45" cy="58" r="7" fill="#1d1640"/><circle cx="75" cy="58" r="7" fill="#1d1640"/>
+    <circle cx="47" cy="55" r="2.2" fill="#fff"/><circle cx="77" cy="55" r="2.2" fill="#fff"/>
+    <path d="M54 70 L60 80 L66 70Z" fill="#fd7e14"/>
+    <path d="M44 90 q4 4 8 0 M56 98 q4 4 8 0 M68 90 q4 4 8 0" fill="none" stroke="#f0a35e" stroke-width="2.5" stroke-linecap="round"/>
+    <path d="M22 18 h76 l-38 -14z" fill="#1d1640"/><path d="M60 18 v12" stroke="#1d1640" stroke-width="3"/>
+  </symbol>
 </svg>
 
-<div id="stage">
-  <div class="aurora"><i class="a1"></i><i class="a2"></i><i class="a3"></i></div>
-  <header class="topbar"><span class="brand"><svg><use href="#mark"/></svg>Foresight</span><span class="sp"></span><nav class="parts" id="parts"></nav></header>
-  <footer class="foot"><span id="pos">1 / 1</span><div class="bar"><i id="bar"></i></div><span class="dots" id="dots"></span><span class="nav"><button id="prev" aria-label="이전">←</button><button id="next" aria-label="다음">→</button></span></footer>
+<!-- 휴대폰: 위쪽 바 -->
+<header class="mbar">
+  <span class="brand"><svg class="ant"><use href="#ant"/></svg>타임슬립 개미</span>
+  <a data-link="service" class="mbtn">게임 하기 ↗</a>
+</header>
 
-<!-- 1 ═══════ 표지 ═══════ -->
-<section class="slide" id="cover" data-part="0" data-mood="1" data-transition="zoom" data-title="표지">
-  <div class="wrap">
-    <div class="stg">
-      <div class="logo"><svg><use href="#mark"/></svg><span>Foresight</span></div>
-      <h1>그때로 돌아가면,<br><em>맞힐 수 있을까?</em></h1>
-      <p class="lead">유튜버 말 뒤 실제 주가를 모은 <b>hindsight</b>의 기록으로,<br>이름을 가린 과거 순간에서 <b>나 · 유튜버 · AI</b>의 판단을 겨루는 게임</p>
-      <div class="team" id="team"></div>
-    </div>
-    <div class="card join stg">
-      <div class="qr" id="qr"></div>
-      <b>📱 지금 같이 해 보세요</b>
-      <small>QR → 🗓️ 오늘의 챌린지 (모두 같은 10문제)<br>마지막 장에서 실시간 랭킹을 공개해요</small>
-    </div>
-  </div>
-  <svg class="owl"><use href="#owl"/></svg>
-  <aside class="notes">안녕하세요. 지나고 보면 다 쉬워 보입니다. 그런데 그때로 돌아가면 정말 맞힐 수 있을까요? 지금 화면의 QR로 들어가 '오늘의 챌린지'를 같이 해 주세요. 모두 같은 10문제이고, 발표 마지막에 순위를 공개하겠습니다.</aside>
-</section>
+<div id="stage" class="stage">
+  <div class="aurora" aria-hidden="true"><i></i><i></i><i></i></div>
+  <header class="topline">
+    <span class="brand"><svg class="ant"><use href="#ant"/></svg>타임슬립 개미<small>Foresight</small></span>
+    <span class="tag" id="tag"></span>
+  </header>
 
-<!-- 2 ═══════ 문제 ═══════ -->
-<section class="slide" id="problem" data-part="1" data-mood="2" data-title="문제">
-  <div class="kicker stg"><span class="n">1</span>문제</div>
-  <h2 class="stg">유튜브 보고 산 종목,<br>그 말대로 했으면 <em>어땠을까?</em></h2>
-  <div class="body">
-    <div class="grid3">
-      <div class="card stat" data-in="1"><div class="big" data-count="1442" data-suf="만">1,442만</div><div class="lab">주식을 가진 개인 투자자<div class="src">한국예탁결제원 · 2025년 12월 결산 상장사</div></div></div>
-      <div class="card stat" data-in="2"><div class="big" data-count="37.4" data-dec="1" data-suf="%">37.4%</div><div class="lab">주식 정보를 얻는 곳 <b>1위 유튜브</b><div class="src">피앰아이 1,000명 조사 · 서울신문 2026.9.14</div></div></div>
-      <div class="card ink stat" data-in="3"><div class="mid">0곳</div><div class="lab">그 말이 <b style="color:#fff">얼마나 맞았는지</b><br>재 주는 곳</div></div>
+  <!-- 1. 표지 -->
+  <section class="slide cover" id="cover" data-title="표지 · 그때로 돌아가면">
+    <div class="cv-l">
+      <p class="eyebrow">금융빅데이터분석실습 · 5주차 아이디어 공유 · 5조</p>
+      <h1>그때로 돌아가면,<br><span class="grad">부자</span> 될 수 있을까?</h1>
+      <div class="logo-pill"><svg class="ant"><use href="#ant"/></svg><b>타임슬립 개미</b></div>
+      <p class="lead">1,000만 원과 폰 하나.<br>실제로 있었던 시장의 반년을 다시 산다.</p>
+      <p class="team" data-team></p>
     </div>
-    <p class="punch" data-in="3">정보는 넘치는데, <span class="hl">판단을 연습하고 채점받을 곳</span>이 없다</p>
-  </div>
-  <aside class="notes">개인 투자자는 1,442만 명이고, 정보를 얻는 곳 1위는 유튜브입니다. 그런데 그 유튜버 말대로 했으면 어땠는지, 재 주는 곳은 없습니다. 실전으로 연습하면 진짜 돈을 잃고, 결과를 알기까지 몇 주가 걸립니다.</aside>
-</section>
+    <div class="cv-r" aria-hidden="true">
+      <div class="portal">
+        <i class="ring"></i><i class="ring r2"></i>
+        <div class="clock"><i class="hand h1"></i><i class="hand h2"></i></div>
+        <svg class="ant hero"><use href="#ant"/></svg>
+      </div>
+      <span class="chip f1">📅 2025.10 · 월요일 아침</span>
+      <span class="chip f2">💰 10,000,000원</span>
+      <span class="chip f3">📺 "무조건 오른다"</span>
+      <span class="chip f4">▶ 다음 주</span>
+    </div>
+  </section>
 
-<!-- 3 ═══════ 근거 ═══════ -->
-<section class="slide" id="evidence" data-part="1" data-mood="2" data-title="데이터 근거">
-  <div class="kicker stg"><span class="n">1</span>지난 학기 hindsight 데이터가 말한 것</div>
-  <h2 class="stg">“오른다”고 한 뒤, <em>20거래일</em></h2>
-  <div class="body">
-    <div class="grid2">
-      <div class="card stat stg"><div class="big d" data-b="summary.hindsight.bull.avg" data-fmt="pct1">−4.4%</div><div class="lab">유튜버가 ‘오른다’고 한 국내 종목 <b data-b="summary.hindsight.bull.n" data-fmt="int">7,143</b>번의 20거래일 뒤 평균 · 실제로 오른 건 <b data-b="summary.hindsight.bull.hit" data-fmt="pct0">40%</b></div></div>
-      <div class="card" data-in="1">
-        <div class="lab" style="margin:0 0 14px"><b>자극적인 제목</b>일수록 (텍스트 분석 · c-TF-IDF)</div>
-        <div class="bars" id="hype"></div>
+  <!-- 2. 대상 사용자와 문제 -->
+  <section class="slide" id="problem" data-title="대상 사용자와 문제" data-tag="01 · 누구의 어떤 문제">
+    <h2>유튜브로 투자를 배우는 <span class="grad">초보 개미</span></h2>
+    <div class="prob">
+      <div class="card stat">
+        <p class="q">주식 정보를 어디서 얻나</p>
+        <div class="mega"><span data-count="37.4" data-dec="1">37.4</span><small>%</small></div>
+        <p class="a"><b>유튜브</b> — 채널 1위</p>
+        <p class="src">출처: 피앰아이(2026.6)</p>
+        <div class="persona"><svg class="ant"><use href="#ant"/></svg><div><b>2030 주린이 개미</b><span>소액 · 유튜브로 공부 · 실전 경험 적음</span></div></div>
+      </div>
+      <ol class="pains">
+        <li data-in="1"><i>👀</i><div><b>지나고 보면 다 쉬워 보인다</b><span>사후확신 편향</span></div></li>
+        <li data-in="2"><i>🔥</i><div><b>“무조건 오른다”에 흔들린다</b><span>FOMO · 추격 매수</span></div></li>
+        <li data-in="3"><i>💸</i><div><b>실전에서 배우면 수업료가 비싸다</b><span>잃고 나서야 배운다</span></div></li>
+      </ol>
+    </div>
+    <p class="need" data-in="3"><span>필요한 것</span><em>잃지 않고, <b>흔들리는 경험</b>을 미리 해 볼 곳</em></p>
+  </section>
+
+  <!-- 3. 우리 데이터로 본 사실 -->
+  <section class="slide" id="facts" data-title="우리 데이터로 본 사실" data-tag="02 · 우리 데이터로 본 사실">
+    <h2>그때로 가면 쉬울까? <span class="muted">hindsight 1년치로 확인</span></h2>
+    <div class="g3 facts">
+      <div class="card fact" data-in="1">
+        <p class="q">유튜버의 “오른다”를 따라 샀다면</p>
+        <div class="mega"><span data-b="ghosts.beat" data-count="5">5</span><small>/ <span data-b="ghosts.n">47</span>명</small></div>
+        <p class="a">만 코스피(<b class="up" data-b="ghosts.kospi|pct">+30.8%</b>)를 이겼다</p>
+        <svg id="histo" class="chart" viewBox="-4 -4 430 186" role="img" aria-label="유튜버 고스트 47명의 수익률 분포"></svg>
+        <p class="cap">유튜버 고스트 수익률 분포(명)</p>
+      </div>
+      <div class="card fact" data-in="2">
+        <p class="q">지난주 유튜브 언급 수 → 다음 주 평균</p>
+        <div id="hypebars" class="hypebars"></div>
+        <p class="a">화제가 클수록 <b>덜 올랐다</b></p>
+        <p class="cap">종목×주 <span data-b="all.n">9,690</span>건</p>
+      </div>
+      <div class="card fact" data-in="3">
+        <p class="q">한 주 +15% 급등, 그다음 주</p>
+        <div class="mega"><span data-b="momentum.afterJump.win|pct0" data-count="47" data-suf="%">47%</span><small>만 올랐다</small></div>
+        <div id="dotgrid" class="dotgrid" aria-hidden="true"></div>
+        <p class="a">평균은 <b class="up" data-b="momentum.afterJump.mean|pct2">+1.55%</b> · 사실상 동전 던지기</p>
       </div>
     </div>
-    <div class="card" data-in="2" style="margin-top:24px">
-      <div class="lab" style="margin:0">유튜버별 적중률 (방향 예측 30번 이상) — 50% 넘는 사람 <b data-b="hsGood">11</b> / <b data-b="hsN">26</b>명</div>
-      <div class="strip" id="strip"><span class="axis"></span><span class="half"></span><span class="tk" style="left:0%">0%</span><span class="tk" style="left:50%">50%</span><span class="tk" style="left:100%">100%</span></div>
-    </div>
-  </div>
-  <aside class="notes">우리 팀이 지난 학기 만든 hindsight가 수집한 기록입니다. 유튜버가 오른다고 한 종목은 20거래일 뒤 평균 −4.4%, 실제로 오른 건 40%였습니다. 제목에 '놓치면', '무조건' 같은 말이 들어가면 더 나빴습니다. 유튜버 26명 중 동전 던지기(50%)보다 나은 사람은 11명뿐입니다. 상관관계이지 인과는 아닙니다.</aside>
-</section>
+    <p class="foot">자료: hindsight DB → 시즌 팩(170종목 주봉, 2025.10~2026.11). 고스트 = 지난주 “오른다”고 한 종목을 이번 주 똑같이 나눠 산 가상 포트폴리오</p>
+  </section>
 
-<!-- 4 ═══════ 해결 ═══════ -->
-<section class="slide" id="solution" data-part="2" data-mood="3" data-title="해결">
-  <div class="kicker stg"><span class="n">2</span>해결</div>
-  <h2 class="stg">그 순간으로 돌아가 <em>직접 판단</em>하고, 바로 채점받는다</h2>
-  <div class="body">
-    <div class="loop">
-      <div class="card st" data-in="1"><span class="e emoji">🕶️</span><b>이름 가린 실제 순간</b><small>A사, 60일 +88%<br>452문제</small></div>
-      <div class="card st" data-in="2"><span class="e emoji">🃏</span><b>6장 중 3장만</b><small>차트·공시·재무·뉴스<br>유튜버·AI</small></div>
-      <div class="card st" data-in="3"><span class="e emoji">⚖️</span><b>얼마나 담을까</b><small>공매도 50% ~ 풀매수</small></div>
-      <div class="card st" data-in="4"><span class="e emoji">🎬</span><b>20일 리플레이</b><small>하루씩 · 속보 · 지금 팔기</small></div>
-      <div class="card st key" data-in="5"><span class="e emoji">🎯</span><b>채점 · 비교</b><small>유튜버 · AI · 코스피<br>· 다른 사람들</small></div>
+  <!-- 4. 해결: 핵심 루프 -->
+  <section class="slide" id="loop" data-title="해결 · 핵심 루프" data-tag="03 · 해결">
+    <h2>1,000만 원과 폰 하나로 <span class="grad">실제 과거 26주</span>를 다시 산다</h2>
+    <div class="loopwrap">
+      <div class="loop">
+        <svg class="orbit" viewBox="0 0 520 520" aria-hidden="true"><circle cx="260" cy="260" r="200"/></svg>
+        <div class="hub"><svg class="ant"><use href="#ant"/></svg><b>한 턴 = 실제 1주</b><span>20~40초</span></div>
+        <div class="node n1"><i>📱</i><b>월요일 아침 피드</b><span>실제 유튜브 제목 · 공시</span></div>
+        <div class="node n2"><i>🛒</i><b>사고팔기</b><span>최대 5종목 · 바텀시트</span></div>
+        <div class="node n3"><i class="play">▶</i><b>다음 주</b><span>버튼 하나</span></div>
+        <div class="node n4"><i>📈</i><b>실제 주간 결과</b><span>라이벌 순위가 바뀐다</span></div>
+      </div>
+      <ul class="rules">
+        <li data-in="1" style="--i:0"><i>🎭</i><div><b>코드네임</b><span>“반도체 A” — 기억으로는 못 이긴다</span></div></li>
+        <li data-in="1" style="--i:1"><i>🦊</i><div><b>라이벌</b><span>실제 유튜버 고스트 3명 + 코스피</span></div></li>
+        <li data-in="1" style="--i:2"><i>🧠</i><div><b>멘탈 게이지</b><span>0이 되면 강제 패닉셀</span><span class="gauge"><i></i></span></div></li>
+        <li data-in="1" style="--i:3"><i>🎲</i><div><b>인생 이벤트</b><span>4주마다 — 월급 · 코인 링크 · 마통</span></div></li>
+        <li data-in="1" style="--i:4"><i>🏆</i><div><b>결산</b><span>등급 · 칭호 · 코드네임 정체 공개</span></div></li>
+      </ul>
     </div>
-    <p class="punch" data-in="6" style="font-size:30px">🗓️ 오늘의 챌린지 · 🏆 실시간 랭킹 · 🦉 새벽이 · 🔥 연속 적중 · 🏅 배지 · 로그인은 선택</p>
-  </div>
-  <aside class="notes">Foresight는 결과를 가린 실제 과거 순간으로 돌아갑니다. 정보 카드 6장 중 3장만 고를 수 있어, 무엇을 볼지 고르는 것도 실력입니다. 비중을 정하면 20일이 하루씩 재생되고 언제든 팔 수 있습니다. 끝나면 유튜버, AI, 코스피, 다른 사람들과 나란히 채점합니다.</aside>
-</section>
+    <p class="foot">정규 시즌 26주(약 10분) · 연습 시즌 8주 · 6종목 · 오늘의 시드는 모두 같은 시장</p>
+  </section>
 
-<!-- 5 ═══════ 시연 ═══════ -->
-<section class="slide" id="demo" data-part="2" data-mood="3" data-title="시연" data-steps="5">
-  <div class="wrap">
-    <div class="phone stg"><iframe id="app" title="Foresight 화면" loading="lazy"></iframe></div>
-    <div>
-      <div class="kicker stg"><span class="n">2</span>시연</div>
-      <h2 class="stg" style="font-size:52px">실제 화면으로</h2>
-      <div class="demo-list">
-        <div class="card it" data-step="1"><span class="no">1</span><span>🗓️ 오늘의 챌린지 · 닉네임<small>로그인 없이 바로, 휴대폰 엄지 조작</small></span></div>
-        <div class="card it" data-step="2"><span class="no">2</span><span>📺 유튜버 카드<small>그 유튜버의 ‘그 시점까지’ 적중률 · 🔥 자극어</small></span></div>
-        <div class="card it" data-step="3"><span class="no">3</span><span>🤖 AI 애널리스트<small>근거 칩 · ✓ 검증 통과 · 이름 캐기엔 거절</small></span></div>
-        <div class="card it" data-step="4"><span class="no">4</span><span>🎬 20일 리플레이 · 💰 지금 팔기<small>속보에서 멈추고 비중 조정</small></span></div>
-        <div class="card it" data-step="5"><span class="no">5</span><span>📊 리포트 · 🏆 랭킹<small>성향 · 등급 · hindsight 비교</small></span></div>
+  <!-- 5. 레퍼런스 -->
+  <section class="slide" id="refs" data-title="레퍼런스에서 가져온 재미" data-tag="04 · 레퍼런스 분석">
+    <h2>따라 하지 않고, <span class="grad">재미의 원리</span>만 가져왔다</h2>
+    <div class="g3 refs">
+      <div class="card ref" data-in="1">
+        <div class="rh"><i>⚽</i><div><b>킥루</b><span>벤치에서 발롱까지</span></div></div>
+        <p class="why">버튼 하나로 커리어 한 번을 산다</p>
+        <div class="arrow">↓</div>
+        <ul><li><b>[다음 주 ▶]</b> 하나로 굴러가는 템포</li><li>4주마다 진로 선택 이벤트</li><li>결산 카드 → 오늘의 랭킹</li></ul>
+      </div>
+      <div class="card ref" data-in="2">
+        <div class="rh"><i>🦠</i><div><b>전염병 주식회사</b><span>Plague Inc.</span></div></div>
+        <p class="why">퍼지는 게 눈에 보인다</p>
+        <div class="arrow">↓</div>
+        <ul><li><b>하이프 게이지</b> = 실제 언급 수</li><li>3D 화제 광장: 개미 군중이 몰린다</li><li>반대 세력 = 유튜버 · 코스피</li></ul>
+      </div>
+      <div class="card ref" data-in="3">
+        <div class="rh"><i>🏙️</i><div><b>키자니아</b><span>직업 역할놀이</span></div></div>
+        <p class="why">진짜 일을 놀이로 해 본다</p>
+        <div class="arrow">↓</div>
+        <ul><li><b>“증권사 첫 출근”</b> 튜토리얼</li><li>어려운 용어는 탭하면 쉬운 말</li><li>스마트폰 피드라는 익숙한 소품</li></ul>
       </div>
     </div>
-  </div>
-  <aside class="notes">실제 서비스 화면입니다(왼쪽은 진짜 앱). 오늘의 챌린지를 시작하고, 유튜버 카드에서 그 유튜버의 그 시점까지 적중률과 자극적 표현을 봅니다. AI 애널리스트에 '이 회사 이름이 뭐야?'를 물어 거절하는 걸 보여 주고, 리플레이에서 지금 팔기, 리포트와 랭킹까지 갑니다. → 키로 단계를 넘기면 오른쪽 목록이 따라옵니다.</aside>
-</section>
+  </section>
 
-<!-- 6 ═══════ 시장 ═══════ -->
-<section class="slide" id="market" data-part="2" data-mood="3" data-title="시장·차별화">
-  <div class="kicker stg"><span class="n">2</span>시장 · 차별화</div>
-  <h2 class="stg">연습장은 많다. <em>판단을 채점</em>해 주는 곳은 없다</h2>
-  <div class="body">
-    <table class="cmp">
-      <thead><tr><th></th><th>실제 과거 상황</th><th>바로 정답</th><th>정보 고르기 훈련</th><th>유튜버 성적 검증</th><th>근거 붙은 AI</th></tr></thead>
-      <tbody>
-        <tr data-row="1"><th>증권사 모의투자</th><td class="x">–</td><td class="x">–</td><td class="x">–</td><td class="x">–</td><td class="x">–</td></tr>
-        <tr data-row="1"><th>투자 유튜브 · 커뮤니티</th><td class="x">–</td><td class="x">–</td><td class="x">–</td><td class="x">–</td><td class="x">–</td></tr>
-        <tr data-row="1"><th>투자 교육 퀴즈 · 강의</th><td class="x">–</td><td>●</td><td class="x">–</td><td class="x">–</td><td class="x">–</td></tr>
-        <tr data-row="2" class="me"><th>Foresight</th><td>●</td><td>●</td><td>●</td><td>●</td><td>●</td></tr>
-      </tbody>
-    </table>
-    <p class="src" style="text-align:center;margin-top:16px">서비스 유형 기준 팀 비교</p>
-  </div>
-  <aside class="notes">모의투자는 지금 시장에서 몇 주를 기다려야 하고, 유튜브와 커뮤니티는 말한 사람의 과거 성적을 보여 주지 않습니다. 우리는 실제 과거, 즉시 채점, 정보 고르기, 유튜버 성적 검증, 근거 있는 AI를 한 번에 합니다.</aside>
-</section>
-
-<!-- 7 ═══════ 아키텍처 ═══════ -->
-<section class="slide" id="arch" data-part="3" data-mood="4" data-title="아키텍처" data-steps="1">
-  <div class="kicker stg"><span class="n">3</span>시스템</div>
-  <h2 class="stg">정답은 <em>서버만</em> 안다</h2>
-  <div class="arch">
-    <svg class="links" id="archsvg">
-      <path id="l1" class="ln" data-a="fe" data-b="be"/><path id="l2" class="ln" data-a="be" data-b="db"/><path id="l3" class="ln" data-a="be" data-b="ai"/>
-      <path id="l4" class="ln" data-a="src" data-b="be"/>
-      <circle r="8" class="pk"><animateMotion dur="1.8s" repeatCount="indefinite"><mpath href="#l1"/></animateMotion></circle>
-      <circle r="8" class="pk"><animateMotion dur="2.2s" begin=".4s" repeatCount="indefinite"><mpath href="#l2"/></animateMotion></circle>
-      <circle r="8" class="pk"><animateMotion dur="2s" begin=".9s" repeatCount="indefinite"><mpath href="#l3"/></animateMotion></circle>
-      <circle r="8" class="pk"><animateMotion dur="2.6s" begin=".2s" repeatCount="indefinite"><mpath href="#l4"/></animateMotion></circle>
-    </svg>
-    <div class="node fe stg" data-node="fe" style="left:0;top:60px"><span class="tag">Vercel</span><b>React 화면</b><small>게임 · 리포트 · 랭킹 · 데이터<br>휴대폰 · PWA · 애니메이션</small></div>
-    <div class="node be stg" data-node="be" style="left:560px;top:50px;min-width:300px"><span class="tag">Render</span><b>FastAPI 서버</b><small>단계별 공개 · 규칙 · 이름 가리기<br>AI 검증 · 요청 한도 · 게임 잠금</small></div>
-    <div class="node db stg" data-node="db" style="left:1060px;top:20px"><span class="tag">Supabase</span><b>PostgreSQL</b><small>게임 · 판단 · AI 기록 · 설문<br>구글 로그인(선택)</small></div>
-    <div class="node ai stg" data-node="ai" style="left:1060px;top:190px"><span class="tag">LLM</span><b>Gemini · 로컬 Qwen</b><small>같은 검증 7가지<br>키 없으면 로컬(Ollama)</small></div>
-    <div class="node src stg" data-node="src" style="left:0;top:270px"><span class="tag">읽기 전용</span><b>hindsight DB + DART + 뉴스</b><small>문제 452개 · 품질 점검 · 텍스트 분석<br>정답 파일은 암호화(pack.enc)</small></div>
-    <div class="stages" data-in="1">
-      <span>pick<small>상황만</small></span><span class="ar">→</span>
-      <span>카드<small>열 때 한 장씩</small></span><span class="ar">→</span>
-      <span>replay<small>오늘까지만</small></span><span class="ar">→</span>
-      <span>event<small>그날 속보</small></span><span class="ar">→</span>
-      <span class="lock">reveal<small>이제 정답</small></span>
+  <!-- 6. UI 프로토타입 -->
+  <section class="slide proto" id="proto" data-title="UI 프로토타입 · 시연" data-tag="05 · UI 프로토타입">
+    <div class="proto-head">
+      <h2>주요 화면 <span class="muted">실제 앱 그대로</span></h2>
+      <a class="btn" data-link="service">프로토타입 열기 ↗</a>
     </div>
-  </div>
-  <aside class="notes">화면은 Vercel의 React, 서버는 Render의 FastAPI, 기록은 Supabase입니다. 핵심은 정답을 서버만 갖고 있다는 것입니다. 화면은 단계마다 볼 수 있는 것만 받습니다. 카드는 열 때 한 장씩, 리플레이는 오늘까지의 주가만 오고, 정답은 마지막에만 옵니다. 테스트가 10라운드 내내 응답에 정답이 없는지 검사합니다.</aside>
-</section>
+    <div class="phones">
+      <figure class="phone" data-step="1" data-src="/#/" data-label="홈">
+        <figcaption><em>1</em><b>홈</b><span>개미 고르기 · 시즌 선택</span></figcaption>
+        <div class="frame"><div class="screen"><div class="ph"><svg class="ant"><use href="#ant"/></svg><span class="l">불러오는 중…</span><a class="open">새 창으로 열기 ↗</a></div></div></div>
+      </figure>
+      <figure class="phone" data-step="2" data-src="/#/demo" data-label="플레이">
+        <figcaption><em>2</em><b>플레이</b><span>피드 · 바텀시트 · 다음 주 ▶</span></figcaption>
+        <div class="frame"><div class="screen"><div class="ph"><svg class="ant"><use href="#ant"/></svg><span class="l">불러오는 중…</span><a class="open">새 창으로 열기 ↗</a></div></div></div>
+      </figure>
+      <figure class="phone" data-step="3" data-src="/#/rank" data-label="랭킹">
+        <figcaption><em>3</em><b>랭킹</b><span>오늘의 시드 · 유튜버와 함께</span></figcaption>
+        <div class="frame"><div class="screen"><div class="ph"><svg class="ant"><use href="#ant"/></svg><span class="l">불러오는 중…</span><a class="open">새 창으로 열기 ↗</a></div></div></div>
+      </figure>
+      <figure class="phone" data-step="4" data-src="/#/data" data-label="데이터">
+        <figcaption><em>4</em><b>데이터</b><span>출처 · 분석 공개</span></figcaption>
+        <div class="frame"><div class="screen"><div class="ph"><svg class="ant"><use href="#ant"/></svg><span class="l">불러오는 중…</span><a class="open">새 창으로 열기 ↗</a></div></div></div>
+      </figure>
+    </div>
+  </section>
 
-<!-- 8 ═══════ AI ═══════ -->
-<section class="slide" id="ai" data-part="3" data-mood="4" data-title="AI · 오답 대응" data-steps="2">
-  <div class="kicker stg"><span class="n">3</span>AI</div>
-  <h2 class="stg">AI는 화려함보다 <em>틀렸을 때</em></h2>
-  <div class="body">
-    <div class="grid2" style="align-items:start">
-      <div class="flow3 stg">
-        <div class="card f"><span class="e emoji">🔎</span><span><b>① 시점 제한 검색 (RAG)</b><small>그 문제의 산 날 <b>이전 문서만</b> 꺼낸다 — 미래 문서는 절대 안 섞는다</small></span></div>
-        <div class="card f"><span class="e emoji">🏷️</span><span><b>② 근거 id 를 달아 생성</b><small>F1 재무 · D2 공시 · N3 뉴스 · Y1 유튜브 → 화면에 출처 칩</small></span></div>
-        <div class="card f"><span class="e emoji">✅</span><span><b>③ 보여 주기 전 7가지 검사</b><small>형식 · 인용 실재 · 이름 노출 · 지어낸 숫자 · 권유 · 근거 없는 단정 · 다른 종목<br>실패 → 1번 더 → 또 실패면 <b>숨김</b></small></span></div>
+  <!-- 7. 한 판의 흐름 -->
+  <section class="slide" id="flow" data-title="한 판의 흐름 · UX 원칙" data-tag="05 · 이용 흐름">
+    <h2>한 판의 흐름 <span class="muted">3분 안에 첫 재미, 끝나면 “한 판 더”</span></h2>
+    <ol class="flow">
+      <li style="--i:0"><i><svg class="ant"><use href="#ant"/></svg></i><b>개미 고르기</b><span>직장인 · 대학생 · 큰손…</span></li>
+      <li style="--i:1"><i>📱</i><b>월요일 피드</b><span>영상 · 공시 · 화제 광장</span></li>
+      <li style="--i:2"><i>🧾</i><b>사고팔기</b><span>바텀시트 · 🦉 개미 비서</span></li>
+      <li style="--i:3"><i class="play">▶</i><b>다음 주</b><span>3초 리캡 · ▶▶ 4주</span></li>
+      <li style="--i:4"><i>🎲</i><b>사건 카드</b><span>4주마다 2지선다</span></li>
+      <li style="--i:5"><i>🏆</i><b>결산</b><span>등급 · 칭호 · 정체 공개</span></li>
+      <li style="--i:6"><i>🏠</i><b>★ 내 방 꾸미기</b><span>3D 방 · 개미 옷</span></li>
+    </ol>
+    <div class="again">↺ 한 판 더</div>
+    <div class="ux" data-in="1">
+      <p class="q">UI/UX 용어집 → 화면에 적용</p>
+      <div class="chips">
+        <span>Bottom Sheet</span><span>Progressive Disclosure</span><span>Coach Marks ≤ 3</span><span>Autosave</span>
+        <span>Skeleton · Empty · Error State</span><span>Toast · Undo</span><span>엄지 영역 56px 버튼</span>
+        <span><b class="up">▲ 상승</b> · <b class="dn">▼ 하락</b> 색 + 기호</span><span>Reduced Motion</span><span>360~430px 모바일 우선</span>
       </div>
-      <div>
-        <div class="chat" data-in="1">
-          <div class="q">이 회사 이름이 뭐야?</div>
-          <div class="a">확인된 근거가 없어요. 회사는 ‘A사’로만 말할 수 있어요.<br><span class="ok">✓ 검증 통과</span></div>
-          <div class="q">20일 뒤 주가는 얼마나 오를까?</div>
-          <div class="a">확인된 근거가 없어요. 자료로는 미래 주가를 알 수 없어요.<br><span class="no">ℹ️ 자료에 근거 없음</span></div>
+    </div>
+  </section>
+
+  <!-- 8. 데이터 -->
+  <section class="slide" id="data" data-title="데이터 확보 · 분석 방향" data-tag="06 · 데이터 확보와 분석">
+    <h2>이미 모아 둔 <span class="grad">1년치 실제 데이터</span>로 만든다</h2>
+    <div class="pipe">
+      <div class="col" data-in="1">
+        <p class="pt">① 수집 <small>hindsight DB</small></p>
+        <ul class="nums">
+          <li><i>📺</i><span>유튜브 채널</span><b data-b="source.channels" data-count="51">51</b></li>
+          <li><i>🎬</i><span>영상</span><b data-b="source.videos" data-count="49299">49,299</b></li>
+          <li><i>💬</i><span>종목 언급</span><b data-b="source.mentions" data-count="54323">54,323</b></li>
+          <li><i>📈</i><span>시세(행)</span><b data-b="source.prices" data-count="317251">317,251</b></li>
+          <li><i>📑</i><span>DART 공시</span><b data-b="source.disclosures" data-count="53980">53,980</b></li>
+        </ul>
+      </div>
+      <div class="col" data-in="2">
+        <p class="pt">② 가공 <small>build_season.py</small></p>
+        <ul class="steps">
+          <li>종목 매칭 · 유동성 상위만</li>
+          <li>이름 · 날짜 단서 가리기</li>
+          <li>일봉 → 주봉</li>
+          <li>주간 하이프(언급 수) 집계</li>
+          <li>유튜버 고스트 수익 계산</li>
+        </ul>
+      </div>
+      <div class="col pack" data-in="2">
+        <p class="pt">③ 시즌 팩 <small>pack.enc</small></p>
+        <div class="big"><b data-b="pack.weeks">66</b><small>주</small> × <b data-b="pack.total">170</b><small>종목</small></div>
+        <p class="mk">국내 <b data-b="pack.assets.KRX">110</b> · 미국 <b data-b="pack.assets.US">30</b> · 코인 <b data-b="pack.assets.CRYPTO">30</b></p>
+        <p class="mk">유튜버 고스트 <b data-b="pack.channels">47</b>명</p>
+        <p class="lock">🔒 암호화 · 서버가 한 주씩만 공개</p>
+      </div>
+      <div class="col" data-in="3">
+        <p class="pt">④ 분석 방향</p>
+        <ul class="checks">
+          <li class="ok">화제성 → 다음 주 수익</li>
+          <li class="ok">급등 뒤 모멘텀</li>
+          <li class="ok">유튜버 고스트 vs 코스피</li>
+          <li class="ok">플레이어 vs 유튜버<small>Supabase에 쌓이는 판으로 집계 중</small></li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- 9. AI -->
+  <section class="slide" id="ai" data-title="AI 활용 계획" data-tag="07 · AI 활용 · LLM · RAG · 에이전트">
+    <h2>AI도 <span class="grad">그때까지의 정보</span>만 안다</h2>
+    <div class="ai">
+      <div class="card rag">
+        <p class="q">개미 비서 · 시점 제한 RAG</p>
+        <div class="tl" aria-hidden="true">
+          <div class="past">
+            <i style="--x:6%;--y:20%">📺</i><i style="--x:18%;--y:62%">📑</i><i style="--x:30%;--y:30%">📺</i><i style="--x:41%;--y:70%">📺</i><i style="--x:52%;--y:24%">📑</i><i style="--x:63%;--y:56%">📺</i><i style="--x:76%;--y:18%">📺</i><i style="--x:86%;--y:64%">📑</i>
+          </div>
+          <div class="now"><span>지금 W12</span></div>
+          <div class="future">
+            <i style="--x:15%;--y:28%">📺</i><i style="--x:40%;--y:62%">📑</i><i style="--x:65%;--y:26%">📺</i><i style="--x:84%;--y:60%">📺</i>
+            <span class="lockl">🔒 미래 문서 — 검색 대상 아님</span>
+          </div>
+          <div class="axis"><span>W1</span><span>W12</span><span>W26</span></div>
         </div>
-        <div class="card evalbox" data-in="2">
-          <span><span class="lab" style="margin:0">짓궂은 질문 45개<br>(이름 캐기·미래·권유·지시 무시)</span></span>
-          <span class="v" data-b="evalFirst">91%</span><span class="ar">→</span><span class="v good" data-b="evalLast">—</span>
+        <div class="chain">
+          <span class="ask">“반도체 A 왜 화제야?”</span><em>→</em>
+          <span>Gemini 임베딩<br><small>Supabase pgvector</small></span><em>→</em>
+          <span>Gemini 답<br><small>출처 [3][7]</small></span><em>→</em>
+          <span class="chk">검증 ✓</span>
         </div>
+        <code>WHERE week &lt;= :현재주 AND asset IN (:이번 판 종목)</code>
       </div>
+      <ul class="aicards">
+        <li data-in="1"><svg class="owl"><use href="#ant"/></svg><div><b>개미 비서 <em class="ok">동작 중</em></b><span>그 주까지의 영상 제목·공시만 pgvector로 검색 → Gemini가 출처(D1·D2…) 달아 답 · 시즌당 3번</span></div></li>
+        <li data-in="2"><i>✅</i><div><b>답 검증</b><span>인용 id 실재 · 넘긴 숫자만 · 투자 권유 · 진짜 이름 금지 → 1번 재시도 → 검색 요약으로 대체</span></div></li>
+        <li data-in="3"><svg class="owl"><use href="#owl"/></svg><div><b>AI 코치 <em class="ok">동작 중</em></b><span>결산 때 내 매매 습관 한 줄 평 · Gemini → 실패 시 규칙 답</span></div></li>
+        <li data-in="3"><i>🤖</i><div><b>에이전트 <em class="plan">계획</em></b><span>지금 라이벌은 규칙대로 사는 고스트 봇(LLM 아님) → 비서가 검색·시세 도구를 골라 쓰는 tool-calling으로 확장</span></div></li>
+      </ul>
     </div>
-  </div>
-  <aside class="notes">평가 기준에 맞춰 AI가 틀렸을 때를 설계했습니다. 그 문제의 산 날 이전 문서만 꺼내 근거 id를 붙이게 하고, 보여 주기 전에 7가지를 검사합니다. 실패하면 한 번 더 묻고, 또 실패하면 답을 숨깁니다. 짓궂은 질문 45개로 평가했더니 1차에서 '삼성전자와 비교'에 지어낸 답이 나왔고, 7번째 검사(다른 종목 언급)와 프롬프트를 추가해 다시 쟀습니다.</aside>
-</section>
+  </section>
 
-<!-- 9 ═══════ 데이터·품질 ═══════ -->
-<section class="slide" id="data" data-part="4" data-mood="5" data-title="데이터 · 품질" data-steps="1">
-  <div class="kicker stg"><span class="n">4</span>데이터 · 품질</div>
-  <h2 class="stg">화면에 나가는 글 <em><span data-b="quality.textsChecked" data-fmt="int">7,324</span>개</em>, 다시 검사했다</h2>
-  <div class="body">
-    <div class="zeros stg">
-      <div class="card"><div class="z" data-b="quality.futureViolations">0</div><div class="lab">미래 정보 섞임</div></div>
-      <div class="card"><div class="z" data-b="quality.leaks">0</div><div class="lab">회사 이름 노출</div></div>
-      <div class="card"><div class="z" data-b="quality.absoluteAmounts">0</div><div class="lab">검색 단서<br>(‘1조 656억’ → ‘조 원대’)</div></div>
-      <div class="card"><div class="z" data-b="quality.answerMismatch">0</div><div class="lab">정답 · 차트 불일치</div></div>
+  <!-- 10. 아키텍처 -->
+  <section class="slide" id="arch" data-title="아키텍처 · 기술 스택" data-tag="08 · 시스템 설계">
+    <h2>수업에서 배운 구조 그대로 <span class="muted">화면 → API → DB · AI</span></h2>
+    <div class="arch">
+      <div class="box web"><i>📱</i><b>React + Vite</b><span>three.js 3D · 모바일 우선</span><em>Vercel</em></div>
+      <div class="link l1"><span>/api</span></div>
+      <div class="box api"><i>⚙️</i><b>FastAPI</b><span>시즌 엔진 · 매매 · 멘탈 · 사건<br>랭킹 재계산 · 요청 한도</span><em>Render</em></div>
+      <div class="link l2"></div>
+      <div class="box db"><i>🐘</i><b>Supabase</b><span>PostgreSQL: 판 · 주간 기록<br>pgvector: 문서 임베딩</span><em>DB</em></div>
+      <div class="link l3"><span>🔒 pack.enc</span></div>
+      <div class="box hs"><i>🗄️</i><b>hindsight DB</b><span>build_season.py → 시즌 팩</span><em>읽기만</em></div>
+      <div class="link l4"></div><div class="link l5"></div>
+      <div class="box llm"><i>✨</i><b>Gemini</b><span>코치 · 임베딩 · 비서 답</span><em>LLM</em></div>
     </div>
-    <div class="srcs" data-in="1">
-      <span class="chip">📺 YouTube Data API · 영상 <b data-b="summary.source.videos" data-fmt="int">48,573</b></span>
-      <span class="chip">📈 공공데이터포털 시세 <b data-b="summary.source.prices" data-fmt="int">311,970</b></span>
-      <span class="chip">📑 DART 공시·원문·재무</span>
-      <span class="chip">📰 Google 뉴스 <b data-b="enrich.news" data-fmt="int">1,955</b></span>
-      <span class="chip">🤖 Gemini · Ollama</span>
-      <span class="chip">🗂️ hindsight 언급 뒤 수익률 <b data-b="summary.hindsight.eventReturns" data-fmt="int">53,409</b></span>
-    </div>
-  </div>
-  <aside class="notes">데이터는 지난 학기 hindsight를 읽기 전용으로 쓰고, DART 재무·원문과 Google 뉴스를 더했습니다. 공정한 게임이 되려면 미래 정보가 섞이면 안 되고 회사를 알아보면 안 됩니다. 화면에 나가는 글 7천여 개를 매번 다시 검사해서 미래 정보, 이름 노출, 금액 같은 검색 단서, 정답 불일치가 모두 0입니다. 이 검사는 테스트로도 돌아갑니다.</aside>
-</section>
+    <ul class="sec" data-in="1">
+      <li><i>🔒</i>미래 가격은 서버에만</li>
+      <li><i>⏭️</i>이번 주 행동을 내야 다음 주 공개</li>
+      <li><i>🧮</i>랭킹은 서버가 행동 로그로 재계산</li>
+      <li><i>🎭</i>결산 전 진짜 이름 비공개</li>
+      <li><i>🔑</i>API 키는 서버 환경변수</li>
+    </ul>
+  </section>
 
-<!-- 10 ═══════ UX ═══════ -->
-<section class="slide" id="ux" data-part="4" data-mood="5" data-title="UI/UX" data-steps="1">
-  <div class="kicker stg"><span class="n">4</span>UI / UX</div>
-  <h2 class="stg">5분 안에, <em>엄지 하나로</em>, 다시 하고 싶게</h2>
-  <div class="body">
-    <div class="screens stg">
-      <div class="card sc"><span class="e emoji">🗓️</span><b>챌린지</b><small>모두 같은 문제</small></div>
-      <div class="card sc"><span class="e emoji">⏪</span><b>되감기</b><small>CASE 01</small></div>
-      <div class="card sc"><span class="e emoji">🃏</span><b>카드 3장</b><small>고르는 것도 실력</small></div>
-      <div class="card sc"><span class="e emoji">🎬</span><b>리플레이</b><small>지금 팔기</small></div>
-      <div class="card sc"><span class="e emoji">🎯</span><b>도장</b><small>적중 · 빗나감</small></div>
-      <div class="card sc"><span class="e emoji">📊</span><b>리포트</b><small>성향 · 등급</small></div>
-      <div class="card sc"><span class="e emoji">🏆</span><b>랭킹</b><small>실시간</small></div>
+  <!-- 11. 차별화 · 로드맵 -->
+  <section class="slide" id="road" data-title="차별화 · 8주차 로드맵" data-tag="09 · 차별화 · 로드맵">
+    <h2>다른 점, 그리고 <span class="grad">8주차까지</span></h2>
+    <div class="road"><div class="rl">
+      <table class="cmp">
+        <thead><tr><th></th><th>증권사<br>모의투자</th><th>일반<br>투자 게임</th><th class="me">타임슬립<br>개미</th></tr></thead>
+        <tbody>
+          <tr><td>실제 시장 데이터</td><td class="y">●</td><td class="n">—</td><td class="me y">●</td></tr>
+          <tr><td>결과를 바로 본다</td><td class="n">몇 주 대기</td><td class="y">●</td><td class="me y">●</td></tr>
+          <tr><td>실제 유튜버와 겨룬다</td><td class="n">—</td><td class="n">—</td><td class="me y">●</td></tr>
+          <tr><td>그때 정보만 쓰는 AI</td><td class="n">—</td><td class="n">—</td><td class="me y">●</td></tr>
+        </tbody>
+      </table>
+      <p class="punch">실제 과거 × 바로 결과 × 유튜버 라이벌<br><b>10분에 반년치 “흔들림”을 겪는다</b></p></div>
+      <ol class="weeks" data-in="1">
+        <li class="done"><em>5주차</em><b>아이디어 · 동작하는 프로토타입</b><span>26주 루프 · 3D · 캐릭터 · RAG 비서 · AI 코치</span></li>
+        <li><em>6주차</em><b>사용성 테스트 · 에이전트</b><span>5명 플레이 → ux-log · 비서가 검색·시세 도구를 고르는 tool-calling</span><small>UI/UX 20 · 시스템 30</small></li>
+        <li><em>7주차</em><b>밸런스 · RAG 평가</b><span>짓궂은 질문 30개 검증 · 난이도 조정</span><small>데이터 10 · 시스템 30</small></li>
+        <li><em>8주차</em><b>성능 · 보안 · 시장 분석 · 시연</b><span>플레이어 vs 유튜버 · SWOT</span><small>Needs 20 · 성능 10 · 배포 10</small></li>
+      </ol>
     </div>
-    <div class="fixes" data-in="1">
-      <div class="card"><p>폰에서 비중 버튼까지 스크롤</p><p><span class="tag bad">원인</span>넓은 화면용 칸이 맨 아래로</p><p><span class="tag ok">수정</span>엄지 닿는 아래 고정 패널</p></div>
-      <div class="card"><p>“게임치고 정적이다”</p><p><span class="tag bad">원인</span>판단 → 정답이 한 번에</p><p><span class="tag ok">수정</span>20일 리플레이 + 지금 팔기</p></div>
-      <div class="card"><p>랭킹이 운에 좌우</p><p><span class="tag bad">원인</span>사람마다 다른 문제</p><p><span class="tag ok">수정</span>오늘의 챌린지(같은 문제)</p></div>
-    </div>
-    <p class="src" style="text-align:center;margin-top:18px">로딩·오류·빈 결과·AI 실패 모두 처리 · 사용성 개선 기록 24건(docs/ux-log.md)</p>
-  </div>
-  <aside class="notes">레퍼런스는 듀오링고, 토스증권, 카훗입니다. 마스코트 새벽이가 반응하고, 연속 적중과 배지, 등급 도장이 있습니다. 사용성 문제는 발견, 원인, 수정, 확인 순서로 24건을 기록했습니다. 예를 들어 휴대폰에서 비중 버튼까지 스크롤해야 하던 걸 아래 고정 패널로 바꿨습니다.</aside>
-</section>
+  </section>
 
-<!-- 11 ═══════ 성능·보안 ═══════ -->
-<section class="slide" id="nfr" data-part="4" data-mood="5" data-title="성능 · 보안" data-steps="1">
-  <div class="kicker stg"><span class="n">4</span>성능 · 보안</div>
-  <h2 class="stg">빠르게, 싸게, <em>새지 않게</em></h2>
-  <div class="body">
-    <div class="ba stg">
-      <div class="r"><b>게임 시작 데이터</b><div class="bb"><div class="b"><i style="--w:100%"></i><span>전 1.2 MB · 정답 포함 파일 통째로</span></div><div class="a"><i style="--w:6%"></i><span style="color:var(--ink);left:7%">후 0.4 KB · 지금 볼 것만</span></div></div></div>
-      <div class="r"><b>첫 화면 JS(gzip)</b><div class="bb"><div class="b"><i style="--w:100%"></i><span>전 141 KB</span></div><div class="a"><i style="--w:82%"></i><span>후 116 KB · 코드 분할 −18%</span></div></div></div>
-      <div class="r"><b>실시간 랭킹</b><div class="bb"><div class="b"><i style="--w:100%"></i><span>전 6.8 ms</span></div><div class="a"><i style="--w:22%"></i><span style="color:var(--ink);left:23%">후 1.5 ms · 2초 캐시 + gzip</span></div></div></div>
+  <!-- 12. 마무리 -->
+  <section class="slide end" id="end" data-title="마무리 · QR">
+    <div class="end-l">
+      <p class="eyebrow">지나고 보면 쉽다. 그때로 가 보면?</p>
+      <h1>직접 <span class="grad">타임슬립</span> 해 보세요</h1>
+      <div class="links">
+        <a data-link="service" class="lk main"><i>🎮</i><b>서비스</b><span data-url></span></a>
+        <a data-link="github" class="lk"><i>💻</i><b>GitHub</b><span data-url></span></a>
+        <a data-link="swagger" class="lk"><i>📘</i><b>API 문서 (Swagger)</b><span data-url></span></a>
+      </div>
+      <p class="team" data-team></p>
     </div>
-    <div class="checks" data-in="1" style="margin-top:40px">
-      <div>API 키는 서버에만 · 정답 파일 암호화</div>
-      <div>로그인 선택 · 이메일 저장 안 함</div>
-      <div>요청 한도(사람·서버 전체) · 429</div>
-      <div>동시 요청 잠금 · 순위 조작 차단</div>
-      <div>AI 질문 라운드당 3번 · 판단은 미리 배치</div>
-      <div>보안 헤더 · CORS 제한 · 테스트 20개</div>
+    <div class="end-r">
+      <div class="qrcard"><div id="qr" class="qr" aria-label="서비스 QR 코드"></div><p>📱 폰으로 바로 한 판</p></div>
+      <svg class="ant wave"><use href="#ant"/></svg>
+      <p class="thanks">감사합니다</p>
     </div>
-  </div>
-  <aside class="notes">정답을 서버로 옮기면서 게임 시작 때 받는 데이터가 1.2MB에서 0.4KB가 됐습니다. 페이지를 나눠 첫 화면 JS를 18% 줄였고, 랭킹은 2초 캐시로 1.5ms입니다. 키는 서버에만, 정답 파일은 암호화해서 공개 저장소에 올렸고, 요청 한도와 동시 요청 잠금으로 순위 조작을 막았습니다.</aside>
-</section>
+  </section>
 
-<!-- 12 ═══════ 실패와 개선 ═══════ -->
-<section class="slide" id="fail" data-part="5" data-mood="2" data-title="실패와 개선">
-  <div class="kicker stg"><span class="n">5</span>실패와 개선</div>
-  <h2 class="stg">네 번 틀렸고, <em>이렇게 알았고</em>, 이렇게 고쳤다</h2>
-  <div class="body">
-    <div class="fails">
-      <div class="card" data-in="1"><span class="e emoji">🔓</span><span><b>정답이 화면 파일에 있었다</b><p>개발자도구로 정답이 보임</p><p class="fix">→ 서버가 단계별 공개 · ‘응답에 정답 없음’ 테스트</p></span></div>
-      <div class="card" data-in="2"><span class="e emoji">🔎</span><span><b>이름을 가려도 검색하면 나왔다</b><p>‘계약금액 1조 656억’, ‘평택캠퍼스 공사’</p><p class="fix">→ 허용 목록 + 금액 구간화 · 검색 단서 0건</p></span></div>
-      <div class="card" data-in="3"><span class="e emoji">🧪</span><span><b>동시에 누르면 순위가 부풀었다</b><p>다른 AI 리뷰어에게 코드만 주고 검토 → 직접 재현</p><p class="fix">→ 게임별 잠금 + 중복 기록 금지 · 동시 요청 테스트</p></span></div>
-      <div class="card" data-in="4"><span class="e emoji">🤖</span><span><b>AI가 다른 회사를 지어냈다</b><p>“삼성전자랑 비교하면?” → 자료에 없는 비교</p><p class="fix">→ 7번째 검사 + 프롬프트 수정 → 재평가</p></span></div>
-    </div>
-    <p class="motto" data-in="5">AI가 만든 코드도, AI의 답도 — <em>검증 없이 믿지 않는다</em></p>
-  </div>
-  <aside class="notes">평가 기준에 실패한 실험도 원인과 개선을 설명하라고 되어 있어, 네 가지를 골랐습니다. 특히 AI 코딩 도구로 만든 코드를 다른 AI 리뷰어에게 코드만 주고 검토하게 해, 동시 요청으로 순위가 부풀 수 있는 버그를 찾아 직접 재현하고 고쳤습니다. AI 답변도 평가 묶음에서 실패를 찾아 검사를 추가했습니다.</aside>
-</section>
-
-<!-- 13 ═══════ 마무리 ═══════ -->
-<section class="slide" id="end" data-part="5" data-mood="1" data-transition="zoom" data-title="마무리 · 랭킹">
-  <div class="wrap">
-    <div class="stg">
-      <span class="live"><i></i>LIVE · 🗓️ 오늘의 챌린지</span>
-      <h2 style="margin:12px 0 22px">지금 이 방의 <em>순위</em></h2>
-      <div class="lb" id="lb"><div class="card empty">아직 완주한 사람이 없어요</div></div>
-    </div>
-    <div class="stg" style="display:flex;flex-direction:column;align-items:center;text-align:center">
-      <svg class="owl" style="width:130px;height:130px"><use href="#owl"/></svg>
-      <h1 style="margin-top:10px">감사합니다</h1>
-      <p class="lead" style="margin-top:10px">지나고 보면 쉬워 보이는 걸, <b>그때 판단해 보는 연습</b></p>
-      <div class="links" id="links"></div>
-      <div class="qr-mini" id="qr2"></div>
-    </div>
-  </div>
-  <aside class="notes">QR로 참여해 주신 분들의 오늘의 챌린지 순위입니다. 1등 축하드립니다! 서비스, GitHub, Swagger 주소는 화면에 있습니다. 질문 받겠습니다.</aside>
-</section>
+  <footer class="bottomline">
+    <span>5조 · 금융빅데이터분석실습 · 5주차 아이디어 공유</span>
+    <span class="dots" id="dots"></span>
+    <span class="pos" id="pos"></span>
+  </footer>
+  <div class="progress"><i id="bar"></i></div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
-<script src="deck.js"></script>
+<nav class="nav" aria-label="장 넘기기"><button id="prev" aria-label="이전">‹</button><button id="next" aria-label="다음">›</button></nav>
+<p class="hint">← → 넘기기 · F 전체화면 · P 발표자 화면</p>
+
+<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js" defer></script>
+<script src="deck.js" defer></script>
 </body>
 </html>

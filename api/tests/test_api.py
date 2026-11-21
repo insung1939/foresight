@@ -1,362 +1,295 @@
-"""게임 흐름·정답 숨기기·규칙·AI 검증 테스트.
+"""게임 흐름·미래 정보 차단·규칙·AI 검증 테스트.
 
     cd api && ../.venv/bin/python -m pytest -q
 """
 import json
 import os
+import random
+import re
 import tempfile
 
 os.environ["DATABASE_URL"] = f"sqlite:///{tempfile.mkdtemp()}/test.db"
 os.environ["GEMINI_API_KEY"] = ""  # 실제 호출 금지
-os.environ["RATE_LIMIT"] = "0"  # 요청 한도는 아래 단위 테스트로 따로 검사
-os.environ["LLM_PROVIDER"] = "gemini"  # 테스트는 로컬 Ollama 도 부르지 않는다(키 없음 = 연결 안 됨)
+os.environ["RATE_LIMIT"] = "0"
+os.environ["LLM_PROVIDER"] = "gemini"  # 키 없음 = 연결 안 됨 → 규칙 답
 
 from fastapi.testclient import TestClient  # noqa: E402
 
-from app import ai, rules  # noqa: E402
-from app.bank import bank  # noqa: E402
+from app import ai, season  # noqa: E402
 from app.main import app  # noqa: E402
 
 client = TestClient(app)
-client.__enter__()  # startup(테이블 생성)
+client.__enter__()
+P = season.pack.load()
 
 
-def secrets_of(gid: str, round_no: int) -> list[str]:
-    from app.db import Game, Session
-
-    with Session() as s:
-        key = s.get(Game, gid).case_ids[round_no]
-    c = bank.get(key)
-    out = [c["answer"]["name"], c["answer"]["symbol"], c["answer"]["t0"], c["private"]["corpCode"], "_rcept", "_excerpt", "_raw"]
-    return out
+def real_names(st: dict) -> list[str]:
+    return [P["assets"][a["i"]]["name"] for a in st["assets"] if len(P["assets"][a["i"]]["name"]) >= 3]
 
 
-def assert_hidden(payload: dict, gid: str, round_no: int):
-    text = json.dumps(payload, ensure_ascii=False)
-    for s in secrets_of(gid, round_no):
-        assert s not in text, f"정답 정보가 새어 나감: {s}"
+def past_only(st: dict, v: dict) -> bool:
+    """턴 t 화면의 차트는 정확히 지난주(s+t-1)에서 끝난다 — 이번 주 이후 종가는 없다"""
+    w = st["s"] + v["t"] - 1
+    for a, meta in zip(v["assets"], st["assets"]):
+        close = P["assets"][meta["i"]]["close"]
+        want = [round(c * meta["scale"], 2) for c in close[w - len(a["hist"]) + 1:w + 1]]
+        if a["hist"] != want:
+            return False
+    return True
 
 
-def test_full_game_hides_answers_until_reveal():
-    st = client.post("/v1/games").json()
-    gid = st["gameId"]
-    for r in range(rules.ROUNDS):
-        assert st["round"] == r and st["stage"] == "pick"
-        assert_hidden(st, gid, r)
-        for card in ("chart", "disclosure", "youtube"):
-            st = client.post(f"/v1/games/{gid}/cards", json={"card": card}).json()
-            assert_hidden(st, gid, r)
-        # 4번째 카드는 막힌다
-        assert client.post(f"/v1/games/{gid}/cards", json={"card": "news"}).status_code == 409
-        # 미래 차트가 오지 않는다
-        assert max(p["t"] for p in st["current"]["cards"]["chart"]["points"]) == 0
-        st = client.post(f"/v1/games/{gid}/decide", json={"weight": -50 if r % 2 else 70}).json()
-        # 리플레이: 하루씩. 매일 그날까지의 주가만 오고 정답은 없다
-        while st["stage"] in ("replay", "event"):
-            assert_hidden(st, gid, r)
-            if st["stage"] == "event":
-                ev = st["current"]["event"]
-                assert max(p["t"] for p in ev["points"]) == ev["t"] == st["current"]["replay"]["day"]
-                st = client.post(f"/v1/games/{gid}/adjust", json={"weight": 0}).json()
-                continue
-            rp = st["current"]["replay"]
-            assert max(p["t"] for p in rp["points"]) == rp["day"]
-            if r == 2 and rp["day"] == 3:  # 한 라운드는 중도 매도
-                st = client.post(f"/v1/games/{gid}/exit").json()
-                assert st["current"]["reveal"]["exitDay"] == 3
-                break
-            st = client.post(f"/v1/games/{gid}/tick", json={"days": 1}).json()
-        assert st["stage"] == "reveal"
-        assert st["current"]["reveal"]["answer"]["name"]
-        st = client.post(f"/v1/games/{gid}/next").json()
-    assert st["done"]
-    rep = client.get(f"/v1/games/{gid}/report").json()
-    assert len(rep["rounds"]) == rules.ROUNDS and len(rep["track"]) == rules.ROUNDS + 1
+def play(rid: str, strategy, pick: int = 0) -> dict:
+    from app.db import Run, Session
+
+    body = client.get(f"/v1/runs/{rid}").json()
+    while not body["view"]["done"]:
+        v = body["view"]
+        with Session() as s:
+            st = s.get(Run, rid).state
+        # 미래 정보 차단: 화면의 가격은 모두 지난주까지
+        assert past_only(st, v), "미래 가격 노출"
+        text = json.dumps(v, ensure_ascii=False)
+        for ch in P["channelNames"].values():  # 채널 이름(예: '비트코인 ○○TV')은 종목 정체가 아니다
+            text = text.replace(ch, "")
+        for n in real_names(st):
+            assert n not in text, f"진짜 이름 노출: {n}"
+        words = " ".join([x["t"] for a in v["assets"] for x in a["titles"]] + [d for a in v["assets"] for d in a["disc"]] + [h["t"] for h in v["headlines"]])
+        m = re.search(r"20\d\d|\b\d{2}\.\d{1,2}\.\d{1,2}|\d+월", words)
+        assert not m, f"날짜 노출: {words[max(0, m.start() - 20):m.end() + 20]}"
+        choice = pick if v["pending"] else None
+        orders = [] if v["skip"] else strategy(v)
+        r = client.post(f"/v1/runs/{rid}/turn", json={"orders": orders, "choice": choice})
+        assert r.status_code == 200, r.text
+        body = r.json()
+        assert body["week"]["t"] == v["t"]
+    return body
 
 
-def test_stage_guards():
-    gid = client.post("/v1/games").json()["gameId"]
-    assert client.post(f"/v1/games/{gid}/adjust", json={"weight": 0}).status_code == 409
-    assert client.post(f"/v1/games/{gid}/next").status_code == 409
-    assert client.post(f"/v1/games/{gid}/decide", json={"weight": 50}).status_code == 400
-    assert client.get(f"/v1/games/{gid}/report").status_code == 409
-    assert client.get("/v1/games/nope").status_code == 404
+def buy_hot(v):
+    open_ = [a for a in v["assets"] if not a["locked"]]
+    a = max(open_, key=lambda a: a["hype"])
+    held = {p["k"] for p in v["pos"]}
+    if a["k"] in held or len(held) >= v["maxHold"]:
+        return [{"k": p["k"], "q": -p["qty"]} for p in v["pos"][:1]]
+    q = int(v["cash"] * 0.3 / a["price"])
+    return [{"k": a["k"], "q": q}] if q > 0 else []
 
 
-def test_ask_without_key_degrades_gracefully():
-    st = client.post("/v1/games").json()
-    gid = st["gameId"]
-    assert client.post(f"/v1/games/{gid}/ask", json={"question": "실적 어때?"}).status_code == 409  # 카드 안 엶
-    client.post(f"/v1/games/{gid}/cards", json={"card": "ai"})
-    r = client.post(f"/v1/games/{gid}/ask", json={"question": "실적 어때?"}).json()
-    assert "error" in r and r["remaining"] == 3  # 실패는 횟수에서 빼지 않는다
+def test_full_run_daily_hides_future_and_ranks():
+    r = client.post("/v1/runs", json={"mode": "daily", "nickname": "테스트개미"}).json()
+    v = r["view"]
+    assert v["t"] == 0 and v["season"] == 26 and v["cash"] == season.START_CASH
+    assert len(v["assets"]) == sum(season.UNIVERSE.values())
+    end = play(r["id"], buy_hot)
+    fin = end["final"]
+    assert fin["grade"] in "SABCDF" and 1 <= fin["rank"] <= fin["of"] == 5
+    assert len(fin["weeks"]) == 26 and len(fin["curves"]["me"]) == 27
+    # 결산에서만 진짜 이름이 나온다
+    assert all(x["name"] for x in fin["reveal"])
+    # 끝난 판은 더 못 민다
+    assert client.post(f"/v1/runs/{r['id']}/turn", json={"orders": []}).status_code == 409
+    lb = client.get("/v1/leaderboard").json()
+    assert lb["total"] >= 1 and lb["rows"][0]["nickname"]
 
 
-def test_short_and_fee():
-    c = {"chart": [{"t": 0, "p": 100, "b": 100}, {"t": 20, "p": 90, "b": 100}], "event": None, "answer": {"r20": -0.1}}
-    assert abs(rules.round_return(c, -50, -50) - (0.05 - 0.5 * 0.04 * 20 / 250)) < 1e-9
-    assert rules.round_return(c, 0, 0) == 0
-    assert rules.is_hit(c, -50) and not rules.is_hit(c, 70)
+def test_same_daily_seed_same_market():
+    a = client.post("/v1/runs", json={"mode": "daily"}).json()["view"]
+    b = client.post("/v1/runs", json={"mode": "daily"}).json()["view"]
+    assert [x["code"] for x in a["assets"]] == [x["code"] for x in b["assets"]]
+    assert [x["price"] for x in a["assets"]] == [x["price"] for x in b["assets"]]
 
 
-def test_event_compounding():
-    c = {"chart": [{"t": 0, "p": 100, "b": 100}, {"t": 10, "p": 120, "b": 100}, {"t": 20, "p": 60, "b": 100}],
-         "event": {"t": 10}, "answer": {"r20": -0.4}}
-    # 100% 로 산 뒤 사건일에 0% 로 정리 → +20%
-    assert abs(rules.round_return(c, 100, 0) - 0.2) < 1e-9
-    # 끝까지 들고 가면 −40%
-    assert abs(rules.round_return(c, 100, 100) + 0.4) < 1e-9
-    # 사건일에 팔면(중도 매도) +20%, 그 뒤 하락은 피함
-    assert abs(rules.round_return(c, 100, 100, exit_day=10) - 0.2) < 1e-9
+def test_hold_cash_twr_is_zero():
+    r = client.post("/v1/runs", json={"mode": "free", "markets": ["KRX"]}).json()
+    end = play(r["id"], lambda v: [], pick=1)  # 두 번째 선택지에는 자동 매수가 없다
+    assert abs(end["final"]["ret"]) < 1e-9
 
 
-def test_exit_guards():
-    g = client.post("/v1/games").json()
-    gid = g["gameId"]
-    assert client.post(f"/v1/games/{gid}/exit").status_code == 409  # 판단 전
-    st = client.post(f"/v1/games/{gid}/decide", json={"weight": 70}).json()
-    assert st["stage"] == "replay" and st["current"]["replay"]["day"] == 0
-    assert client.post(f"/v1/games/{gid}/exit").status_code == 409  # 산 날은 못 팖
-    st = client.post(f"/v1/games/{gid}/tick", json={"days": 2}).json()
-    assert st["current"]["replay"]["day"] == 2 and abs(st["current"]["replay"]["value"] - 1) < 1
-    st = client.post(f"/v1/games/{gid}/exit").json()
-    rv = st["current"]["reveal"]
-    assert rv["exitDay"] == 2 and "holdRet" in rv
+def test_rules_reject_bad_orders():
+    r = client.post("/v1/runs", json={"mode": "free", "markets": ["KRX"]}).json()
+    v = r["view"]
+    a = next(x for x in v["assets"] if not x["locked"])
+    coin = next(x for x in v["assets"] if x["market"] == "CRYPTO")
+    rid = r["id"]
+    too_many = int(v["cash"] / a["price"]) + 10
+    assert client.post(f"/v1/runs/{rid}/turn", json={"orders": [{"k": a["k"], "q": too_many}]}).status_code == 409
+    assert client.post(f"/v1/runs/{rid}/turn", json={"orders": [{"k": coin["k"], "q": 1}]}).status_code == 409  # 잠긴 시장
+    assert client.post(f"/v1/runs/{rid}/turn", json={"orders": [{"k": a["k"], "q": -1}]}).status_code == 409   # 없는 걸 팔기
+    assert client.post(f"/v1/runs/{rid}/turn", json={"orders": [{"k": "99", "q": 1}]}).status_code == 409
+    # 실패한 주문은 상태를 바꾸지 않는다
+    assert client.get(f"/v1/runs/{rid}").json()["view"]["cash"] == v["cash"]
+    ok = client.post(f"/v1/runs/{rid}/turn", json={"orders": [{"k": a["k"], "q": 10}]}).json()
+    assert ok["view"]["pos"][0]["qty"] == 10
+    fee = 10 * a["price"] * season.FEES["KRX"][0]
+    assert abs((v["cash"] - ok["view"]["cash"]) - (10 * a["price"] + fee)) < 2
 
 
-def test_ai_check_catches_bad_answers():
-    target = {"name": "삼성전자", "aliases": [], "symbol": "005930"}
-    ctx = "[F1] 매출 전년 대비 +12.0%"
-    ok = ai.check("매출이 12.0% 늘었어요.", ["F1"], {"F1"}, ctx, target)
-    assert ok.ok
-    assert not ai.check("삼성전자는 좋아요.", ["F1"], {"F1"}, ctx, target).ok  # 이름 노출
-    assert not ai.check("매출이 35% 늘었어요.", ["F1"], {"F1"}, ctx, target).ok  # 없는 숫자
-    assert not ai.check("지금 사세요.", ["F1"], {"F1"}, ctx, target).ok  # 직접 권유
-    assert not ai.check("좋아요.", ["X9"], {"F1"}, ctx, target).ok  # 없는 인용
-    assert not ai.check("좋아요.", [], {"F1"}, ctx, target).ok  # 근거 없이 단정
-
-
-def test_meta_has_no_answers():
-    m = client.get("/v1/meta").json()
-    text = json.dumps(m, ensure_ascii=False)
-    assert "private" not in text and "corpCode" not in text
-    assert m["summary"]["cases"] == len(bank.cases)
-
-
-def test_rounds_never_repeat_company_and_records_are_past_only():
-    """한 게임에 같은 종목은 한 번만. 유튜버 과거 성적은 산 날 전 기록이라 정답 수익률과 무관한 값."""
-    import random
-
-    from app import rules
-    from app.main import bank
-
-    for seed in range(30):
-        picked = rules.pick_rounds(bank.cases, random.Random(seed))
-        assets = [c["private"]["assetId"] for c in picked]
-        assert len(picked) == 10 and len(set(assets)) == 10
-    for c in bank.cases:
-        for v in c["youtube"]["videos"]:
-            r = v.get("record")
-            assert r is None or (r["n"] >= 5 and 0 <= r["hit"] <= 1)
-
-
-def test_nickname_and_live_leaderboard():
-    bad = client.post("/v1/games", json={"nickname": "<script>"})
-    assert bad.status_code == 400
-    g = client.post("/v1/games", json={"nickname": "테스트 부엉이"}).json()
-    gid = g["gameId"]
-    assert g["nickname"] == "테스트 부엉이"
-    st = g
-    while not st["done"]:
-        if st["stage"] == "pick":
-            st = client.post(f"/v1/games/{gid}/decide", json={"weight": 70}).json()
-        elif st["stage"] == "event":
-            st = client.post(f"/v1/games/{gid}/adjust", json={"weight": 70}).json()
-        elif st["stage"] == "replay":
-            st = client.post(f"/v1/games/{gid}/tick", json={"days": 20}).json()
-        else:
-            st = client.post(f"/v1/games/{gid}/next").json()
-    rep = client.get(f"/v1/games/{gid}/report").json()
-    assert rep["rank"] >= 1
-    live = client.get("/v1/live?scope=all").json()
-    assert any(r["nickname"] == "테스트 부엉이" for r in live["leaders"])
-    assert live["stats"]["finished"] >= 1
-    # 랭킹·피드에는 회사 이름(정답)이 없어야 한다
-    text = json.dumps(live, ensure_ascii=False)
-    for c in bank.cases:
-        assert c["answer"]["name"] not in text
-    assert client.post(f"/v1/games/{gid}/nickname", json={"nickname": "새이름"}).json()["nickname"] == "새이름"
-
-
-
-def _finish(gid: str):
-    st = client.get(f"/v1/games/{gid}").json()
-    while not st["done"]:
-        if st["stage"] == "pick":
-            st = client.post(f"/v1/games/{gid}/decide", json={"weight": 0}).json()
-        elif st["stage"] == "event":
-            st = client.post(f"/v1/games/{gid}/adjust", json={"weight": 0}).json()
-        elif st["stage"] == "replay":
-            st = client.post(f"/v1/games/{gid}/tick", json={"days": 20}).json()
-        else:
-            st = client.post(f"/v1/games/{gid}/next").json()
-
-
-def test_survey_once_after_finish_and_counted():
-    gid = client.post("/v1/games").json()["gameId"]
-    early = client.post(f"/v1/games/{gid}/survey", json={"youtube": "often", "helpful": 4, "lesson": "yt"})
-    assert early.status_code == 409  # 끝나기 전엔 못 함
-    _finish(gid)
-    assert client.post(f"/v1/games/{gid}/survey", json={"youtube": "bad", "helpful": 4, "lesson": "yt"}).status_code == 400
-    assert client.post(f"/v1/games/{gid}/survey", json={"youtube": "often", "helpful": 9, "lesson": "yt"}).status_code == 422
-    assert client.post(f"/v1/games/{gid}/survey", json={"youtube": "often", "helpful": 4, "lesson": "yt"}).json()["ok"]
-    assert client.post(f"/v1/games/{gid}/survey", json={"youtube": "often", "helpful": 4, "lesson": "yt"}).status_code == 409
-    m = client.get("/v1/meta").json()
-    assert m["survey"]["n"] >= 1 and m["survey"]["youtube"]["often"] >= 1
-
-
-def test_ai_error_kind_and_feedback_guard():
-    g = client.post("/v1/games").json()
-    gid = g["gameId"]
-    client.post(f"/v1/games/{gid}/cards", json={"card": "ai"})
-    r = client.post(f"/v1/games/{gid}/ask", json={"question": "최근 공시 요약해 줘"}).json()
-    assert r["errorKind"] == "unconfigured" and r["remaining"] == 3  # 실패한 호출은 횟수를 깎지 않는다
-    assert client.post("/v1/ai/999999/feedback", json={"vote": 1}).status_code == 404
-    assert client.post("/v1/ai/1/feedback", json={"vote": 5}).status_code == 400
-
-
-def test_rate_limit_and_security_headers():
-    from app import ops
-
-    ops.reset_limits()
-    now = 1000.0
-    assert all(ops.check_limit("ask", "1.2.3.4", now + i * 0.1) is None for i in range(ops.LIMITS["ask"]))
-    wait = ops.check_limit("ask", "1.2.3.4", now + 2)
-    assert wait is not None and 0 < wait <= 60
-    assert ops.check_limit("ask", "5.6.7.8", now + 2) is None  # 다른 IP 는 영향 없음
-    assert ops.check_limit("ask", "1.2.3.4", now + 61) is None  # 1분 지나면 풀림
-    h = client.get("/v1/health").headers
-    assert h["x-content-type-options"] == "nosniff" and h["x-frame-options"] == "DENY" and "x-response-time" in h
-    assert client.post("/v1/games").headers["cache-control"] == "no-store"
-    perf = client.get("/v1/meta").json()["perf"]["routes"]
-    assert any(r["path"] == "POST /v1/games" and r["p95"] >= r["p50"] for r in perf)
-
-
-
-def test_bank_quality_no_future_info_no_leaks():
-    """문제 은행 전체: 미래 정보 0건, 회사 이름 노출 0건, 정답과 차트 일치(scripts/quality.py 와 같은 검사)"""
-    import sys
-    from pathlib import Path
-
-    sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "scripts"))
-    from quality import audit
-
-    q = audit({"cases": bank.cases, "summary": bank.summary}, bank.extra)
-    assert q["futureViolations"] == 0, q["future"]
-    assert q["leaks"] == 0, q["leakSamples"]
-    assert q["answerMismatch"] == 0
-    assert q["absoluteAmounts"] == 0  # '1조 656억' 같은 검색 단서는 구간으로
-
-
-def test_public_facts_allowlist():
-    from app.masking import generalize_amounts, public_fact
-
-    assert public_fact("계약상대", "한국지역난방공사") is None  # 상대방 이름은 빼고
-    assert public_fact("체결계약명", "평택캠퍼스 2단지 조성 공사") is None
-    assert public_fact("계약금액 총액(원)", "약 10,656억 원")["value"] == "조 원대"
-    assert public_fact("매출액대비(%)", "6.37")["value"] == "6.37"
-    assert public_fact("증자방식", "제3자배정증자")["value"] == "제3자배정증자"
-    assert "559억" not in generalize_amounts("A사 559억 계약 체결")
-
-
-def test_daily_challenge_same_questions_and_first_play_only_ranked():
-    h = {"X-Device": "dev-test-1"}
-    a = client.post("/v1/games", json={"mode": "daily", "nickname": "챌린저"}, headers=h).json()
-    b = client.post("/v1/games", json={"mode": "daily"}, headers={"X-Device": "dev-test-2"}).json()
-    again = client.post("/v1/games", json={"mode": "daily"}, headers=h).json()
-    assert a["mode"] == "daily" and b["mode"] == "daily" and again["mode"] == "replay"  # 같은 기기 두 번째 판은 순위 제외
-    from app.db import Game, Session
-
-    with Session() as s:
-        assert s.get(Game, a["gameId"]).case_ids == s.get(Game, b["gameId"]).case_ids  # 모두 같은 문제
-    _finish(a["gameId"])
-    live = client.get("/v1/live?scope=daily").json()
-    assert live["scope"] == "daily" and any(r["nickname"] == "챌린저" for r in live["leaders"])
-
-
-def test_login_optional_and_me():
-    """로그인은 선택: 토큰 없이도 게임. 토큰이 있으면 게임이 계정에 붙고 /v1/me 에서 전적이 보인다."""
-    import jwt as pyjwt
-
-    from app import auth
-
-    auth.SUPABASE_JWT_SECRET = "test-secret-for-hs256-must-be-long-enough-0123456789"
+def test_max_hold_limit():
+    st = season.new_run("free:hold", ["KRX", "US", "CRYPTO"])
+    orders = [{"k": str(k), "q": 1} for k in range(season.MAX_HOLD + 1)]
     try:
-        assert client.get("/v1/me").status_code == 401  # 로그인 필요
-        bad = {"Authorization": "Bearer nope"}
-        assert client.get("/v1/me", headers=bad).status_code == 401
-        assert client.post("/v1/games", headers=bad).status_code == 200  # 틀린 토큰이면 손님으로 진행
-        tok = pyjwt.encode({"sub": "user-123", "aud": "authenticated"}, auth.SUPABASE_JWT_SECRET, algorithm="HS256")
-        h = {"Authorization": f"Bearer {tok}"}
-        assert client.put("/v1/me", json={"nickname": "로그인 부엉이"}, headers=h).json()["nickname"] == "로그인 부엉이"
-        guest = client.post("/v1/games").json()["gameId"]  # 로그인 전 판
-        _finish(guest)
-        assert client.post("/v1/me/claim", json={"gameIds": [guest]}, headers=h).json()["claimed"] == 1
-        g = client.post("/v1/games", headers=h).json()
-        assert g["nickname"] == "로그인 부엉이"
-        _finish(g["gameId"])
-        m = client.get("/v1/me", headers=h).json()
-        assert m["stats"]["games"] == 2 and m["user"]["nickname"] == "로그인 부엉이"
-        merged = client.post("/v1/me/progress", json={"progress": {"xpByGame": {"a": 30, "b": 20}, "badges": {"first_hit": {"at": "2026-01-02", "game": "a"}}}}, headers=h).json()["progress"]
-        again = client.post("/v1/me/progress", json={"progress": {"xpByGame": {"a": 30}, "badges": {"first_hit": {"at": "2026-01-01", "game": "c"}}}}, headers=h).json()["progress"]
-        assert merged["xp"] == 50 and again["xp"] == 50  # 같은 게임은 한 번만
-        assert again["badges"]["first_hit"]["at"] == "2026-01-01"  # 먼저 딴 날짜
-    finally:
-        auth.SUPABASE_JWT_SECRET = ""
+        season.play_turn(st, orders)
+        raise AssertionError("6종목 매수가 통과됨")
+    except season.GameError:
+        pass
+    assert st["pos"] == {} and st["t"] == 0  # 원래대로
 
 
-def test_concurrent_requests_cannot_double_count():
-    """연타·동시 요청: 카드는 3장까지만, 한 라운드는 한 번만 기록(게임별 잠금 + 유니크 인덱스)"""
-    from concurrent.futures import ThreadPoolExecutor
-
-    from app.db import Play, Session
-
-    gid = client.post("/v1/games").json()["gameId"]
-    cards = ["chart", "disclosure", "youtube", "finance", "news", "ai"]
-    with ThreadPoolExecutor(6) as ex:
-        list(ex.map(lambda c: client.post(f"/v1/games/{gid}/cards", json={"card": c}), cards))
-    st = client.get(f"/v1/games/{gid}").json()
-    assert len(st["current"]["opened"]) == 3 and len(st["current"]["cards"]) == 3
-    client.post(f"/v1/games/{gid}/decide", json={"weight": 100})
-    client.post(f"/v1/games/{gid}/tick", json={"days": 2})
-    with ThreadPoolExecutor(8) as ex:
-        codes = list(ex.map(lambda _: client.post(f"/v1/games/{gid}/exit").status_code, range(8)))
-    assert codes.count(200) == 1  # 나머지는 409(이미 끝난 라운드)
-    with Session() as s:
-        assert len(s.query(Play).filter(Play.game_id == gid, Play.round == 0).all()) == 1
-
-
-def test_progress_payload_is_validated():
-    import jwt as pyjwt
-
-    from app import auth
-
-    auth.SUPABASE_JWT_SECRET = "test-secret-for-hs256-must-be-long-enough-0123456789"
+def test_event_needs_choice_and_skip_blocks_trades():
+    st = season.new_run("free:event", ["KRX"])
+    for _ in range(season.EVENT_TURNS[0]):
+        season.play_turn(st, [])
+    assert st["pending"] is not None
     try:
-        h = {"Authorization": "Bearer " + pyjwt.encode({"sub": "user-xp", "aud": "authenticated"}, auth.SUPABASE_JWT_SECRET, algorithm="HS256")}
-        r = client.post("/v1/me/progress", json={"progress": {"xpByGame": {"a": 1e9}}}, headers=h).json()["progress"]
-        assert r["xp"] <= 800  # 게임당 상한
-        assert client.post("/v1/me/progress", json={"progress": {"xpByGame": {"a": "많이"}}}, headers=h).status_code == 400
-    finally:
-        auth.SUPABASE_JWT_SECRET = ""
+        season.play_turn(st, [])
+        raise AssertionError("사건 선택 없이 진행됨")
+    except season.GameError:
+        pass
+    st["events"][st["pending"]] = "trip"  # 출장: 거래 불가
+    season.play_turn(st, [], choice=0)
+    assert st["t"] == season.EVENT_TURNS[0] + 1
 
 
+def test_panic_sell_when_mental_hits_zero():
+    st = season.new_run("free:panic", ["KRX"])
+    k = "0"
+    px = season.price(st, k, st["s"] - 1)
+    season.play_turn(st, [{"k": k, "q": int(st["cash"] * 0.9 / px)}])
+    st["mental"] = 1
+    st["traits"]["fomo"] = 0
+    # 떨어지는 주가 올 때까지 진행
+    for _ in range(20):
+        if st["traits"]["panic"] or st["done"] or not st["pos"]:
+            break
+        before = st["mental"]
+        season.play_turn(st, [], choice=0 if st["pending"] is not None else None)
+        if st["mental"] < before:
+            break
+        st["mental"] = 1
+    assert st["traits"]["panic"] >= 1 or st["mental"] > 0
 
-def test_ai_check_v2_normalizes_cites_and_blocks_other_stocks():
-    """평가 v1 실패 사례로 추가한 검사: 묶어 쓴 근거 id 정리, 자료에 없는 다른 종목 언급 차단"""
-    assert ai.norm_cites(["[C1]", "D1,D2", "F1"]) == ["C1", "D1", "D2", "F1"]
-    ids = {"C1", "F1"}
-    ok = ai.check("A사는 매출이 늘었어요.", ["F1"], ids, "F1 매출 증가", {"name": "가나다", "aliases": [], "symbol": "000000"})
-    assert ok.ok
-    bad = ai.check("반면 삼성전자는 실적이 좋아요.", ["F1"], ids, "F1 매출 증가", {"name": "가나다", "aliases": [], "symbol": "000000"})
-    assert not bad.ok and "others" in bad.items
+
+def test_random_strategies_never_break_invariants():
+    rng = random.Random(1)
+    for i in range(15):
+        st = season.new_run(f"free:fuzz{i}", ["KRX", "US", "CRYPTO"])
+        while not st["done"]:
+            v = season.view(st)
+            orders = []
+            if not v["skip"]:
+                for _ in range(rng.randint(0, 3)):
+                    a = rng.choice(v["assets"])
+                    held = next((p for p in v["pos"] if p["k"] == a["k"]), None)
+                    if held and rng.random() < 0.5:
+                        orders.append({"k": a["k"], "q": -rng.randint(1, held["qty"])})
+                    elif not held and len(v["pos"]) < season.MAX_HOLD:
+                        orders.append({"k": a["k"], "q": max(1, int(v["cash"] * 0.2 / a["price"]))})
+            try:
+                season.play_turn(st, orders, 0 if v["pending"] else None)
+            except season.GameError:
+                season.play_turn(st, [], 0 if v["pending"] else None)
+            assert st["cash"] >= -1 and 0 <= st["mental"] <= 100 and len(st["pos"]) <= season.MAX_HOLD
+        fin = season.final(st)
+        assert abs(fin["curves"]["me"][-1] - 1 - fin["ret"]) < 1e-3
+
+
+def test_coach_falls_back_without_ai():
+    r = client.post("/v1/runs", json={"mode": "free", "markets": ["KRX"]}).json()
+    play(r["id"], lambda v: [])
+    c = client.post(f"/v1/runs/{r['id']}/coach").json()
+    assert c["source"] == "rule" and len(c["points"]) == 3
+
+
+def test_coach_check_catches_bad_answers():
+    ctx = json.dumps({"수익률(%)": 12.3, "거래 횟수": 14})
+    good = {"headline": "버티기 성공", "points": ["수익률 12.3%예요", "거래는 14번", "잘했어요"], "tip": "분산해 보세요"}
+    assert all(v for k, v in ai.check(good, ctx).items() if not k.startswith("_"))
+    bad = {"headline": "대박", "points": ["수익률 55%", "이 종목 사세요", "x"], "tip": "y"}
+    chk = ai.check(bad, ctx)
+    assert not chk["numbers"] and not chk["advice"]
+
+
+def test_meta_has_analysis():
+    m = client.get("/v1/meta").json()
+    assert m["hype"]["0건"]["n"] > 0 and m["ghosts"]["n"] > 10 and m["pack"]["weeks"] > 26
+
+
+def test_event_endpoint_applies_before_orders():
+    r = client.post("/v1/runs", json={"mode": "free", "markets": ["KRX"]}).json()
+    rid = r["id"]
+    for _ in range(season.EVENT_TURNS[0]):
+        v = client.post(f"/v1/runs/{rid}/turn", json={"orders": []}).json()["view"]
+    assert v["pending"]
+    assert client.post(f"/v1/runs/{rid}/turn", json={"orders": []}).status_code == 409
+    e = client.post(f"/v1/runs/{rid}/event", json={"choice": 1}).json()
+    assert e["view"]["pending"] is None and e["event"]["choice"] == 1
+    assert client.post(f"/v1/runs/{rid}/event", json={"choice": 1}).status_code == 409
+    assert client.post(f"/v1/runs/{rid}/turn", json={"orders": []}).status_code == 200
+
+
+# ---------------------------------------------------------------- 2차: 연습 시즌 · 캐릭터 · 미션 · 빨리 감기 · 개미 비서(RAG)
+def test_practice_season_is_short_and_simple():
+    r = client.post("/v1/runs", json={"mode": "practice", "char": "office"}).json()
+    v = r["view"]
+    assert v["season"] == 8 and len(v["assets"]) == 6 and v["markets"] == ["KRX"]
+    assert all(a["market"] == "KRX" for a in v["assets"]) and len(v["missions"]) == 3
+    end = play(r["id"], lambda v: [], pick=1)
+    assert end["final"]["len"] == 8 and len(end["final"]["weeks"]) == 8 and "stars" in end["final"]
+
+
+def test_characters_change_rules():
+    whale = season.new_run("free:c1", ["KRX"], "free", "whale")
+    student = season.new_run("free:c1", ["KRX"], "free", "student")
+    coin = season.new_run("free:c1", ["KRX"], "free", "coin")
+    assert whale["cash"] == 30_000_000 and student["cash"] == 6_000_000
+    assert "CRYPTO" in coin["markets"] and coin["mental"] == 50
+    holder = season.new_run("free:c2", ["KRX"], "free", "holder")
+    holder["mental"] = 1
+    season.play_turn(holder, [])
+    assert holder["mental"] >= 20  # 존버 개미는 20 아래로 안 떨어진다
+    office = season.new_run("free:c3", ["KRX"], "free", "office")
+    for _ in range(4):
+        season.play_turn(office, [], 1 if office["pending"] is not None else None)
+    assert office["deposits"] == 10_000_000 + 500_000  # 4주째 월급
+
+
+def test_skip_stops_at_event_and_counts_weeks():
+    r = client.post("/v1/runs", json={"mode": "free", "markets": ["KRX"]}).json()
+    j = client.post(f"/v1/runs/{r['id']}/skip", json={"weeks": 8}).json()
+    assert len(j["weeks"]) == season.EVENT_TURNS[0] and j["view"]["pending"]  # 첫 사건에서 멈춘다
+    assert client.post(f"/v1/runs/{r['id']}/skip", json={"weeks": 4}).status_code == 409
+
+
+def test_missions_are_judged_at_the_end():
+    st = season.new_run("free:m", ["KRX"], "free", "office")
+    st["missions"] = ["calm", "nofomo", "profit"]
+    while not st["done"]:
+        season.play_turn(st, [], 1 if st["pending"] is not None else None)
+    fin = season.final(st)
+    states = {m["id"]: m["state"] for m in fin["missions"]}
+    assert states["nofomo"] == "fail"  # 거래 3번 미만
+    assert states["profit"] == "fail"  # 현금만: 0%
+    assert fin["stars"] == sum(1 for m in fin["missions"] if m["state"] == "done") + {"S": 2, "A": 2, "B": 1}.get(fin["grade"], 0)
+
+
+def test_rag_search_never_returns_future_docs():
+    from app import rag
+    import numpy as np
+
+    idx = rag.Index()
+    idx.docs = [{"id": i, "a": 1, "w": w, "k": "yt", "t": f"제목{w}", "ch": "", "st": "n", "v": 0} for i, w in enumerate(range(20, 40))]
+    m = np.random.default_rng(0).normal(size=(20, 8)).astype(np.float32)
+    idx.emb = m / np.linalg.norm(m, axis=1, keepdims=True)
+    idx.backend = "memory"
+    got = idx.search(idx.emb[-1], [1], wmax=30, focus=1)
+    assert got and all(d["w"] <= 30 and d["w"] >= 30 - rag.WINDOW + 1 for d in got)
+    assert all(d["w"] <= 30 for d in idx.search(None, [1], wmax=30, focus=1))  # 임베딩 없을 때도
+
+
+def test_ask_check_allows_quotes_but_blocks_advice_and_names():
+    ctx = "D1 · 지난주 · 유튜브 · [반도체 A] 이 주식 사라"
+    ok = {"answer": "유튜버들은 '이 주식 사라'고 했어요.", "cites": ["D1"]}
+    assert all(v for k, v in ai.check_ask(ok, ctx, "q", {"D1"}, ["삼성전자"]).items() if not k.startswith("_"))
+    bad = {"answer": "삼성전자는 지금 사세요. 30% 오릅니다.", "cites": ["D9"]}
+    chk = ai.check_ask(bad, ctx, "q", {"D1"}, ["삼성전자"])
+    assert not chk["advice"] and not chk["names"] and not chk["cites"] and not chk["numbers"]

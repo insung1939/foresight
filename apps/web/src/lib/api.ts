@@ -1,9 +1,8 @@
 // 서버 호출은 전부 여기서. 화면은 이 함수들만 쓴다.
 // 개발: vite 가 /api → http://localhost:8000 으로 넘긴다. 배포: VITE_API_URL.
 import { useCallback, useEffect, useState } from "react";
-import { authHeader } from "./auth";
 import { deviceId } from "./device";
-import type { AskResult, CardKey, GameState, Live, Me, Meta, Mode, Report, Weight } from "./types";
+import type { AskOut, Board, Coach, Final, Market, Meta, Mode, RunOut, Trade } from "./types";
 
 const BASE = ((import.meta.env.VITE_API_URL as string | undefined) ?? "/api").replace(/\/$/, "");
 const TIMEOUT_MS = 30_000;
@@ -25,7 +24,7 @@ async function call<T>(path: string, init?: { method?: string; body?: unknown; t
   try {
     const res = await fetch(`${BASE}${path}`, {
       method: init?.method ?? "GET",
-      headers: { ...(init?.body ? { "Content-Type": "application/json" } : {}), "X-Device": deviceId(), ...(await authHeader()) },
+      headers: { ...(init?.body ? { "Content-Type": "application/json" } : {}), "X-Device": deviceId() },
       body: init?.body ? JSON.stringify(init.body) : undefined,
       signal: ctrl.signal,
     });
@@ -50,25 +49,20 @@ async function call<T>(path: string, init?: { method?: string; body?: unknown; t
 }
 
 export const api = {
-  newGame: (nickname?: string | null, mode: Mode = "free") => call<GameState>("/v1/games", { method: "POST", body: { nickname: nickname || null, mode: mode === "free" ? "free" : "daily" } }),
-  tick: (id: string, days = 1) => call<GameState>(`/v1/games/${id}/tick`, { method: "POST", body: { days } }),
-  exit: (id: string) => call<GameState>(`/v1/games/${id}/exit`, { method: "POST" }),
-  me: () => call<Me>("/v1/me"),
-  setMe: (nickname: string) => call<{ nickname: string }>("/v1/me", { method: "PUT", body: { nickname } }),
-  syncProgress: (progress: unknown) => call<{ progress: unknown }>("/v1/me/progress", { method: "POST", body: { progress } }),
-  claim: (gameIds: string[]) => call<{ claimed: number }>("/v1/me/claim", { method: "POST", body: { gameIds } }),
-  setNickname: (id: string, nickname: string) => call<{ nickname: string }>(`/v1/games/${id}/nickname`, { method: "POST", body: { nickname } }),
-  live: (scope: "daily" | "today" | "all") => call<Live>(`/v1/live?scope=${scope}`),
-  game: (id: string) => call<GameState>(`/v1/games/${id}`),
-  open: (id: string, card: CardKey) => call<GameState>(`/v1/games/${id}/cards`, { method: "POST", body: { card } }),
-  decide: (id: string, weight: Weight) => call<GameState>(`/v1/games/${id}/decide`, { method: "POST", body: { weight } }),
-  adjust: (id: string, weight: Weight) => call<GameState>(`/v1/games/${id}/adjust`, { method: "POST", body: { weight } }),
-  next: (id: string) => call<GameState>(`/v1/games/${id}/next`, { method: "POST" }),
-  report: (id: string) => call<Report>(`/v1/games/${id}/report`),
-  ask: (id: string, question: string) => call<AskResult>(`/v1/games/${id}/ask`, { method: "POST", body: { question }, timeout: 60_000 }),
+  newRun: (mode: Mode, markets?: Market[], nickname?: string | null, char = "office") =>
+    call<RunOut>("/v1/runs", { method: "POST", body: { mode, markets: markets ?? null, nickname: nickname || null, char } }),
+  skip: (id: string, weeks = 4) => call<RunOut>(`/v1/runs/${id}/skip`, { method: "POST", body: { weeks } }),
+  ask: (id: string, question: string, k?: string) => call<AskOut>(`/v1/runs/${id}/ask`, { method: "POST", body: { question, k: k ?? null }, timeout: 60_000 }),
+  vote: (logId: number, vote: 1 | -1) => call<{ ok: boolean }>(`/v1/ai/${logId}/feedback`, { method: "POST", body: { vote } }),
+  run: (id: string) => call<RunOut>(`/v1/runs/${id}`),
+  event: (id: string, choice: number) => call<RunOut & { event: { id: string; choice: number; trades: Trade[] } }>(`/v1/runs/${id}/event`, { method: "POST", body: { choice } }),
+  turn: (id: string, orders: { k: string; q: number }[], choice: number | null) =>
+    call<RunOut>(`/v1/runs/${id}/turn`, { method: "POST", body: { orders, choice } }),
+  final: (id: string) => call<Final>(`/v1/runs/${id}/final`),
+  nickname: (id: string, nickname: string) => call<{ nickname: string }>(`/v1/runs/${id}/nickname`, { method: "POST", body: { nickname } }),
+  coach: (id: string) => call<Coach>(`/v1/runs/${id}/coach`, { method: "POST", timeout: 60_000 }),
+  board: (day?: string) => call<Board>(`/v1/leaderboard${day ? `?day=${day}` : ""}`),
   meta: () => call<Meta>("/v1/meta"),
-  feedback: (logId: number, vote: 1 | -1) => call<{ ok: boolean }>(`/v1/ai/${logId}/feedback`, { method: "POST", body: { vote } }),
-  survey: (id: string, body: { youtube: string; helpful: number; lesson: string }) => call<{ ok: boolean }>(`/v1/games/${id}/survey`, { method: "POST", body }),
 };
 
 export type Async<T> =

@@ -9,6 +9,9 @@ data/*.db
 data/*.log
 .pytest_cache/
 # 정답이 들어 있는 문제 파일은 공개 저장소에 올리지 않는다(서버에만 따로 올림, docs/deploy.md)
+data/season.json
+data/rag.json
+data/rag_docs.json
 data/bank.json
 data/extra.json
 data/ai.json

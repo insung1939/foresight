@@ -6,7 +6,7 @@
 ```bash
 .venv/bin/python scripts/pack_data.py   # data/pack.enc 생성(암호문), .env 에 DATA_KEY
 ```
-공개 저장소에는 `data/pack.enc` 만 올라가고 정답 원본(bank·extra·ai.json)은 `.gitignore`.
+공개 저장소에는 `data/pack.enc` 만 올라가고 시즌 팩 원본(season.json)은 `.gitignore`.
 
 ## 1. Supabase (새 프로젝트)
 1. 새 프로젝트 → Project Settings → Database → Connection string(**Session pooler**) 복사 → Render `DATABASE_URL`
@@ -28,3 +28,9 @@
 - `apps/web/src/lib/team.ts` 의 `links` 에 세 주소, `members` 에 팀원
 - `docs/demo.md` 체크리스트(다른 PC·휴대폰 접속, 서버 깨우기)
 - 강의실 와이파이에서 3~4명 동시 플레이 시험(요청 한도는 IP+기기 기준이라 서로 막지 않음)
+
+
+## 2026-11-21 리디자인(타임슬립 개미) 뒤 바뀐 점
+- 로그인(Supabase Auth)을 뺐다. Render 의 `SUPABASE_URL`, Vercel 의 `VITE_SUPABASE_*` 는 더 이상 필요 없다(남아 있어도 무시).
+- 서버가 읽는 데이터는 `data/season.json` 하나. `scripts/build_season.py` → `scripts/pack_data.py` 로 `data/pack.enc` 를 다시 만들어 올리고, Render 의 `DATA_KEY` 는 그대로 쓴다.
+- DB 는 새 테이블 `runs`·`coach_logs` 를 서버 시작 때 만든다. 예전 `games`·`plays` 테이블은 남아 있어도 쓰지 않는다.
