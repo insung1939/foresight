@@ -11,7 +11,7 @@ const CONFIG = {
   swagger: "https://foresight-api-yda3.onrender.com/docs",
   deck: "https://foresight-rho-teal.vercel.app/deck/index.html",
   api: "/api", // 같은 서비스의 API(Vercel rewrite · vite proxy). 실패하면 아래 DATA 값 그대로
-  team: { name: "5조", members: ["김지환", "김현준", "오선호", "조인성", "채재희"], presenter: "조인성" },
+  team: { name: "5조", members: ["김지환", "김현준", "오선호", "조인성", "채재희"], presenter: "" },
   // 프로토타입 장의 휴대폰 화면(같은 서비스의 상대 주소)
   screens: [
     { src: "/#/", label: "홈", sub: "개미 고르기 · 시즌 선택" },
@@ -40,7 +40,7 @@ const DATA = {
 // ───────────────────────── 발표 대본 (docs/script.md 와 같은 내용. segs[k] = k단계에서 할 말) ─────────────────────────
 const NOTES = [
   { id: "cover", title: "표지 · 그때로 돌아가면", sec: 15, segs: [
-    "안녕하세요, 5조 발표를 맡은 조인성입니다. '그때 그 종목 샀으면 지금 부자일 텐데', 한 번쯤 생각해 보셨죠? [한 박자 쉬고] 그 질문을 게임으로 만들었습니다. 「타임슬립 개미」입니다.",
+    "안녕하세요, 5조입니다. '그때 그 종목 샀으면 지금 부자일 텐데', 한 번쯤 생각해 보셨죠? [한 박자 쉬고] 그 질문을 게임으로 만들었습니다. 「타임슬립 개미」입니다.",
   ] },
   { id: "problem", title: "대상 사용자와 문제", sec: 25, segs: [
     "대상은 유튜브로 투자를 배우는 초보 개인투자자, 주린이 개미입니다. 주식 정보를 얻는 곳 1위가 유튜브, 37.4%입니다.",
