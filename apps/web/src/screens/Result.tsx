@@ -109,10 +109,14 @@ function Body({ f, id }: { f: Final; id: string }) {
       setCoachBusy(false);
     }
   };
+  const [savedNick, setSavedNick] = useState(f.nickname ?? "");
   const saveNick = async () => {
+    const n = nick.trim();
+    if (!n || n === savedNick) return;
     try {
-      const r = await api.nickname(id, nick);
+      const r = await api.nickname(id, n);
       write(KEYS.nick, r.nickname);
+      setSavedNick(r.nickname);
       toast(`'${r.nickname}'(으)로 순위에 올렸어요`, { tone: "ok" });
     } catch (e) {
       toast((e as Error).message, { tone: "warn" });
@@ -223,6 +227,52 @@ function Body({ f, id }: { f: Final; id: string }) {
         </div>
       )}
 
+      {!demo && (
+        <section className={`card rank-cta ${f.place ? "on" : ""}`} aria-labelledby="rk-h" data-ux="Inline Edit · Autosave">
+          {f.mode === "daily" && f.place ? (
+            <>
+              <h2 id="rk-h" className="sec-title">
+                🏆 오늘의 시드 {f.place.total.toLocaleString()}명 중 <b className="rk-big">{f.place.rank}등</b>
+              </h2>
+              <form
+                className="nick-row"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  void saveNick();
+                }}
+              >
+                <label className="sr-only" htmlFor="nick-in">
+                  순위에 보일 이름
+                </label>
+                <input id="nick-in" value={nick} maxLength={12} placeholder="순위에 보일 이름(지금은 익명 개미)" onChange={(e) => setNick(e.target.value)} onBlur={() => void saveNick()} enterKeyHint="done" />
+                <button className="btn primary" disabled={!nick.trim() || nick.trim() === savedNick}>
+                  {savedNick && nick.trim() === savedNick ? "저장됨 ✓" : "저장"}
+                </button>
+              </form>
+              <a href="#/rank" className="link">
+                오늘의 순위 보기 →
+              </a>
+            </>
+          ) : f.mode === "daily" ? (
+            <p>
+              <b>이 기기로 오늘 이미 순위에 오른 판이 있어요.</b>
+              <br />
+              <span className="muted small">오늘의 시드는 기기당 첫 완주만 순위에 올라가요. 이번 판은 기록·별만 남아요.</span>
+            </p>
+          ) : (
+            <p>
+              <b>{f.mode === "practice" ? "연습 시즌" : "자유 플레이"}은 순위에 올라가지 않아요.</b>
+              <br />
+              <span className="muted small">모두 같은 시장으로 겨루는 &lsquo;오늘의 시드&rsquo;만 순위에 올라가요.</span>
+              <br />
+              <button className="btn primary" style={{ marginTop: 10 }} onClick={() => go("/")}>
+                🗓️ 오늘의 시드 도전하러 가기
+              </button>
+            </p>
+          )}
+        </section>
+      )}
+
       <div className="res-actions">
         <button className="btn primary" onClick={share}>
           결과 공유
@@ -306,25 +356,6 @@ function Body({ f, id }: { f: Final; id: string }) {
         )}
       </section>
 
-      {f.mode === "daily" && (
-        <section className="card" aria-labelledby="nick">
-          <h2 id="nick" className="sec-title">
-            🏷️ 순위에 보일 이름
-          </h2>
-          <div className="nick-row">
-            <label className="sr-only" htmlFor="nick-in">
-              이름
-            </label>
-            <input id="nick-in" value={nick} maxLength={12} placeholder="익명 개미" onChange={(e) => setNick(e.target.value)} />
-            <button className="btn primary" onClick={saveNick} disabled={!nick.trim()}>
-              저장
-            </button>
-          </div>
-          <a href="#/rank" className="link">
-            오늘의 순위 보기 →
-          </a>
-        </section>
-      )}
       <p className="disclaimer">유튜버 성적은 영상 제목 속 &lsquo;오른다&rsquo; 언급을 기계적으로 따라 산 가상 계산이에요. 채널의 실제 운용 성과가 아니에요.</p>
     </>
   );

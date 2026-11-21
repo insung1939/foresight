@@ -64,6 +64,7 @@ export const api = {
   nickname: (id: string, nickname: string) => call<{ nickname: string }>(`/v1/runs/${id}/nickname`, { method: "POST", body: { nickname } }),
   coach: (id: string) => call<Coach>(`/v1/runs/${id}/coach`, { method: "POST", timeout: 60_000 }),
   board: (day?: string) => call<Board>(`/v1/leaderboard${day ? `?day=${day}` : ""}`),
+  renameDay: (day: string, nickname: string) => call<{ nickname: string }>("/v1/leaderboard/nickname", { method: "POST", body: { day, nickname } }),
   days: () => call<{ days: Day[]; today: string }>("/v1/leaderboard/days"),
   hall: () => call<{ rows: (Board["rows"][number] & { day: string })[] }>("/v1/leaderboard/all"),
   luck: (id: string, card: number) => call<RunOut>(`/v1/runs/${id}/luck`, { method: "POST", body: { card } }),

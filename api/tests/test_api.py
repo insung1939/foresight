@@ -370,3 +370,22 @@ def test_mental_tiers_change_fees():
 def test_scrub_removes_product_codes_and_places():
     out = season._scrub("HBM4 수혜 ⟦3⟧ 대산단지 투입, ETF 와 AI 는 그대로")
     assert "HBM4" not in out and "대산" not in out and "ETF" in out and "AI" in out and "⟦3⟧" in out
+
+
+
+def test_leaderboard_marks_my_run_and_renames_it():
+    h = {"X-Device": "dev-test-1"}
+    r = client.post("/v1/runs", json={"mode": "daily"}, headers=h).json()
+    while True:
+        v = client.get(f"/v1/runs/{r['id']}").json()["view"]
+        if v["done"]:
+            break
+        if v["pending"]:
+            client.post(f"/v1/runs/{r['id']}/event", json={"choice": 1})
+        client.post(f"/v1/runs/{r['id']}/skip", json={"weeks": 8})
+    day = client.get("/v1/leaderboard", headers=h).json()["day"]
+    rows = client.get("/v1/leaderboard", headers=h).json()["rows"]
+    assert any(x["me"] for x in rows)
+    assert not any(x["me"] for x in client.get("/v1/leaderboard", headers={"X-Device": "someone-else"}).json()["rows"])
+    assert client.post("/v1/leaderboard/nickname", json={"day": day, "nickname": "인성갬이"}, headers=h).json()["nickname"] == "인성갬이"
+    assert client.post("/v1/leaderboard/nickname", json={"day": day, "nickname": "x"}, headers={"X-Device": "nobody"}).status_code == 404

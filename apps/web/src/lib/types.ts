@@ -204,7 +204,7 @@ export interface Coach {
 export interface Board {
   day: string;
   total: number;
-  rows: { rank: number; nickname: string; ret: number; grade: string; title: string; char: string | null }[];
+  rows: { rank: number; nickname: string; ret: number; grade: string; title: string; char: string | null; me?: boolean }[];
   median: number | null;
   bench: { youtubers: number[]; index: number; beatAll: number } | null;
 }

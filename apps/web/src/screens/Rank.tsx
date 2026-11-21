@@ -3,7 +3,7 @@ import { motion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 import { Ant, type CharId } from "../components/Characters";
 import { QR } from "../components/QR";
-import { Delta, ErrorState, Loading, TopBar } from "../components/ui";
+import { Delta, ErrorState, Loading, TopBar, toast } from "../components/ui";
 import { api, useAsync } from "../lib/api";
 import { pct, todayKst } from "../lib/format";
 import { query } from "../lib/router";
@@ -130,7 +130,9 @@ function DayBoard({ b, isToday }: { b: Board; isToday: boolean }) {
           top3[i] ? (
             <motion.div key={i} className={`pod p${i + 1}`} initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.1 * i }}>
               <Ant char={(top3[i].char ?? "office") as CharId} mood="happy" size={i === 0 ? 54 : 44} />
-              <b>{top3[i].nickname}</b>
+              <b>
+                {top3[i].nickname} {top3[i].me && <span className="me-tag">나</span>}
+              </b>
               <Delta x={top3[i].ret} />
               <span className="pod-base">{["🥇", "🥈", "🥉"][i]}</span>
             </motion.div>
@@ -143,7 +145,8 @@ function DayBoard({ b, isToday }: { b: Board; isToday: boolean }) {
         {b.total.toLocaleString()}명 완주 · 중간값 {b.median !== null ? pct(b.median) : "-"}
         {b.bench && ` · 유튜버 3명과 코스피를 모두 이긴 사람 ${Math.round(b.bench.beatAll * 100)}%`}
       </p>
-      <Rows rows={b.rows.slice(3)} start={4} />
+      {b.rows.slice(0, 3).some((r) => r.me) && <Rows rows={b.rows.slice(0, 3).filter((r) => r.me)} day={b.day} />}
+      <Rows rows={b.rows.slice(3)} start={4} day={b.day} />
       {b.bench && (
         <p className="muted small">
           이날 라이벌: 유튜버 {b.bench.youtubers.map((x) => pct(x)).join(" · ")} / 코스피 {pct(b.bench.index)}
@@ -153,16 +156,45 @@ function DayBoard({ b, isToday }: { b: Board; isToday: boolean }) {
   );
 }
 
-function Rows({ rows, start = 1, showDay }: { rows: (Board["rows"][number] & { day?: string })[]; start?: number; showDay?: boolean }) {
+function Rows({ rows, start = 1, showDay, day }: { rows: (Board["rows"][number] & { day?: string })[]; start?: number; showDay?: boolean; day?: string }) {
+  const [edit, setEdit] = useState(false);
+  const [name, setName] = useState("");
+  const [names, setNames] = useState<Record<number, string>>({});
   return (
     <ol className="board" start={start}>
       {rows.map((r) => (
-        <li key={`${r.rank}${r.day ?? ""}`} className={r.rank <= 3 ? `top top${r.rank}` : ""}>
+        <li key={`${r.rank}${r.day ?? ""}`} className={`${r.rank <= 3 ? `top top${r.rank}` : ""} ${r.me ? "me" : ""}`}>
           <span className="rk">{r.rank <= 3 ? ["🥇", "🥈", "🥉"][r.rank - 1] : r.rank}</span>
           <span className="bd-name">
             <b>
-              <Ant char={(r.char ?? "office") as CharId} size={20} /> {r.nickname}
+              <Ant char={(r.char ?? "office") as CharId} size={20} /> {names[r.rank] ?? r.nickname} {r.me && <span className="me-tag">나</span>}
             </b>
+            {r.me && day && !edit && (
+              <button className="link" onClick={() => (setEdit(true), setName(r.nickname === "익명 개미" ? "" : r.nickname))}>
+                이름 바꾸기
+              </button>
+            )}
+            {r.me && day && edit && (
+              <form
+                className="rename"
+                onSubmit={async (e) => {
+                  e.preventDefault();
+                  try {
+                    const res = await api.renameDay(day, name);
+                    setNames({ ...names, [r.rank]: res.nickname });
+                    setEdit(false);
+                    toast(`'${res.nickname}'(으)로 바꿨어요`, { tone: "ok" });
+                  } catch (err) {
+                    toast((err as Error).message, { tone: "warn" });
+                  }
+                }}
+              >
+                <input value={name} maxLength={12} placeholder="순위에 보일 이름" onChange={(e) => setName(e.target.value)} autoFocus />
+                <button className="btn primary" disabled={!name.trim()}>
+                  저장
+                </button>
+              </form>
+            )}
             <span className="muted small">
               {r.title}
               {showDay && r.day ? ` · ${r.day}` : ""}

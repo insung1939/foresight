@@ -440,9 +440,31 @@ def leaderboard_all(s: S = Depends(db)):
                       "char": r.char, "day": r.day} for i, r in enumerate(rows)]}
 
 
+class DayNick(BaseModel):
+    day: str = Field(..., pattern=r"^\d{4}-\d{2}-\d{2}$")
+    nickname: str
+
+
+@app.post("/v1/leaderboard/nickname", tags=["랭킹"], summary="순위에 오른 내 판(이 기기)의 이름 바꾸기 — 결산에서 저장을 놓쳤을 때")
+def leaderboard_nickname(request: Request, body: DayNick, s: S = Depends(db)):
+    device = (request.headers.get("x-device") or "")[:40]
+    if not device:
+        raise HTTPException(400, "기기 정보가 없어요")
+    r = s.scalars(select(Run).where(Run.day == body.day, Run.ranked.is_(True), Run.device == device)).first()
+    if not r:
+        raise HTTPException(404, "이 기기로 그날 순위에 오른 판이 없어요")
+    n = clean_nick(body.nickname)
+    if not n:
+        raise HTTPException(422, "이름은 한글·영문·숫자 12자까지예요")
+    r.nickname = n
+    s.commit()
+    return {"nickname": n}
+
+
 @app.get("/v1/leaderboard", tags=["랭킹"], summary="오늘의 시드 랭킹(기기당 첫 완주만)")
-def leaderboard(day: str | None = Query(None, pattern=r"^\d{4}-\d{2}-\d{2}$"), s: S = Depends(db)):
+def leaderboard(request: Request, day: str | None = Query(None, pattern=r"^\d{4}-\d{2}-\d{2}$"), s: S = Depends(db)):
     day = day or today_kst()
+    device = (request.headers.get("x-device") or "")[:40]
     rows = s.scalars(select(Run).where(Run.day == day, Run.ranked.is_(True)).order_by(Run.ret.desc()).limit(50)).all()
     total = s.scalar(select(func.count()).select_from(Run).where(Run.day == day, Run.ranked.is_(True)))
     rets = s.scalars(select(Run.ret).where(Run.day == day, Run.ranked.is_(True))).all()
@@ -455,7 +477,8 @@ def leaderboard(day: str | None = Query(None, pattern=r"^\d{4}-\d{2}-\d{2}$"), s
                    "beatAll": round(sum(1 for x in rets if x > max(yt + [ix])) / len(rets), 3)}
     return {
         "day": day, "total": total,
-        "rows": [{"rank": i + 1, "nickname": r.nickname or "익명 개미", "ret": r.ret, "grade": r.grade, "title": r.title, "char": r.char}
+        "rows": [{"rank": i + 1, "nickname": r.nickname or "익명 개미", "ret": r.ret, "grade": r.grade, "title": r.title, "char": r.char,
+                  "me": bool(device) and r.device == device}  # 내 기기의 판이면 '나'로 표시(판 id 는 공개하지 않는다)
                  for i, r in enumerate(rows)],
         "median": round(statistics.median(rets), 5) if rets else None,
         "bench": yt_beat,

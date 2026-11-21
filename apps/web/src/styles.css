@@ -747,3 +747,12 @@ span.code-chip { display: inline-flex; align-items: center; }
 .ff-btn.soft { border-color: var(--line); color: var(--muted); }
 .orca-badge { display: inline-grid; place-items: center; flex: none; border-radius: 50%; background: radial-gradient(circle at 40% 35%, #e7f5ff, #a5d8ff); box-shadow: inset 0 -3px 0 rgba(28, 126, 214, 0.15); overflow: hidden; }
 @media (prefers-color-scheme: dark) { .orca-badge { background: radial-gradient(circle at 40% 35%, #d0ebff, #74c0fc); } }
+
+/* 결산: 순위·이름 */
+.rank-cta { margin-top: 14px; }
+.rank-cta.on { border: 2px solid var(--brand); background: color-mix(in srgb, var(--brand) 5%, var(--surface)); }
+.rk-big { font-size: 22px; color: var(--brand); }
+.board li.me { outline: 2px solid var(--brand); }
+.me-tag { font-size: 11px; font-weight: 800; color: #fff; background: var(--brand); border-radius: 999px; padding: 1px 7px; }
+.rename { display: flex; gap: 6px; margin-top: 6px; }
+.rename input { flex: 1; min-width: 0; min-height: 40px; border-radius: 10px; border: 1.5px solid var(--line); padding: 0 10px; background: var(--surface); }
