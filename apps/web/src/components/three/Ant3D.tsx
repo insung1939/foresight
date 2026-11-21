@@ -3,15 +3,17 @@ import { useFrame } from "@react-three/fiber";
 import { useRef, useState } from "react";
 import type { Group } from "three";
 
-export function Ant3D({ color = "#5b3fd6", accent = "#e5383b", position = [0, 0, 0] as [number, number, number], scale = 1, mood = "calm", outfit, face = 0 }: { color?: string; accent?: string; position?: [number, number, number]; scale?: number; mood?: string; outfit?: string | null; face?: number }) {
+export function Ant3D({ color = "#5b3fd6", accent = "#e5383b", position = [0, 0, 0] as [number, number, number], scale = 1, mood = "calm", outfit, face = 0, onTap, walking }: { color?: string; accent?: string; position?: [number, number, number]; scale?: number; mood?: string; outfit?: string | null; face?: number; onTap?: () => void; walking?: { current: boolean } }) {
   const g = useRef<Group>(null);
   const [jump, setJump] = useState(0);
   useFrame((st, dt) => {
     if (!g.current) return;
     const t = st.clock.elapsedTime;
     const j = jump > 0 ? Math.sin((1 - jump) * Math.PI) * 0.6 : 0;
-    g.current.position.y = position[1] + Math.abs(Math.sin(t * 2.2)) * 0.08 + j;
-    g.current.rotation.y = face + Math.sin(t * 0.7) * 0.25 + (jump > 0 ? (1 - jump) * Math.PI * 2 : 0);
+    const w = walking?.current;
+    g.current.position.y = position[1] + Math.abs(Math.sin(t * (w ? 9 : 2.2))) * (w ? 0.14 : 0.08) + j;
+    g.current.rotation.y = face + (w ? 0 : Math.sin(t * 0.7) * 0.25) + (jump > 0 ? (1 - jump) * Math.PI * 2 : 0);
+    g.current.rotation.z = w ? Math.sin(t * 9) * 0.06 : 0;
     if (jump > 0) setJump(Math.max(0, jump - dt * 1.6));
   });
   const eyeScale = mood === "panic" ? 1.25 : 1;
@@ -23,7 +25,10 @@ export function Ant3D({ color = "#5b3fd6", accent = "#e5383b", position = [0, 0,
       onClick={(e) => {
         e.stopPropagation();
         setJump(1);
+        onTap?.();
       }}
+      onPointerOver={() => (document.body.style.cursor = "pointer")}
+      onPointerOut={() => (document.body.style.cursor = "")}
     >
       {/* 배·가슴 */}
       <mesh position={[0, 0.35, -0.35]} castShadow>

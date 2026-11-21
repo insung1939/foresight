@@ -1,8 +1,8 @@
 // 해시 라우터(#/play). 정적 호스팅(Vercel)에서 새로고침해도 404 가 나지 않는다.
 import { useEffect, useState } from "react";
 
-export type Route = "/" | "/play" | "/result" | "/rank" | "/data" | "/team" | "/demo" | "404";
-const ROUTES: Route[] = ["/", "/play", "/result", "/rank", "/data", "/team", "/demo"];
+export type Route = "/" | "/play" | "/result" | "/rank" | "/data" | "/team" | "/demo" | "/room" | "404";
+const ROUTES: Route[] = ["/", "/play", "/result", "/rank", "/data", "/team", "/demo", "/room"];
 
 function parse(): Route {
   const h = window.location.hash.replace(/^#/, "").split("?")[0] || "/";

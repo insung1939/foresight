@@ -389,3 +389,19 @@ def test_leaderboard_marks_my_run_and_renames_it():
     assert not any(x["me"] for x in client.get("/v1/leaderboard", headers={"X-Device": "someone-else"}).json()["rows"])
     assert client.post("/v1/leaderboard/nickname", json={"day": day, "nickname": "인성갬이"}, headers=h).json()["nickname"] == "인성갬이"
     assert client.post("/v1/leaderboard/nickname", json={"day": day, "nickname": "x"}, headers={"X-Device": "nobody"}).status_code == 404
+
+
+
+def test_max_buy_never_rejected_for_any_character_or_mood():
+    """화면의 '최대'(현금 ÷ 가격 × (1+표시 수수료))가 어떤 캐릭터·멘탈에서도 서버에서 통과해야 한다"""
+    for char in season.CHARS:
+        for mental in (90, 60, 40, 15):
+            st = season.new_run(f"free:max{char}{mental}", ["KRX", "US", "CRYPTO"], "free", char, nonce="m")
+            st["mental"] = mental
+            v = season.view(st)
+            for a in v["assets"]:
+                if a["locked"]:
+                    continue
+                q = int((v["cash"] * 0.9995) / (a["price"] * (1 + v["fees"][a["market"]]["buy"])))
+                trial = json.loads(json.dumps(st))
+                season.play_turn(trial, [{"k": a["k"], "q": q}])  # GameError 면 테스트 실패

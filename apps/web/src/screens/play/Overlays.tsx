@@ -433,7 +433,7 @@ function Assistant({ v, a, runId, onAsked }: { v: View; a: Asset; runId: string;
                       {c.kind} · {c.ago}
                     </b>{" "}
                     {c.text}
-                    {c.ch && <span className="muted small"> — {c.ch}</span>}
+                    {c.ch && <span className="muted small"> · {c.ch}</span>}
                   </span>
                 </li>
               ))}

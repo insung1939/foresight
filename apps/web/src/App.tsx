@@ -11,6 +11,7 @@ const Rank = lazy(() => import("./screens/Rank"));
 const Data = lazy(() => import("./screens/Data"));
 const Team = lazy(() => import("./screens/Team"));
 const Demo = lazy(() => import("./screens/Demo"));
+const RoomPage = lazy(() => import("./screens/RoomPage"));
 
 export default function App() {
   const route = useRoute();
@@ -31,6 +32,7 @@ export default function App() {
   else if (route === "/data") screen = <Data />;
   else if (route === "/team") screen = <Team />;
   else if (route === "/demo") screen = <Demo />;
+  else if (route === "/room") screen = <RoomPage />;
   else
     screen = (
       <>

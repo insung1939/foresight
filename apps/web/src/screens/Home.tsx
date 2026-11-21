@@ -7,7 +7,7 @@ import { Delta, Sheet, TopBar, toast } from "../components/ui";
 import { api, useAsync } from "../lib/api";
 import { todayKst } from "../lib/format";
 import { ALL_TITLES, charUnlocked, progress, save, unlocked } from "../lib/progress";
-import { FURNITURE, OUTFITS, nextFurniture, unlockedFurniture } from "../lib/room";
+import { nextFurniture, unlockedFurniture } from "../lib/room";
 import { go } from "../lib/router";
 import { sfx } from "../lib/sfx";
 import { KEYS, read, write } from "../lib/storage";
@@ -23,7 +23,6 @@ export default function Home() {
   const [cont, setCont] = useState<RunOut | null>(null);
   const [busy, setBusy] = useState<Mode | null>(null);
   const [pick, setPick] = useState<Mode | null>(null);
-  const [room, setRoom] = useState(false);
   const board = useAsync(() => api.board(), []);
   const first = !p.practiced && p.runs === 0;
   const playedToday = p.dailyDone === todayKst();
@@ -68,7 +67,7 @@ export default function Home() {
               <br />
               <span className="grad">부자 될 수 있을까?</span>
             </h1>
-            <p className="lead">1,000만 원과 폰 하나 들고 진짜 있었던 시장의 반년으로 떨어졌어요. 유튜버 라이벌보다, 코스피보다 많이 벌어 보세요.</p>
+            <p className="lead">1,000만 원과 폰 하나 들고, 진짜 있었던 시장의 반년으로 떨어졌다. 유튜버보다, 코스피보다 더 벌 수 있을까?</p>
             <div className="cta">
               {cont && (
                 <button className="btn primary block" onClick={() => go("/play")}>
@@ -99,7 +98,7 @@ export default function Home() {
           </div>
           <div className="hero-room">
             <RoomView char={char} items={items} mood="happy" height={320} outfit={p.outfit} />
-            <button className="room-cap" onClick={() => setRoom(true)} data-ux="Progress · Collection">
+            <button className="room-cap" onClick={() => go("/room")} data-ux="Progress · Collection">
               <span>⭐ {p.stars}</span>
               <span className="muted small">{nf ? `${nf.stars - p.stars}개 더 모으면 ${nf.icon} ${nf.name}` : "모든 가구를 모았어요!"}</span>
               <span className="link">내 방 →</span>
@@ -109,28 +108,28 @@ export default function Home() {
 
         <section className="how" aria-labelledby="how">
           <h2 id="how" className="sec-title">
-            이렇게 해요
+            한 판은 이렇게
           </h2>
           <ol className="steps" data-ux="Stepper · Onboarding">
             <li>
               <span className="st-ic">📱</span>
               <b>월요일 아침 피드</b>
-              <span>지난주 실제 유튜브 영상 제목과 화제성이 와요. 종목 이름은 코드네임.</span>
+              <span>지난주 유튜브에서 뭐가 떴는지 봐요. 종목 이름은 비밀!</span>
             </li>
             <li>
               <span className="st-ic">🛒</span>
               <b>사고팔고, 물어보고</b>
-              <span>최대 5종목. 궁금하면 🐳범고래 박사(AI)에게.</span>
+              <span>최대 5종목까지. 궁금하면 🐳 범고래 박사한테 물어봐요.</span>
             </li>
             <li>
               <span className="st-ic">▶</span>
               <b>다음 주</b>
-              <span>진짜 그 주의 가격으로 결과가. 멘탈도 같이 흔들려요.</span>
+              <span>그 주 진짜 가격으로 결과가 나와요. 멘탈도 같이 출렁!</span>
             </li>
             <li>
               <span className="st-ic">🏁</span>
-              <b>결산 · ⭐ 모으기</b>
-              <span>유튜버·코스피와 순위, 미션 별로 내 방 꾸미기.</span>
+              <b>결산 · 별 모으기</b>
+              <span>유튜버랑 순위를 겨루고, 모은 별로 내 방을 꾸며요.</span>
             </li>
           </ol>
         </section>
@@ -138,37 +137,30 @@ export default function Home() {
         <div className="home-grid">
           <section className="card" aria-labelledby="dex">
             <h2 id="dex" className="sec-title">
-              🏅 칭호 도감 {got}/{ALL_TITLES.length}
+              🏅 내 칭호 {got}/{ALL_TITLES.length}
             </h2>
-            <ul className="dex">
-              {ALL_TITLES.map((t) => (
-                <li key={t.name} className={p.titles[t.name] ? "on" : ""} title={p.titles[t.name] ? `${t.name} ×${p.titles[t.name]}` : `??? — ${t.hint}`}>
-                  <span aria-hidden>{p.titles[t.name] ? t.icon : "❔"}</span>
-                  <span className="sr-only">{p.titles[t.name] ? t.name : `잠김: ${t.hint}`}</span>
-                </li>
-              ))}
-            </ul>
-            <p className="muted small">{p.runs ? `완주 ${p.runs}판 · 최고 등급 ${p.best}` : "판을 끝내면 투자 습관에 맞는 칭호를 받아요."}</p>
+            <TitleDex owned={p.titles} />
+            <p className="muted small">{p.runs ? `완주 ${p.runs}판 · 최고 등급 ${p.best}` : "판을 끝내면 투자 습관에 맞는 칭호가 붙어요."}</p>
           </section>
 
           <section className="card" aria-labelledby="mk">
             <h2 id="mk" className="sec-title">
-              🔓 열린 시장
+              🗺️ 갈 수 있는 시장
             </h2>
             <ul className="unlocks">
               {(["KRX", "US", "CRYPTO"] as Market[]).map((m) => (
                 <li key={m} className={open.includes(m) ? "on" : ""}>
                   <span>{MK[m]}</span>
-                  <span className="muted small">{open.includes(m) ? "열림" : m === "US" ? "한 판 끝내면" : "B 등급 이상"}</span>
+                  <span className="muted small">{open.includes(m) ? "✅" : m === "US" ? "🔒 한 판 끝내면" : "🔒 B 등급 받으면"}</span>
                 </li>
               ))}
             </ul>
-            <p className="muted small">오늘의 시드는 모두 같은 조건이라 세 시장이 다 열려요.</p>
+            <p className="muted small">오늘의 시드는 다 같이 하는 판이라 세 시장이 모두 열려 있어요.</p>
           </section>
 
           <section className="card" aria-labelledby="today">
             <h2 id="today" className="sec-title">
-              🏆 오늘의 시드 순위
+              🏆 오늘의 1등
             </h2>
             {board.status === "loading" && <p className="muted small">불러오는 중…</p>}
             {board.status === "error" && <p className="muted small">순위를 못 불러왔어요.</p>}
@@ -234,30 +226,57 @@ export default function Home() {
         </button>
       </Sheet>
 
-      {/* 내 방 */}
-      <Sheet open={room} onClose={() => setRoom(false)} title={`⭐ ${p.stars} · 내 방 꾸미기`} wide>
-        <p className="muted small">미션을 달성하고 좋은 등급을 받으면 별이 쌓여요. 별 개수만큼 가구가 저절로 놓여요.</p>
-        <ul className="furn">
-          {FURNITURE.map((f) => (
-            <li key={f.id} className={p.stars >= f.stars ? "on" : ""}>
-              <span aria-hidden>{p.stars >= f.stars ? f.icon : "🔒"}</span>
-              <b>{f.name}</b>
-              <span className="muted small">⭐{f.stars}</span>
+    </>
+  );
+}
+
+
+/** 칭호: 마우스를 올리거나 누르면 무슨 칭호인지, 어떻게 받는지 보여 준다(휴대폰에서도) */
+function TitleDex({ owned }: { owned: Record<string, number> }) {
+  const [sel, setSel] = useState<string | null>(null);
+  const cur = ALL_TITLES.find((t) => t.name === sel);
+  return (
+    <>
+      <ul className="dex" role="listbox" aria-label="칭호">
+        {ALL_TITLES.map((t) => {
+          const has = !!owned[t.name];
+          return (
+            <li key={t.name}>
+              <button
+                className={`dex-btn ${has ? "on" : ""} ${sel === t.name ? "sel" : ""}`}
+                onMouseEnter={() => setSel(t.name)}
+                onFocus={() => setSel(t.name)}
+                onClick={() => setSel(sel === t.name ? null : t.name)}
+                aria-label={has ? `${t.name}: ${t.desc}` : `아직 없는 칭호: ${t.hint}`}
+                aria-selected={sel === t.name}
+              >
+                {has ? t.icon : "❔"}
+              </button>
             </li>
-          ))}
-        </ul>
-        <h3 className="sub">개미 옷</h3>
-        <div className="chips left">
-          <button className={`chip ${!p.outfit ? "on" : ""}`} onClick={() => (save({ outfit: null }), setP(progress()))}>
-            없음
-          </button>
-          {OUTFITS.map((o) => (
-            <button key={o.id} className={`chip ${p.outfit === o.id ? "on" : ""}`} disabled={p.stars < o.stars} onClick={() => (save({ outfit: o.id }), setP(progress()))}>
-              {o.icon} {o.name} {p.stars < o.stars && `🔒⭐${o.stars}`}
-            </button>
-          ))}
-        </div>
-      </Sheet>
+          );
+        })}
+      </ul>
+      <div className="dex-tip" aria-live="polite">
+        {cur ? (
+          owned[cur.name] ? (
+            <>
+              <b>
+                {cur.icon} {cur.name}
+              </b>
+              <span>
+                {cur.desc} · {owned[cur.name]}번 받음
+              </span>
+            </>
+          ) : (
+            <>
+              <b>❔ 아직 없는 칭호</b>
+              <span>힌트: {cur.hint}</span>
+            </>
+          )
+        ) : (
+          <span className="muted">칭호에 마우스를 올리거나 눌러 보세요</span>
+        )}
+      </div>
     </>
   );
 }

@@ -37,13 +37,13 @@ function Toggle({ on, set }: { on: boolean; set: (v: boolean) => void }) {
   );
 }
 
-export function RoomView({ char, items, mood = "happy", height = 300, outfit }: { char: CharId; items: string[]; mood?: Mood; height?: number; outfit?: string | null }) {
+export function RoomView({ char, items, mood = "happy", height = 300, outfit, keys = false }: { char: CharId; items: string[]; mood?: Mood; height?: number; outfit?: string | null; keys?: boolean }) {
   const [on, set] = use3D();
   return (
     <div className="scene-wrap" data-ux="3D Scene (three.js)">
       {on ? (
         <Suspense fallback={<div className="stage3d skeleton" style={{ height }} />}>
-          <Room3D char={char} items={items} mood={mood} height={height} outfit={outfit} />
+          <Room3D char={char} items={items} mood={mood} height={height} outfit={outfit} keys={keys} />
         </Suspense>
       ) : (
         <div className="room2d" style={{ minHeight: height * 0.7 }}>
@@ -57,6 +57,7 @@ export function RoomView({ char, items, mood = "happy", height = 300, outfit }: 
           </div>
         </div>
       )}
+      {on && <p className="room-hint">👆 바닥을 누르면 걸어가요 · 가구와 개미를 눌러 보세요{keys ? " · ⌨️ 방향키로도 움직여요" : ""}</p>}
       <Toggle on={on} set={set} />
     </div>
   );
@@ -87,9 +88,7 @@ export function PlazaView({ stalls, onOpen }: { stalls: Stall[]; onOpen: (k: str
           ))}
         </ul>
       )}
-      <p className="plaza-cap">
-        🐜 군중 = 지난주 실제 유튜브 언급 수 · 가판대 높이 = 지난주 등락(<span className="up">빨강▲</span>/<span className="down">파랑▼</span>) · 눌러서 자세히
-      </p>
+      <p className="plaza-cap">개미가 많이 몰린 가게일수록 유튜브에서 많이 떠든 종목이에요. <span className="up">빨간 가게▲</span>는 지난주에 오른 곳, <span className="down">파란 가게▼</span>는 내린 곳. 눌러 보세요!</p>
       <Toggle on={on} set={set} />
     </div>
   );

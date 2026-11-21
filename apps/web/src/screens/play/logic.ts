@@ -43,7 +43,8 @@ export function merge(orders: Order[], o: Order): Order[] {
 
 /** 살 수 있는 최대 수량(수수료 포함) */
 export function maxBuy(v: View, p: Preview, a: Asset): number {
-  return Math.max(0, Math.floor(p.cash / (a.price * (1 + v.fees[a.market].buy))));
+  // 화면 가격은 소수 둘째 자리 반올림이라 아주 조금 여유(0.05%)를 둔다 → '최대'가 서버에서 현금 부족으로 거절되지 않게
+  return Math.max(0, Math.floor((p.cash * 0.9995) / (a.price * (1 + v.fees[a.market].buy))));
 }
 
 export function canBuy(v: View, p: Preview, a: Asset): string | null {

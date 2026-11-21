@@ -32,7 +32,7 @@ export function Feed({ v, onOpen }: { v: View; onOpen: (k: string) => void }) {
     <div className="feed">
       <section aria-labelledby="plz">
         <h3 id="plz" className="sec-title">
-          🏟️ 화제 광장 <span className="muted small">— 지난주 개미들이 어디로 몰렸나</span>
+          🏟️ 화제 광장 <span className="muted small">지난주 개미들이 몰린 곳</span>
         </h3>
         <PlazaView stalls={v.assets.filter((a) => !a.locked).map((a) => ({ k: a.k, code: a.code, hype: a.hype, chg: a.chg }))} onOpen={onOpen} />
       </section>
@@ -49,7 +49,7 @@ export function Feed({ v, onOpen }: { v: View; onOpen: (k: string) => void }) {
 
       <section aria-labelledby="hl">
         <h3 id="hl" className="sec-title">
-          📺 지난주 가장 많이 본 영상 <span className="muted small">— 누르면 그 종목으로</span>
+          📺 지난주 인기 영상 <span className="muted small">누르면 그 종목으로 가요</span>
         </h3>
         {v.headlines.length === 0 && <p className="empty">지난주엔 우리 종목을 다룬 영상이 없었어요. 조용한 주예요.</p>}
         <ul className="yt-list">
@@ -208,7 +208,7 @@ export function Account({ v, orders, onOpen, onCancel, onOrder }: { v: View; ord
       {orders.length > 0 && (
         <section aria-labelledby="po">
           <h3 id="po" className="sec-title">
-            🧾 이번 주 주문 ({orders.length}) <span className="muted small">— 다음 주로 넘길 때 체결돼요</span>
+            🧾 이번 주 주문 ({orders.length}) <span className="muted small">다음 주로 넘기면 한꺼번에 체결돼요</span>
           </h3>
           <ul className="order-list">
             {orders.map((o) => {
@@ -289,9 +289,7 @@ export function Rivals({ v }: { v: View }) {
   const max = Math.max(...rows.map((r) => Math.abs(r.twr - 1)), 0.01);
   return (
     <div className="rivals">
-      <p className="muted small">
-        라이벌 유튜버는 실제 채널이에요. 매주 <b>지난주 영상 제목에서 &lsquo;오른다&rsquo;고 한 종목</b>을 똑같이 나눠 샀다고 계산한 가상 성적이에요(hindsight 수집 데이터).
-      </p>
+      <p className="muted small">라이벌은 실제 유튜브 채널이에요. 지난주 영상에서 &lsquo;오른다&rsquo;고 한 종목을 그대로 따라 샀다면 어땠을지 계산했어요.</p>
       <ol className="rival-list" data-ux="Leaderboard">
         {rows.map((r, i) => (
           <li key={r.name} className={r.me ? "me" : ""}>
@@ -339,7 +337,7 @@ export function RulesPanel({ v }: { v: View }) {
     <section aria-labelledby="rules-h" className="rules" data-ux="Toggle Switch · Automation">
       <h3 id="rules-h" className="sec-title">
         🃏 전략 카드 {on > 0 && <span className="tag held">{on}장 켜짐</span>}
-        <span className="muted small">— 켜 두면 매주 알아서 지켜요(▶▶ 빨리 감기와 찰떡)</span>
+        <span className="muted small">켜 두면 매주 알아서 해 줘요. ▶▶ 빨리 감기랑 찰떡!</span>
       </h3>
       <ul className="rule-list">
         {RULE_CARDS.map((r) => (

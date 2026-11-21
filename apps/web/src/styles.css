@@ -756,3 +756,28 @@ span.code-chip { display: inline-flex; align-items: center; }
 .me-tag { font-size: 11px; font-weight: 800; color: #fff; background: var(--brand); border-radius: 999px; padding: 1px 7px; }
 .rename { display: flex; gap: 6px; margin-top: 6px; }
 .rename input { flex: 1; min-width: 0; min-height: 40px; border-radius: 10px; border: 1.5px solid var(--line); padding: 0 10px; background: var(--surface); }
+
+/* 내 방 */
+.ant-bubble { background: #fff; color: #15132b; font: 700 13px/1.35 Pretendard, system-ui, sans-serif; padding: 6px 10px; border-radius: 14px; box-shadow: 0 4px 14px rgba(20, 16, 60, 0.18); white-space: nowrap; position: relative; animation: pop 0.25s ease-out; }
+.ant-bubble::after { content: ""; position: absolute; left: 50%; bottom: -6px; transform: translateX(-50%); border: 6px solid transparent; border-top-color: #fff; border-bottom: 0; }
+@keyframes pop { from { transform: scale(0.6); opacity: 0; } }
+.room-hint { position: absolute; left: 10px; bottom: 10px; right: 90px; font-size: 11px; font-weight: 700; color: var(--text-2); background: color-mix(in srgb, var(--surface) 80%, transparent); padding: 4px 8px; border-radius: 8px; pointer-events: none; }
+.room-head { display: flex; justify-content: space-between; align-items: end; gap: 12px; flex-wrap: wrap; }
+.next-furn { margin-top: 14px; display: grid; gap: 8px; }
+.next-furn .hbar { height: 10px; }
+.next-furn .hbar i { background: linear-gradient(90deg, #ffd43b, #f59f00); }
+.room-grid { display: grid; gap: 14px; margin-top: 14px; }
+.room-grid .card + .card { margin-top: 0; }
+@media (min-width: 860px) { .room-grid { grid-template-columns: 1.2fr 1fr; align-items: start; } }
+.who-row { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; }
+.who { width: 100%; display: grid; justify-items: center; gap: 2px; padding: 6px 2px; border-radius: 12px; border: 1.5px solid var(--line); background: var(--surface); font-size: 11px; font-weight: 700; }
+.who.on { border-color: var(--brand); background: var(--surface-2); }
+@media (max-width: 480px) { .who-row { grid-template-columns: repeat(3, 1fr); } }
+.wall-titles { display: flex; flex-wrap: wrap; gap: 6px; }
+
+/* 칭호 */
+.dex li { all: unset; }
+.dex-btn { width: 100%; aspect-ratio: 1; display: grid; place-items: center; font-size: 24px; background: var(--surface-2); border-radius: 12px; filter: grayscale(1); opacity: 0.5; border: 2px solid transparent; transition: transform 0.1s; }
+.dex-btn.on { filter: none; opacity: 1; background: var(--warn-bg); }
+.dex-btn.sel { border-color: var(--brand); opacity: 1; transform: scale(1.06); }
+.dex-tip { min-height: 44px; display: grid; gap: 2px; font-size: 13px; padding: 8px 10px; border-radius: 10px; background: var(--surface-2); margin-bottom: 8px; }

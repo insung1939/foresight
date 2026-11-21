@@ -2,8 +2,8 @@
 //  - Room   : 내 방. 모은 ★ 로 열린 가구가 놓이고 내 개미가 논다(홈·결산)
 //  - Plaza  : 화제 광장. 종목 가판대마다 개미 군중(= 지난주 실제 유튜브 언급 수)이 몰린다(플레이 피드)
 import { Html, RoundedBox } from "@react-three/drei";
-import { Canvas, useFrame } from "@react-three/fiber";
-import { Suspense, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { Canvas, useFrame, type ThreeEvent } from "@react-three/fiber";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { Group } from "three";
 import { CHAR_META, type CharId } from "../Characters";
 import { Ant3D, MiniAnt } from "./Ant3D";
@@ -44,16 +44,109 @@ function Spin({ children, speed = 0.15 }: { children: ReactNode; speed?: number 
 }
 
 // ---------------------------------------------------------------- 내 방
-export function Room({ char = "office", items, mood = "happy", height = 300, outfit }: { char?: CharId; items: string[]; mood?: string; height?: number; outfit?: string | null }) {
+// 가구를 누르면 개미가 그 앞으로 걸어가 한마디(위치 = 방 좌표 x, z)
+const SPOTS: Record<string, { at: [number, number]; box: [number, number, number, number, number]; lines: string[] }> = {
+  desk: { at: [-1.6, -1.3], box: [-1.6, 0.6, -2.2, 2.1, 1.2], lines: ["오늘도 차트 공부! 📈", "책상 앞에 앉으니 전문가 같아"] },
+  monitor: { at: [-1.6, -1.3], box: [-1.6, 1.4, -2.4, 1.2, 0.8], lines: ["모니터 속 빨간 불… 오르는 중?", "화면만 보면 손이 근질근질"] },
+  plant: { at: [1.9, -1.7], box: [2.3, 0.7, -2.3, 1.0, 1.4], lines: ["물 줘야지 🌱", "몬스테라처럼 쑥쑥 크자!"] },
+  lamp: { at: [-1.9, 1.2], box: [-2.5, 1, 1.6, 0.8, 2] , lines: ["밝아졌다 💡", "밤샘 차트는 이제 그만…"] },
+  sofa: { at: [1.6, 1.0], box: [1.6, 0.5, 1.9, 2.3, 1.1], lines: ["잠깐 쉬어 갈까… 멘탈 회복 중", "소파 최고야 🛋️"] },
+  shelf: { at: [-2.2, -0.6], box: [-2.85, 1.1, -0.6, 0.5, 2.2], lines: ["투자 책 한 권 📚", "'존버의 기술'… 읽어 볼까?"] },
+  window: { at: [1.2, -2.2], box: [1.2, 1.9, -2.9, 2.2, 1.4], lines: ["시티뷰 최고 🌃", "저 불빛 중 하나는 내 거…?"] },
+  trophy: { at: [1.9, 0.3], box: [2.4, 0.5, 0.3, 0.7, 1.1], lines: ["내 트로피 반짝반짝 🏆", "다음 시즌도 1등 가자!"] },
+  coins: { at: [1.0, -0.3], box: [1.4, 0.15, -0.5, 0.9, 0.4], lines: ["동전 세는 중… 하나, 둘 🪙", "티끌 모아 태산!"] },
+  statue: { at: [1.8, -0.9], box: [2.2, 0.8, -1.2, 0.9, 1.6], lines: ["황금 개미 선배님…!", "언젠가 나도 황금 개미"] },
+};
+const ANT_LINES = ["안녕! 🐜", "오늘의 시드 해 볼래?", "미션 깨면 별을 받아!", "별 모으면 가구가 생겨", "간지러워 ㅋㅋ", "범고래 박사님 보고 싶다 🐳"];
+const clamp = (v: number) => Math.max(-2.5, Math.min(2.6, v));
+
+function Walker({ color, accent, mood, outfit, target, say, onTapAnt }: { color: string; accent: string; mood: string; outfit?: string | null; target: { current: [number, number] }; say: string | null; onTapAnt: () => void }) {
+  const g = useRef<Group>(null);
+  const walking = useRef(false);
+  useFrame((_, dt) => {
+    if (!g.current) return;
+    const p = g.current.position;
+    const [tx, tz] = target.current;
+    const dx = tx - p.x;
+    const dz = tz - p.z;
+    const d = Math.hypot(dx, dz);
+    walking.current = d > 0.05;
+    if (walking.current) {
+      const step = Math.min(d, dt * 2.2);
+      p.x += (dx / d) * step;
+      p.z += (dz / d) * step;
+      const want = Math.atan2(dx, dz);
+      let diff = want - g.current.rotation.y;
+      diff = Math.atan2(Math.sin(diff), Math.cos(diff));
+      g.current.rotation.y += diff * Math.min(1, dt * 10);
+    } else {
+      // 멈추면 천천히 카메라 쪽(대각선 앞)을 본다
+      let diff = 0.75 - g.current.rotation.y;
+      diff = Math.atan2(Math.sin(diff), Math.cos(diff));
+      g.current.rotation.y += diff * Math.min(1, dt * 2);
+    }
+  });
+  return (
+    <group ref={g} position={[0.3, 0, 0.6]}>
+      <Ant3D color={color} accent={accent} scale={1.1} mood={mood} outfit={outfit} onTap={onTapAnt} walking={walking} />
+      {say && (
+        <Html position={[0, 2.3, 0]} center distanceFactor={7} zIndexRange={[20, 0]}>
+          <div className="ant-bubble">{say}</div>
+        </Html>
+      )}
+    </group>
+  );
+}
+
+export function Room({ char = "office", items, mood = "happy", height = 300, outfit, keys = false }: { char?: CharId; items: string[]; mood?: string; height?: number; outfit?: string | null; keys?: boolean }) {
   const m = CHAR_META[char] ?? CHAR_META.office;
   const has = (id: string) => items.includes(id);
   const gold = has("penthouse");
+  const target = useRef<[number, number]>([0.3, 0.6]);
+  const [say, setSay] = useState<string | null>(null);
+  const timer = useRef<number>();
+  const speak = useCallback((line: string, delay = 0) => {
+    window.clearTimeout(timer.current);
+    timer.current = window.setTimeout(() => {
+      setSay(line);
+      timer.current = window.setTimeout(() => setSay(null), 2600);
+    }, delay);
+  }, []);
+  const walkTo = (x: number, z: number) => {
+    target.current = [clamp(x), clamp(z)];
+  };
+  const onFloor = (e: ThreeEvent<PointerEvent>) => {
+    e.stopPropagation();
+    walkTo(e.point.x, e.point.z);
+  };
+  const visit = (id: string) => (e: ThreeEvent<MouseEvent>) => {
+    e.stopPropagation();
+    const s = SPOTS[id];
+    walkTo(s.at[0], s.at[1]);
+    speak(s.lines[Math.floor(Math.random() * s.lines.length)], 900);
+  };
+  // 방향키·WASD 로 걷기(내 방 화면)
+  useEffect(() => {
+    if (!keys) return;
+    const on = (e: KeyboardEvent) => {
+      if (/INPUT|TEXTAREA/.test((e.target as HTMLElement).tagName)) return;
+      const k = e.key.toLowerCase();
+      const d: Record<string, [number, number]> = { arrowup: [0, -0.6], w: [0, -0.6], arrowdown: [0, 0.6], s: [0, 0.6], arrowleft: [-0.6, 0], a: [-0.6, 0], arrowright: [0.6, 0], d: [0.6, 0] };
+      if (!d[k]) return;
+      e.preventDefault();
+      const [x, z] = target.current;
+      walkTo(x + d[k][0], z + d[k][1]);
+    };
+    window.addEventListener("keydown", on);
+    return () => window.removeEventListener("keydown", on);
+  }, [keys]);
+  useEffect(() => () => window.clearTimeout(timer.current), []);
   return (
-    <Stage height={height} camera={[5.5, 4.6, 6.5]} label={`내 방: 가구 ${items.length}개, ${m.name}`}>
-      <Spin>
+    <Stage height={height} camera={[5.5, 4.6, 6.5]} label={`내 방: 가구 ${items.length}개, ${m.name}. 바닥을 누르면 걸어가고, 가구를 누르면 말해요`}>
+      <group>
         <group position={[0, -1.2, 0]}>
-          {/* 바닥·벽 */}
-          <mesh receiveShadow position={[0, -0.05, 0]}>
+          {/* 바닥·벽 — 바닥을 누르면 그곳으로 걸어간다 */}
+          <mesh receiveShadow position={[0, -0.05, 0]} onPointerDown={onFloor}>
             <boxGeometry args={[6, 0.1, 6]} />
             <meshStandardMaterial color={gold ? "#f1e3c8" : "#f4dcc0"} />
           </mesh>
@@ -188,10 +281,25 @@ export function Room({ char = "office", items, mood = "happy", height = 300, out
               </mesh>
             ))}
           {has("statue") && <Ant3D color="#ffd43b" accent="#c78a00" position={[2.2, 0.4, -1.2]} scale={0.6} mood="happy" />}
+          {/* 가구 누르는 자리(보이지 않는 상자) */}
+          {Object.entries(SPOTS)
+            .filter(([id]) => has(id))
+            .map(([id, s]) => (
+              <mesh
+                key={id}
+                position={[s.box[0], s.box[1], s.box[2]]}
+                onClick={visit(id)}
+                onPointerOver={() => (document.body.style.cursor = "pointer")}
+                onPointerOut={() => (document.body.style.cursor = "")}
+              >
+                <boxGeometry args={[s.box[3], s.box[4], s.box[3]]} />
+                <meshBasicMaterial transparent opacity={0} depthWrite={false} />
+              </mesh>
+            ))}
           {/* 내 개미 */}
-          <Ant3D color={m.body} accent={m.accent} position={[0.3, 0, 0.6]} scale={1.1} mood={mood} outfit={outfit} face={0.7} />
+          <Walker color={m.body} accent={m.accent} mood={mood} outfit={outfit} target={target} say={say} onTapAnt={() => speak(ANT_LINES[Math.floor(Math.random() * ANT_LINES.length)])} />
         </group>
-      </Spin>
+      </group>
     </Stage>
   );
 }

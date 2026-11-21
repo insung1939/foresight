@@ -711,7 +711,8 @@ def view(st: dict) -> dict:
         "deposits": st["deposits"], "pos": pos, "assets": assets, "index": ix,
         "rivals": rivals, "kospi": round(_index_twr(st, s + t), 5),
         "pending": pending, "hist": st["hist"], "markets": st["markets"], "maxHold": MAX_HOLD,
-        "fees": {m: {"buy": f[0], "sell": f[1]} for m, f in FEES.items()},
+        # 실제로 매길 수수료(캐릭터·멘탈 구간·행운 카드·큰손 슬리피지 반영) — 화면의 '최대' 계산이 서버와 같도록
+        "fees": {m: {"buy": round(_fee(st, m, 0), 6), "sell": round(_fee(st, m, 1), 6)} for m in FEES},
         "headlines": _headlines(st, w),
     }
 

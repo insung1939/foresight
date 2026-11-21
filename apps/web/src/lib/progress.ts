@@ -21,18 +21,18 @@ export interface Progress {
 const EMPTY: Progress = { runs: 0, best: null, bestRet: null, titles: {}, dailyDone: null, streak: 0, seen: [], stars: 0, char: "office", outfit: null, practiced: false, boxes: [], pity: 0 };
 const ORDER = ["F", "D", "C", "B", "A", "S"];
 
-export const ALL_TITLES: { name: string; icon: string; hint: string }[] = [
-  { name: "존버의 신", icon: "🗿", hint: "거의 안 건드리고 이기기" },
-  { name: "익절 장인", icon: "💎", hint: "오른 종목을 제때 챙기기" },
-  { name: "칼손절러", icon: "✂️", hint: "크게 잃은 종목 정리하기" },
-  { name: "균형 잡힌 개미", icon: "🐜", hint: "고르게 나눠 담기" },
-  { name: "현금 수호자", icon: "🛡️", hint: "현금을 많이 들고 버티기" },
-  { name: "몰빵러", icon: "🎯", hint: "한 종목에 크게 걸기" },
-  { name: "단타의 민족", icon: "⚡", hint: "매주 바쁘게 사고팔기" },
-  { name: "FOMO 장인", icon: "🔥", hint: "화제 종목 따라 사기" },
-  { name: "코인 탐험가", icon: "🪙", hint: "코인 바람 타기" },
-  { name: "방치형 개미", icon: "💤", hint: "아무것도 안 하기" },
-  { name: "패닉셀러", icon: "😱", hint: "멘탈이 바닥나기" },
+export const ALL_TITLES: { name: string; icon: string; hint: string; desc: string }[] = [
+  { name: "존버의 신", icon: "🗿", hint: "거의 안 건드리고 수익 내기", desc: "거래 4번 이하로 버텨서 벌었어요" },
+  { name: "익절 장인", icon: "💎", hint: "오른 종목을 제때 팔기", desc: "+10% 넘게 오른 종목을 여러 번 챙겼어요" },
+  { name: "칼손절러", icon: "✂️", hint: "크게 잃은 종목 정리하기", desc: "−15% 넘게 빠진 종목을 미련 없이 팔았어요" },
+  { name: "균형 잡힌 개미", icon: "🐜", hint: "골고루 나눠 담기", desc: "분산도 보유 기간도 고른 편이에요" },
+  { name: "현금 수호자", icon: "🛡️", hint: "현금을 넉넉히 들고 있기", desc: "평균 60% 넘게 현금으로 버텼어요" },
+  { name: "몰빵러", icon: "🎯", hint: "한 종목에 크게 걸기", desc: "한 종목 비중이 70%를 넘는 주가 많았어요" },
+  { name: "단타의 민족", icon: "⚡", hint: "매주 바쁘게 사고팔기", desc: "한 주에 평균 3번 넘게 거래했어요" },
+  { name: "FOMO 장인", icon: "🔥", hint: "화제 종목 따라 사기", desc: "화제 1·2위나 급등한 종목을 5번 넘게 쫓아갔어요" },
+  { name: "코인 탐험가", icon: "🪙", hint: "코인 바람 타기", desc: "코인에 올라탔다가 쓴맛을 봤어요" },
+  { name: "방치형 개미", icon: "💤", hint: "거의 아무것도 안 하기", desc: "거래가 거의 없었는데 수익도 없었어요" },
+  { name: "패닉셀러", icon: "😱", hint: "멘탈이 바닥나기", desc: "멘탈이 0이 돼서 한꺼번에 다 팔았어요" },
 ];
 
 export function progress(): Progress {
