@@ -34,9 +34,9 @@ hindsight(유튜버 언급 뒤 실제 주가를 모은 서비스)의 데이터�
 React + three.js(apps/web, Vercel) ──/api──▶ FastAPI(api/, Render) ──▶ Supabase PostgreSQL
                                                   │                        ├─ runs      판 상태·결과(분석에 사용)
                                                   │                        ├─ ai_calls  AI 호출·검증 기록
-                                                  │                        └─ rag_docs  pgvector(256) — 개미 비서 색인
+                                                  │                        └─ rag_docs  pgvector(256) — 범고래 박사 비서 색인
                                                   ├─ data/season.json  시즌 팩(주봉·언급·제목·유튜버 고스트, 서버만)
-                                                  └─ Gemini            질문 임베딩 · 개미 비서 답 · AI 코치(없으면 Ollama → 규칙 답)
+                                                  └─ Gemini            질문 임베딩 · 범고래 박사 답 · AI 코치(로컬 개발: 키 없으면 Ollama, 운영: 실패 시 규칙 답)
 
 hindsight DB ─(읽기만)─▶ build_season.py ─▶ season.json + rag_docs.json ─▶ build_rag.py(Gemini 임베딩, 하루 한도만큼) ─▶ rag.json
                                        └──────────────▶ pack_data.py ─▶ data/pack.enc(공개 저장소, 서버가 DATA_KEY 로 풂)
@@ -57,11 +57,11 @@ API 흐름: `POST /v1/runs`(새 판, mode·char) → `POST /event`(사건) → `
 # 0) 한 번만
 python3 -m venv .venv && .venv/bin/pip install -r api/requirements.txt pytest psycopg[binary]
 cd apps/web && npm install && cd ../..
-# .env: HINDSIGHT_DATABASE_URL, DART_KEY(업종 조회), GEMINI_API_KEY, DATA_KEY (값은 커밋하지 않음)
+# .env: HINDSIGHT_DATABASE_URL, DART_KEY(코드네임용 업종 코드 조회만 — 공시는 게임에서 안 씀), GEMINI_API_KEY, DATA_KEY (값은 커밋하지 않음)
 
 # 1) 시즌 팩(이미 data/season.json 이 있으면 건너뜀. DATA_KEY 가 있으면 서버가 pack.enc 를 자동으로 푼다)
 .venv/bin/python scripts/build_season.py    # ~30초 → season.json + rag_docs.json
-.venv/bin/python scripts/build_rag.py       # 개미 비서 색인(Gemini 임베딩, 하루 무료 한도만큼 — 다음 날 다시 돌리면 이어서)
+.venv/bin/python scripts/build_rag.py       # 범고래 박사 색인(Gemini 임베딩, 하루 무료 한도만큼 — 다음 날 다시 돌리면 이어서)
 .venv/bin/python scripts/pack_data.py       # 배포용 암호화 → data/pack.enc
 # (선택) 로컬에서 Supabase 와 같은 pgvector: docker run -d -p 54329:5432 -e POSTGRES_PASSWORD=ant -e POSTGRES_DB=ant pgvector/pgvector:pg16
 #        → DATABASE_URL=postgresql://postgres:ant@localhost:54329/ant 로 서버 실행. 없으면 SQLite + 메모리 검색

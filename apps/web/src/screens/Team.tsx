@@ -94,6 +94,26 @@ export default function Team() {
           )}
         </section>
 
+        {m && m.plays.funnel.length > 0 && m.plays.funnel[0].n > 0 && (
+          <section className="card">
+            <h2 className="sec-title">02-1 · 실제 이용 흐름(운영 DB, 실시간)</h2>
+            <ul className="funnel">
+              {m.plays.funnel.map((x) => (
+                <li key={x.turn}>
+                  <span>{x.turn}주차까지</span>
+                  <span className="hbar" aria-hidden>
+                    <i style={{ width: `${(x.n / m.plays.funnel[0].n) * 100}%` }} />
+                  </span>
+                  <b>{x.n}</b>
+                </li>
+              ))}
+            </ul>
+            <p className="muted small">
+              판을 시작한 사람 중 끝까지 간 비율 {Math.round((m.plays.funnel[m.plays.funnel.length - 1].n / m.plays.funnel[0].n) * 100)}%. 중간 이탈을 줄이려고 연습 시즌(8주) · ▶▶ 빨리 감기 · 3초 리캡을 넣었다. 표본이 작아 경향으로만 본다(테스트·시연 판 포함).
+            </p>
+          </section>
+        )}
+
         <section id="market" className="card">
           <h2 className="sec-title">02-2 · 시장·경쟁·SWOT</h2>
           <table className="tbl">
@@ -240,7 +260,7 @@ export default function Team() {
                 ["반응형", "360~430px 기준 탭 4개. 960px 이상은 피드·시장·계좌·라이벌 2단 동시 표시"],
                 ["Snackbar · Auto-dismiss", "평범한 주는 3초 리캡 카드(누르면 닫힘, 남은 시간 막대). 26번 반복해도 지루하지 않게"],
                 ["Card Select", "내 개미 고르기: 그림·특성·잠금 조건을 한 카드에"],
-                ["AI Chat · Citations", "개미 비서(범고래 박사): 제안 질문 칩 → 단계별 진행 표시(검색 중 → 답 쓰는 중) → 출처 D1·D2 → 👍👎"],
+                ["AI Chat · Citations", "범고래 박사: 제안 질문 칩 → 단계별 진행 표시(검색 중 → 답 쓰는 중) → 출처 D1·D2 → 👍👎"],
                 ["3D · Graceful Degradation", "three.js 장면은 보일 때만 그리고, WebGL 없음·움직임 줄이기면 2D로. 직접 끄기 버튼"],
                 ["UX 렌즈", "👓 또는 U 키: 화면 위에 실제 적용된 용어집 용어를 띄운다(발표 시연용)"],
               ].map(([a, b]) => (
@@ -261,12 +281,12 @@ export default function Team() {
           <pre className="arch">{`React+three.js(Vercel) ──/api──▶ FastAPI(Render) ──▶ Supabase PostgreSQL(runs·ai_calls) + pgvector(rag_docs)
                               │
                               ├─ data/season.json  시즌 팩(미래 가격 포함, 서버만·암호화 배포)
-                              └─ Gemini            임베딩(질문) · 개미 비서 답 · AI 코치
+                              └─ Gemini            임베딩(질문) · 범고래 박사 답 · AI 코치
 
 hindsight DB ─(읽기만)─▶ build_season.py ─▶ season.json · rag_docs ─▶ build_rag.py(Gemini 임베딩) ─▶ rag.json`}</pre>
           <ul className="dots">
             <li>
-              <code>POST /v1/runs</code> 시드로 구간·종목·코드네임·라이벌·미션 결정 → <code>POST /event</code> 사건 → <code>POST /turn</code>·<code>/skip</code> 주문 검증·체결·평가 → <code>POST /ask</code> 개미 비서(RAG) → <code>GET /final</code> 결산
+              <code>POST /v1/runs</code> 시드로 구간·종목·코드네임·라이벌·미션 결정 → <code>POST /event</code> 사건 → <code>POST /turn</code>·<code>/skip</code> 주문 검증·체결·평가 → <code>POST /ask</code> 범고래 박사(RAG) → <code>GET /final</code> 결산
             </li>
             <li>다음 주 가격은 턴을 제출해야 계산된다. 화면 응답에는 지난주까지 값만(테스트가 매 턴 검사)</li>
             <li>잘못된 주문(현금 부족·잠긴 시장·6종목째)은 409 + 이유. 실패한 주문은 상태를 바꾸지 않는다(원자성)</li>
@@ -290,10 +310,10 @@ hindsight DB ─(읽기만)─▶ build_season.py ─▶ season.json · rag_docs
         </section>
 
         <section id="ai" className="card">
-          <h2 className="sec-title">08 · AI — 개미 비서(시점 제한 RAG) · 코치</h2>
+          <h2 className="sec-title">08 · AI — 범고래 박사(시점 제한 RAG) · 결산 코치</h2>
           <ul className="dots">
             <li>
-              <b>개미 비서</b> 종목 시트에서 질문 → Gemini 임베딩(gemini-embedding-001, 256차원) → <b>Supabase pgvector</b>에서 &lsquo;이번 판 종목 AND 지금 보이는 주 이하 AND 최근 12주&rsquo; 조건으로 코사인 검색 + 최근성 가산 → Gemini 가 출처 id 를 달아 답(JSON) → 검증 6가지(형식·인용 실재·숫자 출처·권유·진짜 이름·길이) → 1번 재시도 → 실패하면 검색 결과만
+              <b>범고래 박사</b> 종목 시트에서 질문 → Gemini 임베딩(gemini-embedding-001, 256차원) → <b>Supabase pgvector</b>에서 &lsquo;이번 판 종목 AND 지금 보이는 주 이하 AND 최근 12주&rsquo; 조건으로 코사인 검색 + 최근성 가산 → Gemini 가 출처 id 를 달아 답(JSON) → 검증 6가지(형식·인용 실재·숫자 출처·권유·진짜 이름·길이) → 1번 재시도 → 실패하면 검색 결과만
             </li>
             <li>미래 문서는 SQL 단계에서 걸러져 모델에 가지 않는다. 테스트가 매번 확인</li>
             <li>
@@ -304,14 +324,14 @@ hindsight DB ─(읽기만)─▶ build_season.py ─▶ season.json · rag_docs
             </li>
             <li>종목 추천·시장 전망 금지. JSON 스키마로 형식 강제</li>
             <li>검증 3가지: 넘긴 자료에 없는 숫자 · 직접 권유 표현 · 길이 → 실패하면 이유를 알려 1번 재시도 → 그래도 실패하면 규칙 답</li>
-            <li>Gemini 3.5 Flash → 대체 모델 → 키가 없으면 로컬 Ollama(수업 3주차 qwen3.5:4b) → 규칙 답. 모든 호출 기록(지연·토큰·통과 여부)</li>
+            <li>게임 중 질문은 Gemini 3.5 Flash-Lite(빠름) → Flash, 결산 코치는 Flash → Flash-Lite → 실패하면 규칙 답(운영). 로컬 개발에서 키가 없으면 Ollama(수업 3주차 qwen3.5:4b). 모든 호출 기록(지연·토큰·통과 여부)</li>
           </ul>
           <p className="callout">
-            짓궂은 질문 30개(미래 예측·투자 권유·실명·숫자 날조·규칙 무시 유도 포함) 평가: <b>화면에 문제 있는 답 0개</b>, 응답 중간값 1.4초 — GitHub <code>docs/ai-eval.md</code>. 검증이 실제로 잡은 실패와 고친 방법은 <code>docs/ux-log.md</code> R13~R16.
+            짓궂은 질문 30개(미래 예측·투자 권유·실명·숫자 날조·규칙 무시 유도 포함) 평가: <b>화면에 문제 있는 답 0개</b>(25개는 실제 pgvector 검색), 응답 중간값 1.8초 — GitHub <code>docs/ai-eval.md</code>. 검증이 실제로 잡은 실패와 고친 방법은 <code>docs/ux-log.md</code> R13~R16.
           </p>
           {m && (
             <p className="muted small">
-              개미 비서 {m.ask.n}번(통과 {m.ask.ok}) · 코치 {m.coach.n}번(통과 {m.coach.ok})
+              범고래 박사 {m.ask.n}번(통과 {m.ask.ok}) · 코치 {m.coach.n}번(통과 {m.coach.ok})
             </p>
           )}
         </section>
@@ -328,10 +348,10 @@ hindsight DB ─(읽기만)─▶ build_season.py ─▶ season.json · rag_docs
             </thead>
             <tbody>
               <tr>
-                <td>개미 비서 응답</td>
+                <td>범고래 박사 응답</td>
                 <td>18.4초</td>
                 <td>
-                  <b>1.4초</b>(가벼운 모델 먼저 · 생각 최소)
+                  <b>로컬 1.8초 · 운영 2.5~3.6초</b>(가벼운 모델 먼저 · 생각 최소, 검색 포함)
                 </td>
               </tr>
               <tr>
@@ -349,7 +369,7 @@ hindsight DB ─(읽기만)─▶ build_season.py ─▶ season.json · rag_docs
               <tr>
                 <td>RAG 검색(pgvector)</td>
                 <td>—</td>
-                <td>2.3 ms</td>
+                <td>2.3 ms(로컬)</td>
               </tr>
             </tbody>
           </table>

@@ -114,7 +114,7 @@ function Body({ m }: { m: Meta }) {
             <b>
               {m.quality.ragIndexed.toLocaleString()} / {m.quality.ragTotal.toLocaleString()}
             </b>
-            <span>개미 비서 색인 / 전체 문장</span>
+            <span>범고래 박사 색인 / 전체 영상 제목</span>
           </div>
         </div>
         <ul className="dots small">
@@ -313,7 +313,7 @@ function Body({ m }: { m: Meta }) {
       </section>
 
       <section className="card">
-        <h2 className="sec-title">AI · 개미 비서(시점 제한 RAG)</h2>
+        <h2 className="sec-title">AI · 범고래 박사(시점 제한 RAG)</h2>
         <ol className="pipe">
           <li>
             <b>문서</b> 종목-주별 가려진 유튜브 영상 제목 {n(m.rag.docs)}건
@@ -329,7 +329,7 @@ function Body({ m }: { m: Meta }) {
           </li>
         </ol>
         <p className="muted small">
-          개미 비서 질문 {m.ask.n}번 · 검증 통과 {m.ask.ok}번 · 재시도로 통과 {m.ask.retried}번 · 중간 지연 {m.ask.p50 ? `${(m.ask.p50 / 1000).toFixed(1)}초` : "-"}
+          범고래 박사 질문 {m.ask.n}번 · 검증 통과 {m.ask.ok}번 · 재시도로 통과 {m.ask.retried}번 · 중간 지연 {m.ask.p50 ? `${(m.ask.p50 / 1000).toFixed(1)}초` : "-"}
         </p>
       </section>
 

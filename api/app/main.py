@@ -43,7 +43,7 @@ app = FastAPI(
     lifespan=lifespan,
     title="타임슬립 개미 API",
     version="2.0.0",
-    description="실제 과거 시장 26주를 다시 사는 투자 시뮬레이션. 데이터: hindsight(YouTube 언급·주가·DART 공시). AI 코치: Gemini.",
+    description="실제 과거 시장 26주를 다시 사는 투자 시뮬레이션. 데이터: hindsight(YouTube 언급·주가). AI: 범고래 박사(시점 제한 RAG) · 결산 코치 — Gemini, Supabase pgvector.",
 )
 app.add_middleware(GZipMiddleware, minimum_size=800)
 app.add_middleware(OpsMiddleware)
@@ -326,7 +326,7 @@ def _ago(n: int) -> str:
     return "지난주" if n <= 0 else f"{n + 1}주 전"
 
 
-@app.post("/v1/runs/{rid}/ask", tags=["AI"], summary="개미 비서: 지금까지 나온 영상·공시만 찾아(pgvector) Gemini 가 출처와 함께 답한다. 시즌당 3번")
+@app.post("/v1/runs/{rid}/ask", tags=["AI"], summary="범고래 박사(개미 비서): 지금까지 나온 유튜브 영상 제목만 찾아(pgvector) Gemini 가 출처와 함께 답한다. 시즌당 3번")
 def ask(rid: str, body: AskIn, s: S = Depends(db)):
     r = get_run(s, rid)
     st = dict(r.state)
@@ -341,10 +341,12 @@ def ask(rid: str, body: AskIn, s: S = Depends(db)):
     pool = {a["i"]: str(k) for k, a in enumerate(st["assets"])}
     focus = st["assets"][int(body.k)]["i"] if body.k and body.k.isdigit() and int(body.k) < len(st["assets"]) else None
     t0 = time.perf_counter()
+    mode = "vector"
     try:
         qv, _ = rag.embed_query(body.question, rag.index.model)
     except Exception:
-        qv = rag.keyword_vector(body.question)
+        qv = rag.keyword_vector(body.question)  # 임베딩 한도·장애 → 단어 겹침 → 그래도 없으면 최근 순
+        mode = "keyword" if qv is not None else "recent"
     docs = rag.index.search(qv, list(pool), wmax, focus)
     cites = []
     for i, d in enumerate(docs, 1):
@@ -392,7 +394,7 @@ def ask(rid: str, body: AskIn, s: S = Depends(db)):
     s.commit()
     for c in ans["cites"]:
         c.pop("_line", None)
-    return {**ans, "left": game._ask_limit(st) - st.get("asks", 0), "searched": len(cites), "backend": rag.index.backend}
+    return {**ans, "left": game._ask_limit(st) - st.get("asks", 0), "searched": len(cites), "backend": rag.index.backend, "searchMode": mode}
 
 
 class Vote(BaseModel):
@@ -525,7 +527,7 @@ def analysis() -> dict:
             "weeksWithTitles": sum(1 for a in p["assets"][:p["etf"]] for t in a["titles"][f0:] if t),
             "assetWeeks": p["etf"] * (n - f0),
             "ragIndexed": len(rag.index.docs), "ragTotal": rag.index.total,
-            "masking": "제목·공시: 종목명·별칭(대소문자 무시) → 코드네임, 다른 종목·그룹·사람·직함·가격·날짜·분기·영문 제품 코드·공장/단지 이름 → ○○. 테스트가 매 턴 진짜 이름·날짜 노출을 검사",
+            "masking": "영상 제목: 종목명·별칭(대소문자 무시) → 코드네임, 다른 종목·그룹·사람·직함·가격·날짜·분기·영문 제품 코드·공장/단지 이름 → ○○. 테스트가 매 턴 진짜 이름·날짜 노출을 검사",
         },
         "source": p["source"],
     }
@@ -542,7 +544,8 @@ def meta(s: S = Depends(db)):
     turns = Counter(s.scalars(select(Run.turn)).all())
     reach = [sum(c for t, c in turns.items() if t >= k) for k in (1, 5, 13, 20, 26)]
     coach_rows = s.execute(select(AiLog.ok, AiLog.latency_ms).where(AiLog.kind == "coach")).all()
-    ask_rows = s.execute(select(AiLog.ok, AiLog.latency_ms, AiLog.attempts).where(AiLog.kind == "ask")).all()
+    ask_all = s.execute(select(AiLog.ok, AiLog.latency_ms, AiLog.attempts).where(AiLog.kind == "ask").order_by(AiLog.id.desc())).all()
+    ask_rows = ask_all[:50]  # 최근 50번(최적화 전 기록과 섞이지 않게)
     fin_rows = s.execute(select(Run.ret, Run.fomo, Run.beat_yt, Run.beat_ix, Run.char, Run.trades)
                          .where(Run.done.is_(True), Run.fomo.is_not(None), Run.mode != "practice")).all()
     fomo_b: dict[str, list[float]] = {"0번": [], "1~2번": [], "3번 이상": []}
@@ -564,7 +567,7 @@ def meta(s: S = Depends(db)):
                   "funnel": [{"turn": k, "n": v} for k, v in zip((1, 5, 13, 20, 26), reach)]},
         "coach": {"n": len(coach_rows), "ok": sum(1 for o, _ in coach_rows if o),
                   "p50": statistics.median([m for _, m in coach_rows]) if coach_rows else None, "provider": ai_mod.provider() or "off"},
-        "ask": {"n": len(ask_rows), "ok": sum(1 for o, _, _ in ask_rows if o), "retried": sum(1 for _, _, a in ask_rows if a > 1),
+        "ask": {"n": len(ask_all), "recent": len(ask_rows), "ok": sum(1 for o, _, _ in ask_all if o), "retried": sum(1 for _, _, a in ask_rows if a > 1),
                 "p50": statistics.median([m for _, m, _ in ask_rows]) if ask_rows else None},
         "rag": {"docs": len(rag.index.docs), "backend": rag.index.backend, "model": rag.index.model, "dim": rag.index.dim, "window": rag.WINDOW},
         "players": players,
