@@ -34,3 +34,9 @@
 - 로그인(Supabase Auth)을 뺐다. Render 의 `SUPABASE_URL`, Vercel 의 `VITE_SUPABASE_*` 는 더 이상 필요 없다(남아 있어도 무시).
 - 서버가 읽는 데이터는 `data/season.json` 하나. `scripts/build_season.py` → `scripts/pack_data.py` 로 `data/pack.enc` 를 다시 만들어 올리고, Render 의 `DATA_KEY` 는 그대로 쓴다.
 - DB 는 새 테이블 `runs`·`coach_logs` 를 서버 시작 때 만든다. 예전 `games`·`plays` 테이블은 남아 있어도 쓰지 않는다.
+
+## 2026-11-21 2차(개미 비서 RAG) 뒤 바뀐 점
+- `data/pack.enc` 에 `season.json` 과 `rag.json`(개미 비서 색인)이 함께 들어 있다. 서버는 시작할 때 `DATA_KEY` 로 풀고, DB 가 PostgreSQL 이면 `create extension vector` 후 `rag_docs` 표(vector(256))를 채운다. 색인이 바뀌었을 때만 다시 채운다(`rag_meta.sig`).
+- Supabase 는 pgvector 확장을 지원한다. 확장을 만들 권한이 없거나 실패하면 서버는 메모리 검색으로 자동 전환한다(`/v1/meta` 의 `rag.backend` 로 확인: `pgvector` · `memory`).
+- 색인 늘리기(하루 무료 한도 ~1,000건): `build_season.py` → `build_rag.py` → `pack_data.py` → 커밋·푸시.
+- 새 의존성: `numpy`. 환경 변수 추가 없음(질문 임베딩은 기존 `GEMINI_API_KEY`).
