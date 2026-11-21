@@ -176,7 +176,7 @@ export function MarketList({ v, orders, onOpen }: { v: View; orders: Order[]; on
 }
 
 // ---------------------------------------------------------------- 내 계좌
-export function Account({ v, orders, onOpen, onCancel }: { v: View; orders: Order[]; onOpen: (k: string) => void; onCancel: (k: string) => void }) {
+export function Account({ v, orders, onOpen, onCancel, onOrder }: { v: View; orders: Order[]; onOpen: (k: string) => void; onCancel: (k: string) => void; onOrder: (o: Order) => void }) {
   const byK = Object.fromEntries(v.assets.map((a) => [a.k, a]));
   const p = preview(v, orders);
   const invested = v.value - v.cash;
@@ -229,7 +229,7 @@ export function Account({ v, orders, onOpen, onCancel }: { v: View; orders: Orde
         ) : (
           <ul className="pos-list">
             {v.pos.map((x) => (
-              <li key={x.k}>
+              <li key={x.k} className="pos-row">
                 <button className="pos" onClick={() => onOpen(x.k)}>
                   <span>
                     <b>{byK[x.k].code}</b>
@@ -239,6 +239,11 @@ export function Account({ v, orders, onOpen, onCancel }: { v: View; orders: Orde
                     <b>{won(x.value)}</b>
                     <Delta x={x.gain} />
                   </span>
+                </button>
+                <button className="sell-all" disabled={v.skip || orders.some((o) => o.k === x.k)} onClick={() => onOrder({ k: x.k, q: -x.qty })} aria-label={`${byK[x.k].code} 전부 팔기 주문`} data-ux="Quick Action">
+                  전부
+                  <br />
+                  팔기
                 </button>
               </li>
             ))}

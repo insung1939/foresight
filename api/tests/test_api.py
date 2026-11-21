@@ -293,3 +293,11 @@ def test_ask_check_allows_quotes_but_blocks_advice_and_names():
     bad = {"answer": "삼성전자는 지금 사세요. 30% 오릅니다.", "cites": ["D9"]}
     chk = ai.check_ask(bad, ctx, "q", {"D1"}, ["삼성전자"])
     assert not chk["advice"] and not chk["names"] and not chk["cites"] and not chk["numbers"]
+
+
+def test_ask_check_requires_the_asked_stock():
+    ctx = "D1 | 종목 자동차 A | 지난주 | 유튜브 | 반도체 A 자동차 A 업고"
+    off = {"answer": "반도체 A 가 화제였어요.", "cites": ["D1"]}
+    assert not ai.check_ask(off, ctx, "q", {"D1"}, [], focus="자동차 A")["focus"]
+    on = {"answer": "자동차 A 는 반도체 A 와 함께 언급됐어요.", "cites": ["D1"]}
+    assert ai.check_ask(on, ctx, "q", {"D1"}, [], focus="자동차 A")["focus"]

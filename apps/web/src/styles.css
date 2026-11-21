@@ -366,7 +366,7 @@ code { font-size: 0.88em; background: var(--surface-2); padding: 1px 6px; border
 .wk-rank li.me { background: var(--surface-2); font-weight: 800; outline: 2px solid var(--brand); }
 .wk-rank li span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-.toasts { position: fixed; left: 0; right: 0; bottom: calc(var(--dock-h) + var(--safe-b) + 8px); z-index: 60; display: grid; justify-items: center; gap: 8px; pointer-events: none; padding: 0 12px; }
+.toasts { position: fixed; left: 0; right: 0; bottom: calc(16px + var(--safe-b)); z-index: 60; display: grid; justify-items: center; gap: 8px; pointer-events: none; padding: 0 12px; }
 .toast { pointer-events: auto; display: flex; align-items: center; gap: 12px; max-width: 520px; background: #1d1a33; color: #fff; padding: 12px 14px; border-radius: 14px; box-shadow: var(--shadow-lg); font-size: 14px; font-weight: 600; }
 .toast.warn { background: #7a2e0b; }
 .toast.ok { background: #1f5f2e; }
@@ -618,3 +618,9 @@ body.ux-lens .empty { outline: 2px dashed #f03e3e; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
 }
+
+body:has(.dock) .toasts { bottom: calc(var(--dock-h) + var(--safe-b) + 8px); }
+.pos-row { display: flex; gap: 6px; align-items: stretch; }
+.pos-row .pos { flex: 1; }
+.sell-all { flex: none; min-width: 56px; border-radius: var(--radius-sm); border: 1.5px solid var(--down); color: var(--down); font-weight: 800; font-size: 13px; background: var(--surface); }
+.sell-all:disabled { border-color: var(--line); color: var(--muted); }

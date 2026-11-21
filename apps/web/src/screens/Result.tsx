@@ -53,11 +53,14 @@ function Body({ f, id }: { f: Final; id: string }) {
 
   useEffect(() => {
     sfx(["S", "A", "B"].includes(f.grade) ? "level" : "tick");
-    if (gain.newTitle) window.setTimeout(() => toast(`새 칭호 획득! ${f.title.icon} ${f.title.name}`, { tone: "ok" }), 1200);
-    for (const m of gain.newMarkets) window.setTimeout(() => toast(`🔓 ${MARKET_KO[m]} 시장이 열렸어요!`, { tone: "ok", ms: 4500 }), 2400);
     const before = unlockedFurniture(gain.starsBefore);
     const fresh = unlockedFurniture(gain.starsAfter).filter((x) => !before.includes(x));
-    if (fresh.length) window.setTimeout(() => toast(`🛋️ 내 방에 새 가구 ${fresh.length}개가 들어왔어요!`, { tone: "ok", ms: 4500 }), 3400);
+    const news = [
+      gain.newTitle ? `새 칭호 ${f.title.icon} ${f.title.name}` : "",
+      ...gain.newMarkets.map((m) => `🔓 ${MARKET_KO[m]} 시장`),
+      fresh.length ? `🛋️ 새 가구 ${fresh.length}개` : "",
+    ].filter(Boolean);
+    if (news.length) window.setTimeout(() => toast(`획득! ${news.join(" · ")}`, { tone: "ok", ms: 5000 }), 1600);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

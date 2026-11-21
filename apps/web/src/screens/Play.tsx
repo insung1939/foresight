@@ -35,7 +35,8 @@ function bigWeek(w: Week, before: View, after: View): boolean {
 }
 
 export default function Play() {
-  const id = runKey();
+  // 판 id 는 화면을 열 때 한 번만 읽는다. 끝나고 저장소에서 지운 뒤 다시 읽으면 '판 없음 → 홈'으로 튕긴다(결산을 못 봄)
+  const [id] = useState(runKey);
   const [run, setRun] = useState<RunOut | null>(null);
   const [err, setErr] = useState<ApiError | null>(null);
   const [slow, setSlow] = useState(false);
@@ -251,7 +252,7 @@ export default function Play() {
         </section>
         <section className="panel p-account" aria-label="내 계좌">
           <h2 className="panel-h">💼 내 계좌</h2>
-          <Account v={v} orders={orders} onOpen={setSheet} onCancel={(k) => setOrders(orders.filter((o) => o.k !== k))} />
+          <Account v={v} orders={orders} onOpen={setSheet} onCancel={(k) => setOrders(orders.filter((o) => o.k !== k))} onOrder={addOrder} />
         </section>
         <section className="panel p-rivals" aria-label="라이벌">
           <h2 className="panel-h">🏁 라이벌</h2>

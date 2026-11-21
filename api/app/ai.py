@@ -79,11 +79,11 @@ def model_name() -> str:
     return GEMINI_MODEL if p == "gemini" else f"ollama/{OLLAMA_MODEL}" if p == "ollama" else GEMINI_MODEL
 
 
-def llm(system: str, user: str, schema: dict, usage: Usage, temperature: float = 0.2) -> dict:
+def llm(system: str, user: str, schema: dict, usage: Usage, temperature: float = 0.2, fast: bool = False) -> dict:
     p = provider()
     if p == "ollama":
         return ollama(system, user, schema, usage, temperature)
-    return gemini(system, user, schema, usage, temperature)
+    return gemini(system, user, schema, usage, temperature, fast)
 
 
 def _json_schema(s: dict) -> dict:
@@ -127,12 +127,15 @@ def ollama(system: str, user: str, schema: dict, usage: Usage, temperature: floa
             raise ValueError("JSON 형식이 아님") from e
 
 
-def gemini(system: str, user: str, schema: dict, usage: Usage, temperature: float = 0.2) -> dict:
+def gemini(system: str, user: str, schema: dict, usage: Usage, temperature: float = 0.2, fast: bool = False) -> dict:
     """Gemini 호출. 기본 모델이 바쁨(5xx)·한도(429)·시간 초과면 GEMINI_FALLBACKS 로 차례로 넘어간다."""
     if not GEMINI_API_KEY:
         raise LLMUnavailable("AI 연결이 아직 설정되지 않았어요", "unconfigured")  # 키도 로컬 모델도 없을 때
     last: LLMUnavailable | None = None
-    for model in [GEMINI_MODEL, *[m for m in GEMINI_FALLBACKS if m != GEMINI_MODEL]]:
+    order = [GEMINI_MODEL, *[m for m in GEMINI_FALLBACKS if m != GEMINI_MODEL]]
+    if fast:  # 게임 중 질문은 기다리게 하면 안 된다 → 가벼운 모델 먼저
+        order = [*[m for m in GEMINI_FALLBACKS if m != GEMINI_MODEL], GEMINI_MODEL]
+    for model in order:
         try:
             out = _gemini_once(model, system, user, schema, usage, temperature)
             usage.model = model
@@ -255,6 +258,7 @@ ASK_SYSTEM = """너는 투자 시뮬레이션 게임 '타임슬립 개미'의 �
 - 사라·팔아라 같은 권유, 앞으로 오른다·내린다 같은 예측을 하지 않는다. 사람들이 무엇을 말했는지, 무엇이 나왔는지만 정리한다.
 - 영상 제목을 옮길 때는 작은따옴표로 감싼다(예: '조만간 오른다'는 제목). 따옴표 밖은 너의 말이다.
 - 종목은 자료에 적힌 코드네임(예: '반도체 A')으로만 부른다.
+- [지금 보고 있는 종목]에 대해 답한다. 제목에 다른 종목이 함께 나와도 그 종목 이야기는 하지 않는다. 답에 그 종목 코드네임을 꼭 쓴다.
 - 2~3문장, 200자 이내, 부드러운 존댓말(~요)."""
 
 ASK_SCHEMA = {
@@ -264,7 +268,7 @@ ASK_SCHEMA = {
 }
 
 
-def check_ask(resp: dict, context: str, question: str, ids: set[str], banned: list[str]) -> dict:
+def check_ask(resp: dict, context: str, question: str, ids: set[str], banned: list[str], focus: str | None = None) -> dict:
     ans = resp.get("answer", "") or ""
     cites = [c for c in (resp.get("cites") or []) if isinstance(c, str)]
     unknown = "알 수 없어요" in ans
@@ -280,19 +284,21 @@ def check_ask(resp: dict, context: str, question: str, ids: set[str], banned: li
         "advice": not ADVICE_RE.search(own),
         "names": not leaked,
         "length": len(ans) <= 320,
+        # 물어본 종목 자료가 있으면 그 종목 이야기를 해야 한다(다른 종목 이야기로 새지 않게)
+        "focus": unknown or not focus or focus in ans,
     }
     out["_bad"] = bad_nums + leaked
     return out
 
 
-def ask(question: str, context: str, ids: set[str], banned: list[str]) -> tuple[dict, dict, Usage, int]:
+def ask(question: str, context: str, ids: set[str], banned: list[str], focus: str | None = None) -> tuple[dict, dict, Usage, int]:
     """(답, 검증, 사용량, 시도 수). 두 번 다 떨어지면 ValueError"""
     usage = Usage()
     user = f"[자료]\n{context}\n\n[질문]\n{question}"
     last: dict = {}
     for attempt in (1, 2):
-        resp = llm(ASK_SYSTEM, user, ASK_SCHEMA, usage, temperature=0.2)
-        chk = check_ask(resp, context, question, ids, banned)
+        resp = llm(ASK_SYSTEM, user, ASK_SCHEMA, usage, temperature=0.2, fast=True)
+        chk = check_ask(resp, context, question, ids, banned, focus)
         if all(v for k, v in chk.items() if not k.startswith("_")):
             return resp, chk, usage, attempt
         last = chk

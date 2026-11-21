@@ -327,7 +327,7 @@ def ask(rid: str, body: AskIn, s: S = Depends(db)):
     try:
         if not cites:
             raise ValueError("검색 결과 없음")
-        resp, chk, usage, attempts = ai_mod.ask(body.question, context, {c["id"] for c in cites}, banned)
+        resp, chk, usage, attempts = ai_mod.ask(body.question, context, {c["id"] for c in cites}, banned, focus_code if n_focus else None)
         used = [c for c in cites if c["id"] in set(resp.get("cites", []))]
         ans = {"answer": resp["answer"], "cites": used, "source": "ai", "model": usage.model or ai_mod.model_name()}
         ok = True
