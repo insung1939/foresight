@@ -33,9 +33,11 @@ async function call<T>(path: string, init?: { method?: string; body?: unknown; t
       try {
         const j = await res.json();
         if (typeof j.detail === "string") detail = j.detail;
+        else if (res.status === 422) detail = "입력한 값을 다시 확인해 주세요.";
       } catch {
         /* 본문 없음 */
       }
+      if (res.status === 429) detail = detail.includes("초") ? detail : "요청이 너무 많아요. 잠시 뒤 다시 해 주세요.";
       throw new ApiError(res.status === 404 ? "notfound" : res.status === 409 ? "conflict" : res.status === 401 ? "auth" : "server", detail, res.status);
     }
     return (await res.json()) as T;

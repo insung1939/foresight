@@ -7,11 +7,11 @@ export type Mood = "happy" | "calm" | "worried" | "panic" | "wow";
 
 export const CHAR_META: Record<CharId, { name: string; body: string; accent: string; perk: string; icon: string; unlock?: string }> = {
   office: { name: "직장인 개미", body: "#5b3fd6", accent: "#e5383b", perk: "4주마다 월급 +50만 원", icon: "💼" },
-  student: { name: "대학생 개미", body: "#1f9d6b", accent: "#1d1640", perk: "시작 600만 원 · 멘탈 회복 2배", icon: "🎓" },
-  whale: { name: "큰손 개미", body: "#c78a00", accent: "#2b2b2b", perk: "시작 3,000만 원 · 손실 때 멘탈 1.5배", icon: "💰", unlock: "한 판 끝내면" },
+  student: { name: "대학생 개미", body: "#1f9d6b", accent: "#1d1640", perk: "시작 600만 원 · 멘탈 회복 2배 · 끝내면 별 +1", icon: "🎓" },
+  whale: { name: "큰손 개미", body: "#c78a00", accent: "#2b2b2b", perk: "시작 3,000만 원 · 사건 금액 3배 · 살 때 0.3% 비쌈 · 손실에 약함", icon: "💰", unlock: "한 판 끝내면" },
   holder: { name: "존버 개미", body: "#6b6984", accent: "#3c3a55", perk: "멘탈이 20 아래로 안 떨어짐 · 수수료 2배", icon: "🗿" },
   trader: { name: "단타 개미", body: "#e8590c", accent: "#ffd43b", perk: "수수료 절반 · 쉬어도 멘탈 회복 없음", icon: "⚡" },
-  coin: { name: "코인 개미", body: "#f59f00", accent: "#5b3fd6", perk: "코인 시장이 처음부터 열림 · 시작 멘탈 50", icon: "🪙", unlock: "B 등급 받으면" },
+  coin: { name: "코인 개미", body: "#f59f00", accent: "#5b3fd6", perk: "코인 처음부터 · 코인 수수료 0 · 주식 수수료 2배 · 시작 멘탈 50", icon: "🪙", unlock: "B 등급 받으면" },
 };
 
 export const moodOf = (mental: number): Mood => (mental >= 80 ? "happy" : mental >= 55 ? "calm" : mental >= 30 ? "worried" : "panic");

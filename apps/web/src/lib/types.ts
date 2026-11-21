@@ -56,6 +56,7 @@ export interface AskOut {
   answer: string;
   cites: Cite[];
   source: "ai" | "search";
+  reason?: string;
   model?: string;
   logId?: number;
   left: number;
@@ -227,6 +228,7 @@ export interface Meta {
     bottom: { name: string; ret: number; weeks: number }[];
     hist: [number, number][];
   };
+  quality: { channelsAll: number; ghosts: number; ghostRule: string; poolRule: string; weeksWithTitles: number; assetWeeks: number; ragIndexed: number; ragTotal: number; masking: string };
   pack: { weeks: number; playable: number; from: string; to: string; assets: Record<Market, number>; channels: number; builtAt: string };
   source: Record<string, number | string>;
   plays: { runs: number; done: number; median: number | null; grades: Record<string, number>; titles: Record<string, number>; funnel: { turn: number; n: number }[] };

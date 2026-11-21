@@ -8,6 +8,7 @@ import { TEAM } from "../lib/team";
 const TOC: [string, string][] = [
   ["why", "왜 갈아엎었나"],
   ["needs", "Needs"],
+  ["market", "SWOT"],
   ["ref", "레퍼런스 분석"],
   ["design", "게임 설계"],
   ["ux", "UI/UX"],
@@ -93,6 +94,55 @@ export default function Team() {
           )}
         </section>
 
+        <section id="market" className="card">
+          <h2 className="sec-title">02-2 · 시장·경쟁·SWOT</h2>
+          <table className="tbl">
+            <thead>
+              <tr>
+                <th>대안</th>
+                <th>실제 과거</th>
+                <th>바로 결과</th>
+                <th>유튜버와 비교</th>
+                <th>그때 정보만 쓰는 AI</th>
+                <th>게임 재미</th>
+              </tr>
+            </thead>
+            <tbody>
+              {[
+                ["증권사 모의투자(예: 키움증권 영웅문 모의투자)", "–", "–(실시간, 몇 주 대기)", "–", "–", "△"],
+                ["투자 유튜브·종목 토론방", "–", "–", "–", "–", "△"],
+                ["금융교육 강의·퀴즈(예: 금융감독원 금융교육 콘텐츠)", "–", "●", "–", "–", "–"],
+                ["타임슬립 개미", "●", "●(10분에 26주)", "●(고스트 라이벌)", "●(시점 제한 RAG)", "●"],
+              ].map((r) => (
+                <tr key={r[0]} className={r[0] === "타임슬립 개미" ? "me-row" : ""}>
+                  {r.map((c, i) => (
+                    <td key={i}>{i === 0 ? <b>{c}</b> : c}</td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <p className="muted small">서비스 유형 기준 팀 비교(2026-11). 특정 제품의 기능을 전수 조사한 것은 아니다.</p>
+          <div className="swot">
+            <div>
+              <b>S 강점</b>
+              <span>hindsight 5.4만 언급·31.7만 시세 실데이터, 미래 정보 차단(테스트), 유튜버 고스트 라이벌, 10분 한 판</span>
+            </div>
+            <div>
+              <b>W 약점</b>
+              <span>데이터 기간 약 15개월(같은 시장이 반복될 수 있음), 무료 AI 한도, 첫 접속 지연</span>
+            </div>
+            <div>
+              <b>O 기회</b>
+              <span>2030 개인 투자자 금융교육 수요, 증권사 신규 고객 온보딩·학교 교육(B2B), 반·동아리 리그</span>
+            </div>
+            <div>
+              <b>T 위협</b>
+              <span>투자 조언으로 오해 → 면책·AI 권유 금지 검증, 실명 채널 평판 → 공개 분석은 익명, 저작권(제목 인용) → 짧은 제목만·출처 표기</span>
+            </div>
+          </div>
+        </section>
+
         <section id="ref" className="card">
           <h2 className="sec-title">03 · 레퍼런스 분석 — 따라 하지 않고, 왜 재미있는지만 가져왔다</h2>
           <table className="tbl ref-tbl">
@@ -117,7 +167,17 @@ export default function Team() {
               <tr>
                 <td>키자니아 주식 체험</td>
                 <td>진짜 직업을 역할놀이로, 쉬운 말과 익숙한 소품</td>
-                <td>&lsquo;첫 출근&rsquo; 튜토리얼 판(국내 10종목만), 월요일 아침 폰 피드라는 익숙한 소품</td>
+                <td>&lsquo;첫 출근&rsquo; 연습 시즌(8주·국내 6종목), 월요일 아침 폰 피드라는 익숙한 소품</td>
+              </tr>
+              <tr>
+                <td>발라트로</td>
+                <td>운(카드)이 판을 흔들지만 효과는 한 줄로 쉽다 → 매 판이 다르다</td>
+                <td>시즌 시작 행운 카드 3장 중 1장 뒤집기(수수료 면제·강철 멘탈·별똥별…), 매주 🍀 작은 행운</td>
+              </tr>
+              <tr>
+                <td>브롤스타즈 상자</td>
+                <td>열기 전 두근거림 + 가변 보상 + 천장(일정 횟수 뒤 큰 보상 보장)</td>
+                <td>결산 행운 상자: 별 +1~+5, 작은 보상 3번이면 다음은 큰 보상 확정</td>
               </tr>
               <tr>
                 <td>듀오링고·워들</td>
@@ -166,7 +226,7 @@ export default function Team() {
             <tbody>
               {[
                 ["Bottom Sheet", "종목 정보·매매. 피드 맥락을 잃지 않고, 아래로 끌면 닫힘. 넓은 화면에선 가운데 창"],
-                ["Onboarding · Coach Marks · Spotlight", "첫 판 3단계 안내(언제든 건너뛰기). '첫 출근' 튜토리얼 판"],
+                ["Onboarding · Coach Marks · Spotlight", "첫 판 3단계 안내(언제든 건너뛰기). 2단계는 직접 종목을 눌러야 넘어간다(체험형). '첫 출근' 연습 시즌"],
                 ["Progressive Disclosure · New Badge", "국내 → 미국 → 코인 순으로 시장을 연다"],
                 ["Undo · Toast Feedback", "주문을 담으면 토스트에 '되돌리기'. 주문은 주 마감 전까지 ✕로 취소"],
                 ["Optimistic UI · Autosave", "주문은 즉시 화면에 반영, 새로고침해도 주문·진행이 남는다"],
@@ -177,7 +237,7 @@ export default function Team() {
                 ["반응형", "360~430px 기준 탭 4개. 960px 이상은 피드·시장·계좌·라이벌 2단 동시 표시"],
                 ["Snackbar · Auto-dismiss", "평범한 주는 3초 리캡 카드(누르면 닫힘, 남은 시간 막대). 26번 반복해도 지루하지 않게"],
                 ["Card Select", "내 개미 고르기: 그림·특성·잠금 조건을 한 카드에"],
-                ["AI Chat · Citations", "부엉이 박사: 제안 질문 칩 → 단계별 진행 표시(검색 중 → 답 쓰는 중) → 출처 D1·D2 → 👍👎"],
+                ["AI Chat · Citations", "개미 비서(부엉이 박사): 제안 질문 칩 → 단계별 진행 표시(검색 중 → 답 쓰는 중) → 출처 D1·D2 → 👍👎"],
                 ["3D · Graceful Degradation", "three.js 장면은 보일 때만 그리고, WebGL 없음·움직임 줄이기면 2D로. 직접 끄기 버튼"],
                 ["UX 렌즈", "👓 또는 U 키: 화면 위에 실제 적용된 용어집 용어를 띄운다(발표 시연용)"],
               ].map(([a, b]) => (
@@ -243,6 +303,9 @@ hindsight DB ─(읽기만)─▶ build_season.py ─▶ season.json · rag_docs
             <li>검증 3가지: 넘긴 자료에 없는 숫자 · 직접 권유 표현 · 길이 → 실패하면 이유를 알려 1번 재시도 → 그래도 실패하면 규칙 답</li>
             <li>Gemini 3.5 Flash → 대체 모델 → 키가 없으면 로컬 Ollama(수업 3주차 qwen3.5:4b) → 규칙 답. 모든 호출 기록(지연·토큰·통과 여부)</li>
           </ul>
+          <p className="callout">
+            짓궂은 질문 30개(미래 예측·투자 권유·실명·숫자 날조·규칙 무시 유도 포함) 평가: <b>화면에 문제 있는 답 0개</b>, 응답 중간값 1.4초 — GitHub <code>docs/ai-eval.md</code>. 검증이 실제로 잡은 실패와 고친 방법은 <code>docs/ux-log.md</code> R13~R16.
+          </p>
           {m && (
             <p className="muted small">
               개미 비서 {m.ask.n}번(통과 {m.ask.ok}) · 코치 {m.coach.n}번(통과 {m.coach.ok})
@@ -252,6 +315,42 @@ hindsight DB ─(읽기만)─▶ build_season.py ─▶ season.json · rag_docs
 
         <section id="nfr" className="card">
           <h2 className="sec-title">09 · 성능·보안</h2>
+          <table className="tbl">
+            <thead>
+              <tr>
+                <th>무엇</th>
+                <th>전</th>
+                <th>후</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>개미 비서 응답</td>
+                <td>18.4초</td>
+                <td>
+                  <b>1.4초</b>(가벼운 모델 먼저 · 생각 최소)
+                </td>
+              </tr>
+              <tr>
+                <td>첫 화면 JS(gzip)</td>
+                <td>338 KB(3D 포함)</td>
+                <td>
+                  <b>111 KB</b>(3D 는 보일 때만)
+                </td>
+              </tr>
+              <tr>
+                <td>한 턴 처리 · 응답</td>
+                <td>—</td>
+                <td>7.8 ms · 5.4 KB</td>
+              </tr>
+              <tr>
+                <td>RAG 검색(pgvector)</td>
+                <td>—</td>
+                <td>2.3 ms</td>
+              </tr>
+            </tbody>
+          </table>
+          <p className="muted small">측정 방법과 비용·남은 한계: GitHub docs/perf.md</p>
           <ul className="dots">
             <li>시즌 팩(2MB)은 서버에만. 한 턴 응답은 지금 화면에 필요한 것만(종목 20개 × 12주) gzip</li>
             <li>공개 저장소엔 암호문(pack.enc)만, 서버는 DATA_KEY 로 풀어 쓴다</li>

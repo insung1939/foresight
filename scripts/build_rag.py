@@ -122,7 +122,7 @@ def main():
     m = np.array([have[hashes[i]] for i in keep], dtype=np.float32)
     m /= np.linalg.norm(m, axis=1, keepdims=True) + 1e-9
     q = np.clip(np.round(m * 127), -127, 127).astype(np.int8)
-    out = {"model": MODEL, "dim": DIM, "docs": docs, "emb": base64.b64encode(q.tobytes()).decode()}
+    out = {"model": MODEL, "dim": DIM, "docs": docs, "emb": base64.b64encode(q.tobytes()).decode(), "total": len(texts)}
     (ROOT / "data" / "rag.json").write_text(json.dumps(out, ensure_ascii=False, separators=(",", ":")))
     print(f"→ data/rag.json 문서 {len(docs):,}개 ({(ROOT / 'data' / 'rag.json').stat().st_size / 1e6:.1f} MB)")
 

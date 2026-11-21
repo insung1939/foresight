@@ -33,6 +33,7 @@ class Index:
         self.model = ""
         self.dim = 256
         self.backend = "off"
+        self.total = 0
 
     def load(self) -> None:
         p = DATA_DIR / "rag.json"
@@ -41,6 +42,7 @@ class Index:
             return
         raw = json.loads(p.read_text())
         self.docs, self.model, self.dim = raw["docs"], raw["model"], raw["dim"]
+        self.total = raw.get("total", len(self.docs))
         q = np.frombuffer(base64.b64decode(raw["emb"]), dtype=np.int8).reshape(len(self.docs), self.dim)
         m = q.astype(np.float32)
         self.emb = m / (np.linalg.norm(m, axis=1, keepdims=True) + 1e-9)
@@ -125,8 +127,9 @@ index = Index()
 
 def embed_query(question: str, model: str) -> tuple[np.ndarray, int]:
     """질문 임베딩(RETRIEVAL_QUERY). (벡터, 걸린 ms)"""
-    if not GEMINI_API_KEY:
-        raise RuntimeError("no key")
+    import os
+    if not GEMINI_API_KEY or os.environ.get("RAG_EMBED") == "0":  # 평가 때 임베딩 한도를 아끼려고 끌 수 있다
+        raise RuntimeError("embedding off")
     t0 = time.perf_counter()
     r = httpx.post(f"https://generativelanguage.googleapis.com/v1beta/models/{model}:embedContent",
                    json={"content": {"parts": [{"text": question}]}, "taskType": "RETRIEVAL_QUERY", "outputDimensionality": index.dim},

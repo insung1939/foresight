@@ -17,7 +17,7 @@
 ## 2. Render (서버)
 - GitHub 저장소 연결 → `render.yaml` 블루프린트
 - 환경 변수: `GEMINI_API_KEY`, `DATABASE_URL`, `DATA_KEY`, `ALLOWED_ORIGINS`(Vercel 주소), `SUPABASE_URL`(선택)
-- 확인: `https://<앱>.onrender.com/v1/health` → `cases: 452`, `ai: true` / Swagger: `/docs`
+- 확인: `https://<앱>.onrender.com/v1/health` → `{"ok": true, "pack": true, "ai": "gemini"}` · `/v1/meta` 의 `rag.backend` 가 `pgvector` / Swagger: `/docs`
 
 ## 3. Vercel (화면)
 - 저장소 연결, Root Directory `apps/web`
@@ -26,7 +26,7 @@
 
 ## 4. 마무리
 - `apps/web/src/lib/team.ts` 의 `links` 에 세 주소, `members` 에 팀원
-- `docs/demo.md` 체크리스트(다른 PC·휴대폰 접속, 서버 깨우기)
+- 발표 전: 서비스·`/deck/index.html` 을 한 번 열어 서버 깨우기(첫 응답 약 30초), 다른 PC·휴대폰에서 접속 확인
 - 강의실 와이파이에서 3~4명 동시 플레이 시험(요청 한도는 IP+기기 기준이라 서로 막지 않음)
 
 

@@ -360,7 +360,8 @@ def ask(rid: str, body: AskIn, s: S = Depends(db)):
     n_focus = sum(1 for c in cites if c["code"] == focus_code)
     context = (f"[지금 보고 있는 종목] {focus_code} — 이 종목 자료 {n_focus}건. 이 종목 자료가 없으면 그 사실을 먼저 말하고, 다른 종목 자료는 참고로만.\n"
                if focus_code else "") + "\n".join(c["_line"] for c in cites)
-    banned = sorted({x for a in st["assets"] for x in [p["assets"][a["i"]]["name"]] if len(x) >= 2})
+    # 진짜 이름: 이번 판 종목만이 아니라 모든 종목 이름을 막는다(사용자가 짐작한 이름을 되풀이해도 정답 힌트가 되므로)
+    banned = sorted({a["name"] for a in p["assets"][:p["etf"]] if len(a["name"]) >= 2} | {"삼성", "하이닉스", "현대", "카카오", "네이버"})
     ans: dict
     ok = False
     try:
@@ -377,8 +378,12 @@ def ask(rid: str, body: AskIn, s: S = Depends(db)):
         s.flush()
         ans["logId"] = row.id
     except (ai_mod.LLMUnavailable, ValueError) as e:
-        ans = {"answer": "AI가 답을 검증하지 못해서, 찾은 자료만 보여드릴게요." if cites else "지금까지 나온 자료에서 관련된 내용을 찾지 못했어요.",
-               "cites": cites[:3], "source": "search"}
+        reason = getattr(e, "kind", "check") if isinstance(e, ai_mod.LLMUnavailable) else ("empty" if not cites else "check")
+        msg = {"check": "AI 답이 검증(출처·숫자·권유·실명)을 통과하지 못해서, 찾은 자료만 보여드릴게요.",
+               "quota": "AI 무료 사용량이 잠깐 찼어요. 찾은 자료만 보여드릴게요.",
+               "busy": "AI가 바빠요. 찾은 자료만 보여드릴게요.", "timeout": "AI 답이 늦어져서, 찾은 자료만 보여드릴게요.",
+               "empty": "지금까지 나온 자료에서 관련된 내용을 찾지 못했어요."}.get(reason, "AI에 연결하지 못해서, 찾은 자료만 보여드릴게요.")
+        ans = {"answer": msg, "cites": cites[:3], "source": "search", "reason": reason}
         s.add(AiLog(run_id=rid, kind="ask", question=body.question, ok=False, docs=len(cites),
                     checks={"error": type(e).__name__, "detail": str(e)[:200]}, latency_ms=int((time.perf_counter() - t0) * 1000), model=ai_mod.model_name()))
     if ok:
@@ -493,8 +498,13 @@ def analysis() -> dict:
         v = 1.0
         for w in range(f0 + 1, n):
             v *= 1 + ch["r"][w]
-        ghosts.append({"name": ch["name"], "ret": round(v - 1, 4), "weeks": sum(1 for x in ch["n"][f0 + 1:] if x)})
+        ghosts.append({"name": ch["name"], "ret": round(v - 1, 4), "weeks": sum(1 for x in ch["n"][f0 + 1:] if x), "cat": ch.get("cat")})
     ghosts.sort(key=lambda g: -g["ret"])
+    # 공개 분석에서는 채널을 익명(채널 A·B…)으로: 기계적으로 따라 산 가상 성적이 특정 채널 평가로 읽히지 않게
+    order = sorted(ghosts, key=lambda g: g["name"])
+    alias = {g["name"]: f"{'코인' if g['cat'] == 'crypto' else '주식'} 채널 {i + 1:02d}" for i, g in enumerate(order)}
+    for g in ghosts:
+        g["name"] = alias[g["name"]]
     kospi = round(ix1 / ix0 - 1, 4)
     hist = Counter()
     for g in ghosts:
@@ -507,7 +517,16 @@ def analysis() -> dict:
         "ghosts": {"kospi": kospi, "n": len(ghosts), "beat": sum(1 for g in ghosts if g["ret"] > kospi),
                    "top": ghosts[:5], "bottom": ghosts[-5:], "hist": sorted(hist.items())},
         "pack": {"weeks": n, "playable": n - game.SEASON - f0 - 1, "from": p["weeks"][f0], "to": p["weeks"][-1],
-                 "assets": dict(by_market), "channels": len(p["channels"]), "builtAt": p["builtAt"]},
+                 "assets": dict(Counter(a["market"] for a in p["assets"][:p["etf"]])), "channels": len(p["channels"]), "builtAt": p["builtAt"]},
+        "quality": {
+            "channelsAll": p["source"]["channels"], "ghosts": len(p["channels"]),
+            "ghostRule": "시즌 동안 '오른다' 언급이 있는 주가 8주 이상인 채널만 고스트로(언급이 드문 채널은 성적이 0%로 왜곡되므로)",
+            "poolRule": "피드 시작 8주 전부터 마지막 주까지 주봉이 빠짐없이 있는 종목만(상장폐지·거래정지로 끊긴 종목 제외). 빈 주는 직전 종가로 채움",
+            "weeksWithTitles": sum(1 for a in p["assets"][:p["etf"]] for t in a["titles"][f0:] if t),
+            "assetWeeks": p["etf"] * (n - f0),
+            "ragIndexed": len(rag.index.docs), "ragTotal": rag.index.total,
+            "masking": "제목·공시: 종목명·별칭(대소문자 무시) → 코드네임, 다른 종목·그룹·사람·직함·가격·날짜·분기·영문 제품 코드·공장/단지 이름 → ○○. 테스트가 매 턴 진짜 이름·날짜 노출을 검사",
+        },
         "source": p["source"],
     }
     return _analysis

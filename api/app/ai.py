@@ -137,7 +137,7 @@ def gemini(system: str, user: str, schema: dict, usage: Usage, temperature: floa
         order = [*[m for m in GEMINI_FALLBACKS if m != GEMINI_MODEL], GEMINI_MODEL]
     for model in order:
         try:
-            out = _gemini_once(model, system, user, schema, usage, temperature)
+            out = _gemini_once(model, system, user, schema, usage, temperature, fast)
             usage.model = model
             return out
         except LLMUnavailable as e:
@@ -147,17 +147,17 @@ def gemini(system: str, user: str, schema: dict, usage: Usage, temperature: floa
     raise last or LLMUnavailable("AI 서버가 바빠요", "busy", 10)
 
 
-def _gemini_once(model: str, system: str, user: str, schema: dict, usage: Usage, temperature: float) -> dict:
+def _gemini_once(model: str, system: str, user: str, schema: dict, usage: Usage, temperature: float, fast: bool = False) -> dict:
     gen = {"temperature": temperature, "responseMimeType": "application/json", "responseSchema": schema, "maxOutputTokens": 1024}
     if model.startswith("gemini-2.5-flash"):
         gen["thinkingConfig"] = {"thinkingBudget": 0}  # 응답 속도 우선
     elif model.startswith("gemini-3"):
-        gen["thinkingConfig"] = {"thinkingLevel": "low"}  # 3.x 는 생각 단계를 낮춰 속도 우선
+        gen["thinkingConfig"] = {"thinkingLevel": "minimal" if fast else "low"}  # 게임 중 질문은 생각을 최소로(속도)
     body = {"systemInstruction": {"parts": [{"text": system}]},
             "contents": [{"role": "user", "parts": [{"text": user}]}], "generationConfig": gen}
     t = time.perf_counter()
     try:
-        r = httpx.post(f"{API}/{model}:generateContent", json=body, timeout=LLM_TIMEOUT,
+        r = httpx.post(f"{API}/{model}:generateContent", json=body, timeout=min(LLM_TIMEOUT, 12) if fast else LLM_TIMEOUT,
                        headers={"x-goog-api-key": GEMINI_API_KEY})
     except httpx.TimeoutException as e:
         usage.latency_ms += int((time.perf_counter() - t) * 1000)
@@ -258,6 +258,7 @@ ASK_SYSTEM = """너는 투자 시뮬레이션 게임 '타임슬립 개미'의 �
 - 사라·팔아라 같은 권유, 앞으로 오른다·내린다 같은 예측을 하지 않는다. 사람들이 무엇을 말했는지, 무엇이 나왔는지만 정리한다.
 - 영상 제목을 옮길 때는 작은따옴표로 감싼다(예: '조만간 오른다'는 제목). 따옴표 밖은 너의 말이다.
 - 종목은 자료에 적힌 코드네임(예: '반도체 A')으로만 부른다.
+- 질문에 회사 이름이 나와도 되풀이하지 않고 '그 이름은 말씀드릴 수 없어요'라고만 한다(맞다·아니다도 말하지 않는다).
 - [지금 보고 있는 종목]에 대해 답한다. 제목에 다른 종목이 함께 나와도 그 종목 이야기는 하지 않는다. 답에 그 종목 코드네임을 꼭 쓴다.
 - 2~3문장, 200자 이내, 부드러운 존댓말(~요)."""
 

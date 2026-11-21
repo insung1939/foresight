@@ -98,6 +98,42 @@ function Body({ m }: { m: Meta }) {
       </section>
 
       <section className="card">
+        <h2 className="sec-title">③ 품질 — 무엇을 빼고, 무엇을 지웠나</h2>
+        <div className="stat-grid">
+          <div>
+            <b>
+              {m.quality.ghosts} / {m.quality.channelsAll}
+            </b>
+            <span>고스트로 쓴 채널 / 전체 채널</span>
+          </div>
+          <div>
+            <b>{pct(m.quality.weeksWithTitles / Math.max(1, m.quality.assetWeeks), 0).replace("+", "")}</b>
+            <span>영상 제목이 있는 종목-주</span>
+          </div>
+          <div>
+            <b>
+              {m.quality.ragIndexed.toLocaleString()} / {m.quality.ragTotal.toLocaleString()}
+            </b>
+            <span>개미 비서 색인 / 전체 문장</span>
+          </div>
+        </div>
+        <ul className="dots small">
+          <li>
+            <b>종목 풀</b> {m.quality.poolRule}
+          </li>
+          <li>
+            <b>고스트</b> {m.quality.ghostRule}
+          </li>
+          <li>
+            <b>이름·시점 가리기</b> {m.quality.masking}
+          </li>
+          <li>
+            <b>색인</b> 임베딩 무료 한도(모델당 하루 약 1,000문장) 때문에 핵심 공시 → 종목별 인기 제목 순으로 하루씩 늘린다. 색인에 없는 종목은 비서가 &lsquo;자료가 없다&rsquo;고 답한다
+          </li>
+        </ul>
+      </section>
+
+      <section className="card">
         <h2 className="sec-title">분석 1 · 유튜브에서 많이 떠든 종목, 다음 주에 올랐을까?</h2>
         <p className="muted small">종목-주 {n(m.all.n)}개. 지난주 언급 수별로 다음 주 수익률을 나눴다.</p>
         <table className="tbl">
@@ -183,11 +219,12 @@ function Body({ m }: { m: Meta }) {
             </ol>
           </div>
         </div>
-        <p className="muted small">영상 제목 속 &lsquo;오른다&rsquo; 언급을 기계적으로 따라 산 가상 계산이다. 채널의 실제 운용 성과나 추천 품질 평가가 아니다.</p>
+        <p className="muted small">영상 제목 속 &lsquo;오른다&rsquo; 언급을 기계적으로 따라 산 가상 계산이다. 채널의 실제 운용 성과나 추천 품질 평가가 아니므로 공개 분석에서는 채널 이름을 가렸다(게임 속 라이벌은 캐릭터로 등장).</p>
       </section>
 
       <section className="card">
         <h2 className="sec-title">분석 4 · 사람들은 어떻게 플레이했나</h2>
+        {m.plays.done < 30 && <p className="inline-alert">표본이 작아요(완주 {m.plays.done}판). 30판이 넘기 전까지는 경향으로만 보세요.</p>}
         <div className="stat-grid">
           <div>
             <b>{n(m.plays.runs)}</b>
@@ -232,6 +269,7 @@ function Body({ m }: { m: Meta }) {
 
       <section className="card">
         <h2 className="sec-title">분석 5 · 플레이어 vs 유튜버 (Supabase 에 쌓인 판)</h2>
+        {m.players.n > 0 && m.players.n < 30 && <p className="inline-alert">표본이 작아요(정규 시즌 {m.players.n}판). 결론이 아니라 쌓이는 중인 기록이에요.</p>}
         {m.players.n === 0 ? (
           <p className="empty">아직 정규 시즌을 끝낸 판이 없어요. 한 판 끝내면 여기에 쌓여요.</p>
         ) : (

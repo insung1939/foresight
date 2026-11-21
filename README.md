@@ -47,7 +47,7 @@ hindsight DB ─(읽기만)─▶ build_season.py ─▶ season.json + rag_docs.
 | `api/app/` | `season.py` 게임 규칙(시드·매매·멘탈·사건·캐릭터·미션·결산) · `main.py` API · `rag.py` 시점 제한 검색(pgvector/메모리) · `ai.py` 개미 비서·코치 프롬프트와 검증 · `masking.py` 이름·날짜 가리기 · `ops.py` 요청 한도·지연 측정 · `db.py` |
 | `apps/web/src/` | `screens/` 홈·플레이(`play/` 판·시트·모달)·결산·랭킹·데이터·팀·시연 · `components/` 공용 부품·캐릭터(SVG)·3D(`three/`) · `lib/` API·진행 기록·내 방 |
 | `apps/web/public/deck/` | 5주차 발표 자료(← → · F 전체화면 · P 발표자 화면) — 대본 `docs/script.md` |
-| `docs/` | `redesign-plan.md` 1차 기획 · `design-v2.md` 자체 피드백·2차 설계 · `ux-log.md` 사용성 개선 기록 · `script.md` 발표 대본 · `deploy.md` 배포 · `archive/` 이전 버전 문서 |
+| `docs/` | `redesign-plan.md` 1차 기획 · `design-v2.md` 자체 피드백·2·3차 설계 · `ux-log.md` 사용성 개선 기록 · `ai-eval.md` 짓궂은 질문 평가 · `perf.md` 성능 전후·비용·보안 · `script.md` 발표 대본 · `deploy.md` 배포 · `archive/` 이전 버전 문서 |
 
 API 흐름: `POST /v1/runs`(새 판, mode·char) → `POST /event`(사건) → `POST /turn` 또는 `/skip`(빨리 감기) × 26 · `POST /ask`(개미 비서) → `GET /final` · `POST /coach` · `GET /v1/leaderboard` · `GET /v1/meta` · `GET /v1/chars`
 
@@ -71,6 +71,6 @@ cd api && ../.venv/bin/uvicorn app.main:app --port 8000 --reload   # Swagger: ht
 cd apps/web && npm run dev                                          # http://localhost:5175
 cd apps/web && npm run dev:lan                                      # 같은 와이파이의 휴대폰에서 http://<이 컴퓨터 IP>:5175
 
-# 테스트 18개(미래 가격·진짜 이름·날짜 노출, 주문 규칙, 사건, 패닉셀, 캐릭터·미션·빨리 감기, RAG 미래 문서 차단, AI 검증)
+# 테스트 25개(미래 가격·진짜 이름·날짜 노출, 주문 규칙, 사건, 패닉셀, 캐릭터·미션·빨리 감기, ETF·전략 카드·행운·멘탈 구간, 단서 지우기, RAG 미래 문서 차단, AI 검증)
 cd api && ../.venv/bin/python -m pytest -q
 ```

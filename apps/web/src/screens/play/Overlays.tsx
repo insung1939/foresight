@@ -452,7 +452,7 @@ function Assistant({ v, a, runId, onAsked }: { v: View; a: Asset; runId: string;
             </ol>
           )}
           <div className="ast-foot">
-            <span className="muted small">{res.source === "ai" ? `AI(${res.model}) · 검증 통과 · 자료 ${res.searched}건 중 인용` : "AI 답이 검증을 못 넘어 자료만 보여드려요(횟수 차감 없음)"}</span>
+            <span className="muted small">{res.source === "ai" ? `AI(${res.model}) · 검증 통과 · 자료 ${res.searched}건 중 인용` : "질문 횟수는 줄지 않았어요"}</span>
             {res.logId && (
               <span className="vote">
                 <button className={voted === 1 ? "on" : ""} aria-label="도움 됐어요" onClick={() => (setVoted(1), api.vote(res.logId!, 1).catch(() => {}), toast("고마워요! 🦉"))}>
