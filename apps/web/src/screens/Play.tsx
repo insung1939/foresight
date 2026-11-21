@@ -11,7 +11,8 @@ import { buzz, sfx } from "../lib/sfx";
 import { KEYS, read, write } from "../lib/storage";
 import type { RunOut, View, Week } from "../lib/types";
 import { canBuy, merge, preview, type Order } from "./play/logic";
-import { AssetSheet, EventModal, MissionsSheet, Recap, Tour, WeekModal } from "./play/Overlays";
+import { RunContext } from "./play/ctx";
+import { AssetSheet, EventModal, LuckPick, MissionsSheet, Recap, ShakyConfirm, Temptation, Tour, WeekModal } from "./play/Overlays";
 import { Account, Feed, MarketList, Rivals } from "./play/Panels";
 
 type Tab = "feed" | "market" | "account" | "rivals";
@@ -49,6 +50,10 @@ export default function Play() {
   const [recap, setRecap] = useState<{ weeks: Week[]; before: View; after: View } | null>(null);
   const [missions, setMissions] = useState(false);
   const [tour, setTour] = useState(false);
+  const [tourStep, setTourStep] = useState(0);
+  const [shaky, setShaky] = useState<Order | null>(null);
+  const [temptSeen, setTemptSeen] = useState(-1);
+  const [luckRun, setLuckRun] = useState<RunOut | null>(null);
 
   useEffect(() => {
     if (!id) {
@@ -88,12 +93,31 @@ export default function Play() {
   }, [orders, run]);
 
   const v = run?.view;
+  const openSheet = (k: string | null) => {
+    setSheet(k);
+    if (k === null && tour && tourStep === 1) setTourStep(2);
+  };
+  const setRules = async (rules: Record<string, boolean>) => {
+    if (!run) return;
+    try {
+      const r = await api.rules(run.id, rules);
+      setRun(r);
+      sfx("tick");
+      toast(Object.values(rules).some(Boolean) ? "전략 카드를 바꿨어요. 매주 알아서 지켜요" : "전략 카드를 모두 껐어요");
+    } catch (e) {
+      toast((e as ApiError).message, { tone: "warn" });
+    }
+  };
   const asset = useMemo(() => (v && sheet ? (v.assets.find((a) => a.k === sheet) ?? null) : null), [v, sheet]);
   const p = v ? preview(v, orders) : null;
 
   const addOrder = useCallback(
-    (o: Order) => {
+    (o: Order, sure = false) => {
       if (!v) return;
+      if (v.tier.id === "shaky" && !sure) {
+        setShaky(o);
+        return;
+      }
       const prev = orders;
       setOrders(merge(orders, o));
       const a = v.assets.find((x) => x.k === o.k)!;
@@ -205,8 +229,11 @@ export default function Play() {
   const char = (v.char ?? progress().char) as CharId;
   const mDone = v.missions.filter((m) => m.state === "done").length;
   const canSkip = !nOrders && !v.pending && left > 1;
+  const hot = [...v.assets].filter((a) => !a.locked && a.k !== v.etf).sort((a, b) => b.hype - a.hype)[0];
+  const showTempt = v.tier.id === "anxious" && temptSeen !== v.t && !v.pending && !big && !tour && !v.luckPick && !!hot;
 
   return (
+    <RunContext.Provider value={{ setRules }}>
     <div className="play">
       <header className="hud" data-tour="hud">
         <div className="hud-in">
@@ -230,6 +257,11 @@ export default function Play() {
             <Delta x={v.twr - 1} />
           </div>
           <Mental value={v.mental} compact />
+          {v.tier.id !== "ok" && (
+            <span className={`tier-chip t-${v.tier.id}`} title={v.tier.desc} aria-label={`멘탈 ${v.tier.name}: ${v.tier.desc}`}>
+              {v.tier.name}
+            </span>
+          )}
           <button className="hud-mission" onClick={() => setMissions(true)} aria-label={`시즌 미션 ${mDone}/${v.missions.length} 달성`} data-ux="Badge · Popover">
             🎯<small>
               {mDone}/{v.missions.length}
@@ -239,20 +271,22 @@ export default function Play() {
         </div>
         {v.mode === "practice" && v.t === 0 && <p className="hud-note info">🐜 연습 시즌: 8주 · 국내 6종목. 마음 편히 사고팔아 보세요!</p>}
         {v.skip && <p className="hud-note">✈️ 이번 주는 거래할 수 없어요. 그대로 다음 주로 넘어가요.</p>}
+        {v.tier.id === "calm" && !v.skip && <p className="hud-note info">😎 침착 보너스: 이번 주 수수료 0원</p>}
+        {v.tier.id === "shaky" && <p className="hud-note">😰 멘탈 흔들림: 수수료 1.5배 · 한 주 쉬면 회복돼요</p>}
       </header>
 
       <main className={`panels tab-${tab}`}>
         <section className="panel p-feed" aria-label="피드">
           <h2 className="panel-h">📱 월요일 아침 피드</h2>
-          <Feed v={v} onOpen={setSheet} />
+          <Feed v={v} onOpen={openSheet} />
         </section>
         <section className="panel p-market" aria-label="시장">
           <h2 className="panel-h">📈 시장</h2>
-          <MarketList v={v} orders={orders} onOpen={setSheet} />
+          <MarketList v={v} orders={orders} onOpen={openSheet} />
         </section>
         <section className="panel p-account" aria-label="내 계좌">
           <h2 className="panel-h">💼 내 계좌</h2>
-          <Account v={v} orders={orders} onOpen={setSheet} onCancel={(k) => setOrders(orders.filter((o) => o.k !== k))} onOrder={addOrder} />
+          <Account v={v} orders={orders} onOpen={openSheet} onCancel={(k) => setOrders(orders.filter((o) => o.k !== k))} onOrder={addOrder} />
         </section>
         <section className="panel p-rivals" aria-label="라이벌">
           <h2 className="panel-h">🏁 라이벌</h2>
@@ -261,6 +295,15 @@ export default function Play() {
       </main>
 
       <AnimatePresence>{recap && <Recap key={recap.after.t} {...recap} onClose={() => setRecap(null)} />}</AnimatePresence>
+      <AnimatePresence>
+        {showTempt && !recap && (
+          <Temptation
+            code={hot!.code}
+            onLook={() => (setTemptSeen(v.t), openSheet(hot!.k))}
+            onResist={() => (setTemptSeen(v.t), toast("잘 참았어요 🧘 흔들릴 땐 한 주 쉬는 것도 전략이에요", { tone: "ok" }))}
+          />
+        )}
+      </AnimatePresence>
 
       <div className="dock">
         <div className="dock-row">
@@ -284,12 +327,43 @@ export default function Play() {
         </nav>
       </div>
 
-      <AssetSheet v={v} a={asset} orders={orders} runId={run.id} onClose={() => setSheet(null)} onOrder={addOrder} onAsked={(left) => setRun({ ...run, view: { ...v, asksLeft: left } })} />
-      <EventModal ev={!big && !tour ? v.pending : null} busy={busy === "event"} onChoose={choose} />
+      <AssetSheet v={v} a={asset} orders={orders} runId={run.id} onClose={() => openSheet(null)} onOrder={addOrder} onAsked={(left) => setRun({ ...run, view: { ...v, asksLeft: left } })} />
+      <EventModal ev={!big && !tour && !v.luckPick ? v.pending : null} busy={busy === "event"} onChoose={choose} />
+      <LuckPick
+        open={(v.luckPick || !!luckRun) && !tour}
+        onClose={() => {
+          if (luckRun) setRun(luckRun);
+          setLuckRun(null);
+        }}
+        onPick={async (i) => {
+          try {
+            const r = await api.luck(run.id, i);
+            sfx("level");
+            buzz([20, 40, 20]);
+            setLuckRun(r);
+            return r.card ?? null;
+          } catch (e) {
+            toast((e as ApiError).message, { tone: "warn" });
+            return null;
+          }
+        }}
+      />
+      <ShakyConfirm
+        text={shaky ? `${v.assets.find((a) => a.k === shaky.k)?.code} ${Math.abs(shaky.q).toLocaleString()}주 ${shaky.q > 0 ? "사기" : "팔기"}` : null}
+        onNo={() => setShaky(null)}
+        onYes={() => {
+          const o = shaky!;
+          setShaky(null);
+          addOrder(o, true);
+        }}
+      />
       <WeekModal week={big?.week ?? null} before={big?.before ?? null} after={big?.after.view ?? null} onNext={afterBig} />
       <MissionsSheet open={missions} onClose={() => setMissions(false)} v={v} />
       {tour && (
         <Tour
+          i={tourStep}
+          waiting={!!sheet}
+          onNext={() => setTourStep((x) => x + 1)}
           onDone={() => {
             setTour(false);
             write(KEYS.tour, true);
@@ -300,5 +374,6 @@ export default function Play() {
         {recap ? `${recap.weeks.length}주 지나감, 이번 수익 ${pct(recap.weeks.reduce((a, w) => a * (1 + w.r), 1) - 1)}` : ""}
       </span>
     </div>
+    </RunContext.Provider>
   );
 }

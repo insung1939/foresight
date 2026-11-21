@@ -164,6 +164,8 @@ export function AssetSheet({ v, a, orders, runId, onClose, onOrder, onAsked }: {
   );
 }
 
+const RULE_KO: Record<string, string> = { stop: "자동 손절", take: "자동 익절", dca: "적립식", cap: "몰빵 방지" };
+
 // ---------------------------------------------------------------- 인생 사건
 export function EventModal({ ev, busy, onChoose }: { ev: EventCard | null; busy: boolean; onChoose: (i: number) => void }) {
   return (
@@ -252,7 +254,16 @@ export function WeekModal({ week, before, after, onNext }: { week: Week | null; 
             ))}
           </ul>
         )}
-        {auto.length > 0 && <p className="muted small">자동 매매: {auto.map((t) => `${byK[t.k]?.code} ${t.q > 0 ? "매수" : "매도"} ${Math.abs(t.q)}주`).join(", ")}</p>}
+        {week.luck && (
+          <motion.p className="rc-luck big" initial={{ scale: 0.6, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ delay: 0.5, type: "spring" }}>
+            {week.luck.icon} {week.luck.text}
+          </motion.p>
+        )}
+        {auto.length > 0 && (
+          <p className="muted small">
+            자동 매매: {auto.map((t) => `${byK[t.k]?.code} ${t.q > 0 ? "매수" : "매도"} ${Math.abs(t.q)}주${(t as { rule?: string }).rule ? `(${RULE_KO[(t as { rule?: string }).rule!]})` : ""}`).join(", ")}
+          </p>
+        )}
 
         <div className="wk-rank">
           <p className="sec-title">
@@ -294,12 +305,12 @@ export function WeekModal({ week, before, after, onNext }: { week: Week | null; 
 // ---------------------------------------------------------------- 첫 판 안내(코치마크 3개)
 const STEPS = [
   { sel: "[data-tour=hud]", title: "진짜 있었던 시장을 버티는 게임이에요", body: "한 턴 = 실제 1주. 총자산과 😎 멘탈을 지키세요. 멘탈이 0이 되면 다 팔아 버려요. 🎯 미션을 깨면 별을 받아요." },
-  { sel: "[data-tour=market]", title: "종목 이름은 코드네임이에요", body: "기억으로 맞히지 못하게 이름을 가렸어요. 눌러서 차트·유튜브·공시를 보고 사고팔아요. 🦉부엉이 박사(AI)에게 물어볼 수도 있어요." },
+  { sel: "[data-tour=market]", title: "종목 이름은 코드네임이에요", body: "기억으로 맞히지 못하게 이름을 가렸어요. 하나를 눌러 차트·유튜브·공시를 보고, 마음에 들면 사 보세요. 고민되면 맨 위 📊 코스피 ETF!" },
   { sel: "[data-tour=next]", title: "준비되면 다음 주로", body: "주문은 모아 뒀다가 한 번에 체결돼요. 그 주의 실제 가격으로 결과가 나와요. ▶▶는 4주를 그대로 빨리 감아요. 유튜버 라이벌을 이겨 보세요!" },
 ];
 
-export function Tour({ onDone }: { onDone: () => void }) {
-  const [i, setI] = useState(0);
+/** 첫 판 안내(제어형). 2단계는 '직접 해 보기': 종목을 눌러야 넘어간다(Learning by doing) */
+export function Tour({ i, onNext, onDone, waiting }: { i: number; onNext: () => void; onDone: () => void; waiting: boolean }) {
   const [box, setBox] = useState<DOMRect | null>(null);
   useLayoutEffect(() => {
     const el = document.querySelector(STEPS[i].sel);
@@ -311,10 +322,12 @@ export function Tour({ onDone }: { onDone: () => void }) {
     const t = window.setTimeout(() => setBox(el?.getBoundingClientRect() ?? null), 30);
     return () => window.clearTimeout(t);
   }, [i]);
+  if (waiting) return null; // 시트를 보는 동안은 숨긴다
   const s = STEPS[i];
+  const doIt = i === 1;
   const below = box ? box.top < window.innerHeight / 2 : true;
   return (
-    <div className="tour" role="dialog" aria-modal aria-label="처음 하는 분을 위한 안내" data-ux="Coach Marks · Spotlight">
+    <div className={`tour ${doIt ? "do" : ""}`} role="dialog" aria-modal={!doIt} aria-label="처음 하는 분을 위한 안내" data-ux="Coach Marks · Spotlight · Learning by Doing">
       {box && <div className="spot" style={{ top: box.top - 6, left: box.left - 6, width: box.width + 12, height: Math.min(box.height + 12, window.innerHeight * 0.5) }} />}
       <div className="tour-tip" style={below && box ? { top: Math.min(box.top + Math.min(box.height, window.innerHeight * 0.5) + 18, window.innerHeight - 220) } : { bottom: box ? window.innerHeight - box.top + 18 : 120 }}>
         <p className="eyebrow">
@@ -326,15 +339,18 @@ export function Tour({ onDone }: { onDone: () => void }) {
           <button className="link" onClick={onDone}>
             건너뛰기
           </button>
-          <button className="btn primary" onClick={() => (i < STEPS.length - 1 ? setI(i + 1) : onDone())} autoFocus>
-            {i < STEPS.length - 1 ? "다음" : "시작!"}
-          </button>
+          {doIt ? (
+            <span className="tour-do">👆 종목 하나를 눌러 보세요</span>
+          ) : (
+            <button className="btn primary" onClick={() => (i < STEPS.length - 1 ? onNext() : onDone())} autoFocus>
+              {i < STEPS.length - 1 ? "다음" : "시작!"}
+            </button>
+          )}
         </div>
       </div>
     </div>
   );
 }
-
 
 // ---------------------------------------------------------------- 개미 비서(부엉이 박사, 시점 제한 RAG)
 const SUGGEST = ["왜 요즘 화제야?", "유튜버들은 뭐라고 해?", "최근 공시를 정리해 줘"];
@@ -472,6 +488,8 @@ export function Recap({ weeks, before, after, onClose }: { weeks: Week[]; before
   const loud = [...byRival].sort((a, b) => Math.abs(b.r) - Math.abs(a.r))[0];
   const dm = after.mental - before.mental;
   const salary = weeks.reduce((a, w) => a + (w.salary ?? 0), 0);
+  const lucks = weeks.map((w) => w.luck).filter(Boolean);
+  const ruled = weeks.flatMap((w) => w.trades.filter((t) => t.rule)).length;
   return (
     <motion.aside className="recap" role="status" initial={{ y: 40, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 30, opacity: 0 }} onClick={onClose} data-ux="Snackbar · Auto-dismiss">
       <div className="rc-top">
@@ -482,7 +500,13 @@ export function Recap({ weeks, before, after, onClose }: { weeks: Week[]; before
           {dm}
         </span>
         {salary > 0 && <span className="tag buy">월급 +{won(salary)}</span>}
+        {ruled > 0 && <span className="tag">자동 규칙 {ruled}건</span>}
       </div>
+      {lucks.map((l, i) => (
+        <p key={i} className="rc-luck">
+          {l!.icon} {l!.text}
+        </p>
+      ))}
       {loud && (
         <p className="rc-line">
           <Tuber name={loud.name} size={24} /> <b>{loud.name}</b> {rivalLine(loud.name, loud.r, after.t)}
@@ -513,5 +537,111 @@ export function MissionsSheet({ open, onClose, v }: { open: boolean; onClose: ()
       </ul>
       <p className="muted small">내 개미 특성: {v.perk}</p>
     </Sheet>
+  );
+}
+
+// ---------------------------------------------------------------- 행운 카드(시즌 시작, 운 요소 — 발라트로의 조커처럼 한 줄 효과)
+export function LuckPick({ open, onPick, onClose }: { open: boolean; onClose: () => void; onPick: (i: number) => Promise<{ id: string; icon: string; name: string; desc: string; others: { id: string; icon: string; name: string; desc: string }[] } | null> }) {
+  const [picked, setPicked] = useState<number | null>(null);
+  const [card, setCard] = useState<Awaited<ReturnType<typeof onPick>>>(null);
+  const [done, setDone] = useState(false);
+  if (!open || done) return <Modal open={false} label="">{null}</Modal>;
+  const flip = async (i: number) => {
+    if (picked !== null) return;
+    setPicked(i);
+    const c = await onPick(i);
+    if (!c) return setPicked(null);
+    setCard(c);
+  };
+  const faces = card ? [card, ...card.others] : [];
+  // 고른 자리에 내 카드, 나머지 자리에 다른 두 장
+  const at = (i: number) => (card ? (i === picked ? faces[0] : faces[i < (picked ?? 0) ? 1 + i : i]) : null);
+  return (
+    <Modal open label="행운 카드 뽑기">
+      <div className="luck" data-ux="Card Flip · Reveal">
+        <p className="eyebrow">시즌 시작 · 행운 카드</p>
+        <h2>{card ? `${card.icon} ${card.name}!` : "카드 한 장을 뒤집어 보세요"}</h2>
+        <p className="muted small">{card ? card.desc : "무엇이 나올지는 운이에요. 이번 시즌 내내 효과가 있어요."}</p>
+        <div className="luck-row">
+          {[0, 1, 2].map((i) => {
+            const f = at(i);
+            const mine = i === picked;
+            return (
+              <button key={i} className={`luck-card ${f ? "flipped" : ""} ${card && !mine ? "other" : ""} ${mine ? "mine" : ""}`} onClick={() => flip(i)} disabled={picked !== null} aria-label={f ? `${f.name}: ${f.desc}` : `${i + 1}번 카드 뒤집기`}>
+                <span className="lc-inner">
+                  <span className="lc-back" aria-hidden>
+                    🍀
+                    <small>?</small>
+                  </span>
+                  <span className="lc-front">
+                    {f && (
+                      <>
+                        <span className="lc-ic">{f.icon}</span>
+                        <b>{f.name}</b>
+                        <small>{f.desc}</small>
+                      </>
+                    )}
+                  </span>
+                </span>
+              </button>
+            );
+          })}
+        </div>
+        {card && (
+          <>
+            <p className="muted small">흐린 카드는 나올 수도 있었던 카드예요.</p>
+            <button className="btn primary block" onClick={() => (setDone(true), onClose())} data-autofocus>
+              시즌 시작 ▶
+            </button>
+          </>
+        )}
+      </div>
+    </Modal>
+  );
+}
+
+// ---------------------------------------------------------------- 멘탈이 낮을 때: 유혹(불안) · 한 번 더 확인(흔들림)
+export function Temptation({ code, onLook, onResist }: { code: string; onLook: () => void; onResist: () => void }) {
+  return (
+    <motion.aside className="tempt" initial={{ y: 30, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ opacity: 0 }} role="alert" data-ux="Nudge · Dark Pattern 체험">
+      <p>
+        <span aria-hidden>😐</span> <b>멘탈 불안</b> · 단톡방: &ldquo;<b>{code}</b> 지금 안 사면 늦는다!!&rdquo;
+      </p>
+      <div className="tempt-act">
+        <button className="btn ghost" onClick={onResist}>
+          참는다 🧘
+        </button>
+        <button className="btn primary" onClick={onLook}>
+          보러 가기
+        </button>
+      </div>
+    </motion.aside>
+  );
+}
+
+export function ShakyConfirm({ text, onYes, onNo }: { text: string | null; onYes: () => void; onNo: () => void }) {
+  return (
+    <Modal open={!!text} label="정말요?">
+      {text && (
+        <div className="event">
+          <div className="ev-icon" aria-hidden>
+            😰
+          </div>
+          <h2>손이 떨려요… 정말요?</h2>
+          <p className="ev-body">{text}</p>
+          <p className="muted small">멘탈이 30 아래면 판단이 흐려져요(수수료 1.5배). 한 주 쉬면 회복돼요.</p>
+          <div className="ev-choices">
+            <button className="choice" onClick={onNo} data-autofocus>
+              <b>잠깐, 다시 생각할래</b>
+              <span>주문을 담지 않아요</span>
+            </button>
+            <button className="choice" onClick={onYes}>
+              <b>그래도 할래</b>
+              <span>주문을 담아요</span>
+            </button>
+          </div>
+        </div>
+      )}
+    </Modal>
   );
 }

@@ -27,6 +27,13 @@ export interface Asset {
   disc: string[];
 }
 
+export interface LuckCard {
+  id: string;
+  icon: string;
+  name: string;
+  desc: string;
+}
+
 export interface Mission {
   id: string;
   icon: string;
@@ -87,6 +94,11 @@ export interface View {
   perk: string;
   missions: Mission[];
   asksLeft: number;
+  tier: { id: "calm" | "ok" | "anxious" | "shaky"; name: string; icon: string; desc: string };
+  rules: Record<string, boolean>;
+  luck: LuckCard | null;
+  luckPick: boolean;
+  etf: string;
   done: boolean;
   skip: boolean;
   cash: number;
@@ -123,7 +135,7 @@ export interface Week {
   dm: number;
   why: [string, number][];
   panic: boolean;
-  trades: Trade[];
+  trades: (Trade & { rule?: string })[];
   event: { id: string; choice: number } | null;
   mine: Record<string, number>;
   top: [string, number][];
@@ -131,6 +143,7 @@ export interface Week {
   index: number;
   rivals: number[];
   salary?: number;
+  luck?: { icon: string; text: string; cash?: number; mental?: number } | null;
 }
 
 export interface Final {
@@ -167,7 +180,16 @@ export interface RunOut {
   view: View;
   week?: Week;
   weeks?: Week[];
+  card?: LuckCard & { others: LuckCard[] };
   final?: Final | null;
+}
+
+export interface Day {
+  day: string;
+  n: number;
+  best: number;
+  winner: string | null;
+  char: string | null;
 }
 
 export interface Coach {

@@ -624,3 +624,107 @@ body:has(.dock) .toasts { bottom: calc(var(--dock-h) + var(--safe-b) + 8px); }
 .pos-row .pos { flex: 1; }
 .sell-all { flex: none; min-width: 56px; border-radius: var(--radius-sm); border: 1.5px solid var(--down); color: var(--down); font-weight: 800; font-size: 13px; background: var(--surface); }
 .sell-all:disabled { border-color: var(--line); color: var(--muted); }
+
+/* ============================================================ 3차: 정렬 칩 · ETF · 전략 카드 · 행운 카드 · 멘탈 구간 · 유혹 */
+.sort-chips { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; padding: 2px; margin: 0 -2px; }
+.sort-chips::-webkit-scrollbar { display: none; }
+.schip {
+  flex: none; display: inline-flex; align-items: center; gap: 6px; min-height: 38px; padding: 0 14px; border-radius: 999px;
+  background: var(--surface); border: 1.5px solid var(--line); font-weight: 700; font-size: 14px; color: var(--text-2);
+  transition: background 0.15s, border-color 0.15s, color 0.15s, transform 0.08s;
+}
+.schip:active { transform: scale(0.96); }
+.schip.on { background: var(--text); border-color: var(--text); color: var(--surface); }
+.schip i { font-style: normal; font-size: 11px; min-width: 18px; height: 18px; border-radius: 9px; display: inline-grid; place-items: center; background: var(--brand); color: #fff; padding: 0 4px; }
+.mk-note { margin: -2px 2px 0; }
+.etf-row {
+  width: 100%; display: grid; grid-template-columns: 40px 1fr auto; gap: 10px; align-items: center; text-align: left;
+  padding: 12px; border-radius: var(--radius-sm); border: 1.5px dashed color-mix(in srgb, var(--brand) 55%, var(--line));
+  background: linear-gradient(120deg, color-mix(in srgb, var(--brand) 7%, var(--surface)), var(--surface));
+}
+.etf-ic { width: 40px; height: 40px; border-radius: 12px; background: var(--surface-2); display: grid; place-items: center; font-size: 20px; }
+
+.rules { display: grid; gap: 8px; }
+.rule-list { display: grid; gap: 8px; }
+.rule { width: 100%; display: grid; grid-template-columns: 36px 1fr auto; gap: 10px; align-items: center; text-align: left; padding: 10px 12px; border-radius: var(--radius-sm); border: 1.5px solid var(--line); background: var(--surface); transition: border-color 0.15s, background 0.15s; }
+.rule.on { border-color: var(--brand); background: color-mix(in srgb, var(--brand) 6%, var(--surface)); }
+.rule-ic { font-size: 22px; text-align: center; }
+.rule-tx { display: grid; }
+.rule-tx small { color: var(--muted); font-size: 12px; }
+.switch { width: 46px; height: 28px; border-radius: 14px; background: var(--line); position: relative; transition: background 0.2s; }
+.switch i { position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2); transition: transform 0.2s; }
+.rule.on .switch { background: var(--brand); }
+.rule.on .switch i { transform: translateX(18px); }
+
+.tier-chip { font-size: 11px; font-weight: 800; padding: 3px 8px; border-radius: 999px; white-space: nowrap; }
+.t-calm { background: var(--ok-bg); color: var(--ok); }
+.t-anxious { background: var(--warn-bg); color: var(--warn); }
+.t-shaky { background: var(--up-bg); color: var(--up); animation: shake 0.6s ease-in-out infinite; }
+@media (max-width: 400px) { .tier-chip { display: none; } }
+
+.tempt { position: fixed; left: 12px; right: 12px; bottom: calc(var(--dock-h) + var(--safe-b) + 10px); z-index: 31; max-width: 520px; margin: 0 auto; background: #2b1d0e; color: #fff; border-radius: 18px; padding: 12px 14px; box-shadow: var(--shadow-lg); display: grid; gap: 10px; }
+.tempt p { font-size: 14px; }
+.tempt-act { display: flex; gap: 8px; }
+.tempt-act .btn { flex: 1; min-height: 42px; }
+.tempt .btn.ghost { background: transparent; color: #fff; border-color: rgba(255, 255, 255, 0.35); }
+
+.rc-luck { background: linear-gradient(90deg, #ebfbee, #fff9db); color: #2b5d16; font-weight: 700; font-size: 13px; padding: 8px 10px; border-radius: 12px; }
+.rc-luck.big { font-size: 15px; text-align: center; }
+@media (prefers-color-scheme: dark) { .rc-luck { background: #1d3320; color: #b2f2bb; } }
+
+.luck { display: grid; gap: 10px; text-align: center; }
+.luck h2 { font-size: 22px; }
+.luck-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 8px 0; perspective: 900px; }
+.luck-card { aspect-ratio: 3 / 4.2; border-radius: 16px; padding: 0; }
+.lc-inner { position: relative; display: block; width: 100%; height: 100%; transform-style: preserve-3d; transition: transform 0.7s cubic-bezier(0.2, 0.9, 0.2, 1.1); }
+.luck-card.flipped .lc-inner { transform: rotateY(180deg); }
+.luck-card.other.flipped .lc-inner { transition-delay: 0.6s; }
+.lc-back, .lc-front { position: absolute; inset: 0; border-radius: 16px; backface-visibility: hidden; display: grid; place-items: center; align-content: center; gap: 4px; padding: 8px; }
+.lc-back { background: var(--dawn); color: #fff; font-size: 34px; box-shadow: var(--shadow); border: 3px solid rgba(255, 255, 255, 0.6); }
+.lc-back small { font-size: 18px; font-weight: 900; }
+.luck-card:not(:disabled):hover .lc-back { transform: translateY(-4px); transition: transform 0.15s; }
+.lc-front { transform: rotateY(180deg); background: var(--surface); border: 2px solid var(--line); }
+.luck-card.mine .lc-front { border-color: var(--brand); box-shadow: 0 0 0 4px color-mix(in srgb, var(--brand) 20%, transparent), var(--shadow-lg); }
+.luck-card.other .lc-front { opacity: 0.45; }
+.lc-ic { font-size: 30px; }
+.lc-front b { font-size: 13px; }
+.lc-front small { font-size: 11px; color: var(--muted); line-height: 1.3; }
+
+.tour.do { pointer-events: none; }
+.tour.do .tour-tip { pointer-events: auto; }
+.tour.do .spot { box-shadow: 0 0 0 9999px rgba(10, 8, 30, 0.45); outline: 3px solid #ffd43b; animation: pulse-ring 1.4s ease-in-out infinite; }
+@keyframes pulse-ring { 50% { outline-color: transparent; } }
+.tour-do { font-weight: 800; color: var(--brand); font-size: 14px; }
+
+/* 폼·입력 공통 다듬기 */
+input[type="text"], input:not([type]), input[inputmode] { -webkit-appearance: none; appearance: none; }
+input:focus-visible { outline: none; border-color: var(--brand) !important; box-shadow: 0 0 0 4px color-mix(in srgb, var(--brand) 18%, transparent); }
+
+/* 랭킹: 날짜 칩 · 시상대 */
+.rank-tabs { min-width: 220px; }
+.day-strip { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; padding: 4px 2px 12px; margin: 0 -2px 4px; scroll-snap-type: x proximity; }
+.day-strip::-webkit-scrollbar { display: none; }
+.dchip { flex: none; scroll-snap-align: start; display: grid; justify-items: center; gap: 0; width: 64px; padding: 8px 0; border-radius: 14px; background: var(--surface); border: 1.5px solid var(--line); color: var(--muted); line-height: 1.25; }
+.dchip small { font-size: 11px; font-weight: 700; }
+.dchip b { font-size: 15px; color: var(--text); }
+.dchip span { font-size: 11px; }
+.dchip.has span { color: var(--brand); font-weight: 800; }
+.dchip.on { background: var(--text); border-color: var(--text); }
+.dchip.on b, .dchip.on small, .dchip.on span { color: var(--surface); }
+.podium { display: grid; grid-template-columns: 1fr 1.15fr 1fr; align-items: end; gap: 8px; margin: 6px 0 12px; }
+.pod { display: grid; justify-items: center; gap: 2px; text-align: center; font-size: 13px; min-width: 0; }
+.pod b { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pod-base { display: grid; place-items: center; width: 100%; border-radius: 12px 12px 4px 4px; background: var(--surface-2); font-size: 22px; margin-top: 4px; }
+.p1 .pod-base { height: 70px; background: linear-gradient(180deg, #ffe066, #fab005); }
+.p2 .pod-base { height: 50px; background: linear-gradient(180deg, #e9ecef, #ced4da); }
+.p3 .pod-base { height: 38px; background: linear-gradient(180deg, #ffd8a8, #ffa94d); }
+.empty-pod { visibility: hidden; }
+.board .bd-name b { display: flex; align-items: center; gap: 4px; }
+
+/* 행운 상자 */
+.lucky { text-align: center; background: linear-gradient(135deg, #fff9db, #fff0f6); }
+.lucky.rare { background: linear-gradient(135deg, #fff3bf, #e5dbff); box-shadow: 0 0 0 3px #ffd43b, var(--shadow-lg); }
+@media (prefers-color-scheme: dark) { .lucky { background: linear-gradient(135deg, #3a3214, #3a1c2c); } }
+.box-btn, .box-prize { width: 100%; display: grid; justify-items: center; gap: 4px; padding: 6px; }
+.box { font-size: 56px; line-height: 1.1; display: inline-block; }
+.box-prize b, .box-btn b { font-size: 17px; }

@@ -6,7 +6,7 @@ import { api, useAsync } from "../lib/api";
 import { dateDot, pct, won } from "../lib/format";
 import { Ant, Owl, Tuber, type CharId } from "../components/Characters";
 import { RoomView } from "../components/Scene";
-import { record } from "../lib/progress";
+import { boxOpened, openBox, progress, record } from "../lib/progress";
 import { nextFurniture, unlockedFurniture } from "../lib/room";
 import { go, query } from "../lib/router";
 import { sfx } from "../lib/sfx";
@@ -45,6 +45,7 @@ export default function Result() {
 function Body({ f, id }: { f: Final; id: string }) {
   const demo = query().demo === "1";
   const [gain] = useState(() => (demo ? { newTitle: false, newMarkets: [], best: false, starsBefore: 0, starsAfter: 0 } : record(id, f)));
+  const [starsNow, setStarsNow] = useState(() => (demo ? 0 : progress().stars));
   const [revealed, setRevealed] = useState(false);
   const [coach, setCoach] = useState<Coach | null>(null);
   const [coachBusy, setCoachBusy] = useState(false);
@@ -176,6 +177,8 @@ function Body({ f, id }: { f: Final; id: string }) {
         )}
       </div>
 
+      {!demo && <LuckyBox id={id} onOpen={(n) => setStarsNow((s) => s + n)} />}
+
       <section className="card stars" aria-labelledby="ms">
         <h2 id="ms" className="sec-title">
           ⭐ 이번 시즌 별 +{f.stars}
@@ -200,10 +203,10 @@ function Body({ f, id }: { f: Final; id: string }) {
         </ul>
         {!demo && (
           <p className="muted small">
-            모은 별 {gain.starsAfter}개 · {nextFurniture(gain.starsAfter) ? `${nextFurniture(gain.starsAfter)!.stars - gain.starsAfter}개 더 모으면 ${nextFurniture(gain.starsAfter)!.icon} ${nextFurniture(gain.starsAfter)!.name}` : "가구를 다 모았어요!"}
+            모은 별 {starsNow}개 · {nextFurniture(starsNow) ? `${nextFurniture(starsNow)!.stars - starsNow}개 더 모으면 ${nextFurniture(starsNow)!.icon} ${nextFurniture(starsNow)!.name}` : "가구를 다 모았어요!"}
           </p>
         )}
-        {!demo && <RoomView char={f.char as CharId} items={unlockedFurniture(gain.starsAfter)} mood={f.ret > 0 ? "happy" : "calm"} height={220} />}
+        {!demo && <RoomView char={f.char as CharId} items={unlockedFurniture(starsNow)} mood={f.ret > 0 ? "happy" : "calm"} height={220} />}
       </section>
 
       {f.mode === "practice" && (
@@ -324,5 +327,46 @@ function Body({ f, id }: { f: Final; id: string }) {
       )}
       <p className="disclaimer">유튜버 성적은 영상 제목 속 &lsquo;오른다&rsquo; 언급을 기계적으로 따라 산 가상 계산이에요. 채널의 실제 운용 성과가 아니에요.</p>
     </>
+  );
+}
+
+
+// ---------------------------------------------------------------- 행운 상자(운 요소 + 천장)
+function LuckyBox({ id, onOpen }: { id: string; onOpen: (stars: number) => void }) {
+  const [state, setState] = useState<"closed" | "shaking" | "open">(boxOpened(id) ? "open" : "closed");
+  const [prize, setPrize] = useState<{ stars: number; label: string; rare: boolean } | null>(null);
+  const open = () => {
+    if (state !== "closed") return;
+    setState("shaking");
+    sfx("tick");
+    window.setTimeout(() => {
+      const p = openBox(id);
+      setPrize(p);
+      if (p) onOpen(p.stars);
+      setState("open");
+      sfx(p?.rare ? "level" : "coin");
+    }, 1100);
+  };
+  if (state === "open" && !prize) return null;
+  return (
+    <section className={`card lucky ${prize?.rare ? "rare" : ""}`} aria-live="polite" data-ux="Reward Reveal · Variable Reward">
+      {state !== "open" ? (
+        <button className="box-btn" onClick={open} disabled={state === "shaking"} aria-label="행운 상자 열기">
+          <motion.span className="box" animate={state === "shaking" ? { rotate: [0, -12, 12, -12, 12, 0], scale: [1, 1.1, 1.1, 1.15, 1.2, 1.25] } : { y: [0, -6, 0] }} transition={state === "shaking" ? { duration: 1.1 } : { duration: 1.4, repeat: Infinity }}>
+            🎁
+          </motion.span>
+          <b>{state === "shaking" ? "두근두근…" : "행운 상자 열기"}</b>
+          <span className="muted small">판을 끝낼 때마다 하나! 무엇이 나올지는 운</span>
+        </button>
+      ) : (
+        <motion.div className="box-prize" initial={{ scale: 0.4, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: "spring", stiffness: 260, damping: 12 }}>
+          <span className="box">{prize!.rare ? "✨🌟✨" : "⭐"}</span>
+          <b>
+            {prize!.label} 별 +{prize!.stars}
+          </b>
+          <span className="muted small">{prize!.rare ? "축하해요! 내 방이 더 화려해져요" : "작은 상자 3번이면 다음엔 반짝이는 상자 확정!"}</span>
+        </motion.div>
+      )}
+    </section>
   );
 }

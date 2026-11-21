@@ -40,12 +40,46 @@ MODES = {
 # 내 개미: 특성이 전략을 바꾼다(킥루의 선수 고르기)
 CHARS = {
     "office": {"name": "직장인 개미", "cash": 10_000_000, "mental": 70, "salary": 500_000, "perk": "4주마다 월급 +50만 원"},
-    "student": {"name": "대학생 개미", "cash": 6_000_000, "mental": 70, "gain_x": 2.0, "perk": "시작 600만 원 · 멘탈 회복 2배"},
-    "whale": {"name": "큰손 개미", "cash": 30_000_000, "mental": 70, "loss_x": 1.5, "perk": "시작 3,000만 원 · 손실 때 멘탈 1.5배 깎임"},
+    "student": {"name": "대학생 개미", "cash": 6_000_000, "mental": 70, "gain_x": 2.0, "star_bonus": 1, "perk": "시작 600만 원 · 멘탈 회복 2배 · 끝내면 별 +1"},
+    "whale": {"name": "큰손 개미", "cash": 30_000_000, "mental": 70, "loss_x": 1.5, "event_x": 3, "slip": 0.003,
+              "perk": "시작 3,000만 원 · 사건 금액 3배 · 대량 매수라 살 때 0.3% 비싸게 · 손실 때 멘탈 1.5배"},
     "holder": {"name": "존버 개미", "cash": 10_000_000, "mental": 70, "floor": 20, "fee_x": 2.0, "perk": "멘탈이 20 아래로 안 떨어짐 · 수수료 2배"},
     "trader": {"name": "단타 개미", "cash": 10_000_000, "mental": 70, "fee_x": 0.5, "no_rest": True, "perk": "수수료 절반 · 쉬어도 멘탈 회복 없음"},
-    "coin": {"name": "코인 개미", "cash": 10_000_000, "mental": 50, "crypto": True, "perk": "코인 시장이 처음부터 열림 · 시작 멘탈 50"},
+    "coin": {"name": "코인 개미", "cash": 10_000_000, "mental": 50, "crypto": True, "fee_market": {"CRYPTO": 0.0, "KRX": 2.0, "US": 2.0},
+             "perk": "코인 시장이 처음부터 열림 · 코인 수수료 0 · 주식 수수료 2배 · 시작 멘탈 50"},
 }
+
+# 행운 카드: 시즌 시작에 뒤집힌 카드 3장 중 1장(무엇이 나올지는 운) — 발라트로의 조커처럼 쉬운 한 줄 효과
+LUCK = {
+    "nofee": {"icon": "🎟️", "name": "수수료 면제권", "desc": "이번 시즌 사고팔 때 수수료 0원"},
+    "steel": {"icon": "🛡️", "name": "강철 멘탈", "desc": "시작 멘탈 +25, 멘탈 하한 10"},
+    "vip": {"icon": "🦉", "name": "부엉이 VIP", "desc": "부엉이 박사 질문 +3번"},
+    "seed": {"icon": "💵", "name": "비상금 발견", "desc": "현금 +300만 원"},
+    "stars": {"icon": "🌟", "name": "별똥별", "desc": "미션 별 2배"},
+    "golden": {"icon": "🐜", "name": "황금 개미", "desc": "매주 20% 확률로 보너스 +50만 원"},
+}
+LUCK_BASE = 0.08  # 누구에게나 매주 8% 확률로 작은 행운(🍀)
+
+# 자동 규칙(전략 카드): 정해 두면 매주 서버가 알아서 지킨다 → 빨리 감기와 같이 쓰면 깊이와 속도가 함께
+RULES = {
+    "stop": {"name": "자동 손절", "desc": "산 값보다 10% 넘게 떨어지면 전부 판다", "v": -0.10},
+    "take": {"name": "자동 익절", "desc": "산 값보다 20% 넘게 오르면 절반 판다", "v": 0.20},
+    "dca": {"name": "적립식", "desc": "매주 현금 50만 원어치 코스피 ETF 를 산다", "v": 500_000},
+    "cap": {"name": "몰빵 방지", "desc": "한 종목이 자산의 40%를 넘으면 넘는 만큼 판다", "v": 0.40},
+}
+ETF_CODE = "코스피 ETF"
+
+
+def mental_tier(m: int) -> dict:
+    """멘탈 구간 효과: 높으면 유리, 낮으면 판단이 흐려진다(유혹·확인·비용)"""
+    if m >= 80:
+        return {"id": "calm", "name": "침착", "icon": "😎", "fee_x": 0.0, "desc": "이번 주 수수료 0원"}
+    if m >= 50:
+        return {"id": "ok", "name": "보통", "icon": "🙂", "fee_x": 1.0, "desc": ""}
+    if m >= 30:
+        return {"id": "anxious", "name": "불안", "icon": "😐", "fee_x": 1.0, "desc": "화제 종목이 자꾸 눈에 밟혀요"}
+    return {"id": "shaky", "name": "흔들림", "icon": "😰", "fee_x": 1.5, "desc": "손이 떨려 수수료 1.5배 · 사고팔 때 한 번 더 확인"}
+
 
 # 시즌 미션(판마다 3개). 숫자는 정규 시즌 기준, 연습 시즌은 short 값
 MISSIONS = {
@@ -73,7 +107,10 @@ class Pack:
                 from .datapack import unpack_if_needed
                 unpack_if_needed()
             self.data = json.loads(p.read_text())
-            self.data["nweeks"] = len(self.data["weeks"])
+            self.data["nweeks"] = n = len(self.data["weeks"])
+            self.data["etf"] = len(self.data["assets"])  # 코스피 ETF = 지수를 그대로 따라가는 가상 종목(언급·공시 없음)
+            self.data["assets"].append({"id": "INDEX:KOSPI", "name": "코스피 지수 ETF", "market": "KRX", "sector": "지수",
+                                        "close": self.data["index"], "m": [[0, 0, 0]] * n, "titles": [[]] * n, "disc": [[]] * n})
         return self.data
 
     @property
@@ -149,14 +186,20 @@ def _nice(x: float) -> float:
     return round(x / e) * e
 
 
-def new_run(seed: str, markets: list[str] | None = None, mode: str = "free", char: str = "office") -> dict:
+def new_run(seed: str, markets: list[str] | None = None, mode: str = "free", char: str = "office", nonce: str = "") -> dict:
     p = pack.load()
     rng = _rng(seed)
     cfg = MODES.get(mode, MODES["free"])
     L = cfg["len"]
     ch = CHARS.get(char, CHARS["office"])
     n, f0 = p["nweeks"], p["feedFrom"]
-    s = rng.randint(f0 + 2, n - L)  # 턴 t 의 가격 주 = s+t, 첫 거래 가격 = s-1 종가
+    lo, hi = f0 + 2, n - L
+    if mode == "practice":  # 연습은 화제가 많았던 구간에서(광장이 썰렁하지 않게)
+        krx = [a for a in p["assets"][:p["etf"]] if a["market"] == "KRX"]
+        heat = sorted(range(lo, hi + 1), key=lambda x: -sum(a["m"][w][0] for a in krx for w in range(x - 1, x + L)))
+        s = rng.choice(heat[:max(3, len(heat) // 4)])
+    else:
+        s = rng.randint(lo, hi)  # 턴 t 의 가격 주 = s+t, 첫 거래 가격 = s-1 종가
     markets = [m for m in (markets or list(UNIVERSE)) if m in UNIVERSE] or ["KRX"]
     if mode == "practice":
         markets = ["KRX"]
@@ -166,8 +209,9 @@ def new_run(seed: str, markets: list[str] | None = None, mode: str = "free", cha
     # 종목 고르기: 시즌 동안 화제가 된 종목일수록 잘 뽑힌다(피드가 살아 있게)
     chosen = []
     for m, k in cfg["universe"].items():
-        cand = [i for i, a in enumerate(p["assets"]) if a["market"] == m]
-        w = [1 + math.sqrt(sum(p["assets"][i]["m"][x][0] for x in range(s - 1, s + L))) for i in cand]
+        cand = [i for i, a in enumerate(p["assets"][:p["etf"]]) if a["market"] == m]
+        pw = 1.0 if mode == "practice" else 0.5  # 연습은 화제 종목 위주
+        w = [1 + sum(p["assets"][i]["m"][x][0] for x in range(s - 1, s + L)) ** pw for i in cand]
         picked: list[int] = []
         while len(picked) < k and cand:
             j = rng.choices(range(len(cand)), weights=w)[0]
@@ -179,6 +223,7 @@ def new_run(seed: str, markets: list[str] | None = None, mode: str = "free", cha
     assets = []
     order = chosen[:]
     rng.shuffle(order)
+    assets.append({"i": p["etf"], "code": ETF_CODE, "scale": 10_000 / p["index"][s - 1]})  # 코스피 ETF 는 늘 맨 앞
     for i in order:
         a = p["assets"][i]
         c = count.get(a["sector"], 0)
@@ -194,6 +239,7 @@ def new_run(seed: str, markets: list[str] | None = None, mode: str = "free", cha
     if mode == "practice":  # 연습 시즌은 쉬운 사건부터
         deck = [d for d in ["payday", "bonus", "trip", "leading"] if d in EV][:len(cfg["events"])]
     missions = rng.sample(list(MISSIONS), 3)
+    luck = _rng(f"{seed}|{nonce}|luck").sample(list(LUCK), 3)  # 카드 3장(판마다 다르게)
     return {
         "v": 2, "seed": seed, "s": s, "t": 0, "len": L, "mode": mode, "char": char if char in CHARS else "office",
         "eventTurns": list(cfg["events"]), "markets": markets,
@@ -202,7 +248,8 @@ def new_run(seed: str, markets: list[str] | None = None, mode: str = "free", cha
         "hist": [], "traits": {"trades": 0, "fomo": 0, "panic": 0, "cut": 0, "take": 0, "chase_coin": 0,
                                "hold_weeks": 0, "cash_ratio": 0.0, "max_w": 0.0, "events": [],
                                "min_m": ch["mental"], "spread": 0, "max_gain": 0.0, "saves": 0},
-        "done": False, "skip": False, "pending": None,
+        "done": False, "skip": False, "pending": None, "nonce": nonce,
+        "luckCards": luck, "luck": None, "rules": {}, "chase": {},
     }
 
 
@@ -215,7 +262,36 @@ def _char(st: dict) -> dict:
 
 
 def _fee(st: dict, market: str, side: int) -> float:
-    return FEES[market][side] * _char(st).get("fee_x", 1.0)
+    if st.get("luck") == "nofee":
+        return 0.0
+    ch = _char(st)
+    x = ch.get("fee_x", 1.0) * ch.get("fee_market", {}).get(market, 1.0) * mental_tier(st["mental"])["fee_x"]
+    return FEES[market][side] * x + (ch.get("slip", 0.0) if side == 0 else 0.0)
+
+
+def _ask_limit(st: dict) -> int:
+    return ASKS + (3 if st.get("luck") == "vip" else 0)
+
+
+def pick_luck(st: dict, idx: int) -> dict:
+    """행운 카드 한 장 뒤집기(시즌 처음, 첫 주 전에 한 번)"""
+    if st.get("luck") or st["t"] > 0 or not st.get("luckCards"):
+        raise GameError("지금은 카드를 뽑을 수 없어요")
+    if not 0 <= idx < len(st["luckCards"]):
+        raise GameError("카드를 골라 주세요")
+    lid = st["luckCards"][idx]
+    st["luck"] = lid
+    if lid == "steel":
+        st["mental"] = min(100, st["mental"] + 25)
+    if lid == "seed":
+        st["cash"] += 3_000_000
+        st["deposits"] += 3_000_000
+    return {"id": lid, **LUCK[lid], "others": [{"id": x, **LUCK[x]} for x in st["luckCards"] if x != lid]}
+
+
+def set_rules(st: dict, rules: dict) -> dict:
+    st["rules"] = {k: bool(v) for k, v in rules.items() if k in RULES and v}
+    return st["rules"]
 
 
 # ---------------------------------------------------------------- 시세 도우미
@@ -234,10 +310,24 @@ def value(st: dict, week: int) -> float:
     return st["cash"] + sum(q["qty"] * price(st, k, week) for k, q in st["pos"].items())
 
 
+# 코드네임을 뚫는 단서: 영문 제품·기술 코드(HBM4·H100·ALT-B4)와 공장·단지 이름(대산단지·평택캠퍼스)
+_CODE_WORD = re.compile(r"\b[A-Za-z]*[A-Z][A-Za-z]*\d[\w-]*\b|\b[A-Z]{3,}\b")
+_ALLOWED = {"ETF", "CEO", "IPO", "PER", "PBR", "ROE", "EPS", "FOMC", "CPI", "PPI", "GDP", "USA", "ESS", "GPU", "CPU", "IT",
+            "TV", "PB", "WM", "KOSPI", "KOSDAQ", "NASDAQ", "SPAC", "MSCI", "AI", "EV", "DART", "LIVE", "NEWS", "TOP", "BEST",
+            "FED", "IMF", "OPEC", "NATO", "USD", "KRW", "MTS", "HTS", "ISA", "IRP", "VIP", "PICK", "SNS", "MZ", "CES"}
+_PLACE = re.compile(r"[가-힣]{2,4}(단지|공장|캠퍼스|사업장|산단|팹|제철소|조선소|연구소)")
+
+
+def _scrub(text: str) -> str:
+    text = _CODE_WORD.sub(lambda g: g.group(0) if g.group(0).upper() in _ALLOWED else "○○", text)
+    return _PLACE.sub(lambda g: "○○" + g.group(1), text)
+
+
 def _code_title(st: dict, text: str) -> str:
-    """⟦i⟧ 토큰 → 이번 판 코드네임(없는 종목은 ○○)"""
+    """⟦i⟧ 토큰 → 이번 판 코드네임(없는 종목은 ○○), 회사를 좁혀 주는 단서도 지운다"""
     m = {a["i"]: a["code"] for a in st["assets"]}
-    out = re.sub(r"⟦(\d+)⟧", lambda g: m.get(int(g.group(1)), "○○"), text)
+    out = _scrub(re.sub(r"⟦(\d+)⟧", lambda g: f"⟦{g.group(1)}⟧", text))
+    out = re.sub(r"⟦(\d+)⟧", lambda g: m.get(int(g.group(1)), "○○"), out)
     return re.sub(r"○○(\s*[,·/]?\s*○○)+", "○○", out)
 
 
@@ -306,7 +396,9 @@ def _apply_event(st: dict, choice: int, week: int, note: list) -> dict:
     ev = EV[eid]
     if not 0 <= choice < len(ev["choices"]):
         raise GameError("선택지를 골라 주세요")
-    fx = ev["choices"][choice]["fx"]
+    fx = dict(ev["choices"][choice]["fx"])
+    if fx.get("cash"):
+        fx["cash"] = fx["cash"] * _char(st).get("event_x", 1)
     v = value(st, week)
     st["cash"] += fx.get("cash", 0)
     if fx.get("cash", 0) > 0:
@@ -373,7 +465,7 @@ def play_turn(st: dict, orders: list[dict], choice: int | None = None) -> dict:
     if len(orders) > 20:
         raise GameError("한 주 주문은 20건까지예요")
 
-    hot = set(_hype_rank(st, trade_w)[:2])
+    hot = set(_hype_rank(st, trade_w)[:2]) - {"0"}  # 코스피 ETF 는 추격 매수가 아니다
     sells = [o for o in orders if int(o["q"]) < 0]
     buys = [o for o in orders if int(o["q"]) > 0]
     for o in sells + buys:
@@ -390,13 +482,17 @@ def play_turn(st: dict, orders: list[dict], choice: int | None = None) -> dict:
             _buy(st, k, int(o["q"]), trade_w, note)
             a = p["assets"][st["assets"][int(k)]["i"]]
             prev = a["close"][trade_w - 1]
-            if k in hot or (prev and a["close"][trade_w] / prev - 1 >= 0.15):
+            if k in hot or (k != "0" and prev and a["close"][trade_w] / prev - 1 >= 0.15):
                 fomo += 1
+                st.setdefault("chase", {})[k] = True  # 추격 매수 표시: 다음 주에 떨어지면 '물림'으로 멘탈이 깎인다
         st["traits"]["fomo"] += fomo
     except GameError:
         st.clear()
         st.update(json.loads(snapshot))
         raise
+
+    # 자동 규칙(전략 카드) — 내 주문 다음에 서버가 지킨다
+    _apply_rules(st, trade_w, note)
 
     # 시장이 움직인다
     before = value(st, trade_w)
@@ -405,6 +501,12 @@ def play_turn(st: dict, orders: list[dict], choice: int | None = None) -> dict:
     st["twr"] *= 1 + r
     n_trades = len([x for x in note if not x.get("auto")])
     dm, why = 0, []
+    # 추격 매수는 '산 순간'이 아니라 '물렸을 때' 아프다(벌면 벌점 없음)
+    bitten = [k for k in list(st.get("chase", {})) if k in st["pos"] and price(st, k, next_w) < price(st, k, trade_w)]
+    st["chase"] = {}
+    if bitten:
+        dm -= 4 * len(bitten)
+        why.append([f"추격 매수 물림 {len(bitten)}개", -4 * len(bitten)])
     if r <= -0.10:
         dm -= 18
         why.append(["큰 손실", -18])
@@ -427,9 +529,6 @@ def play_turn(st: dict, orders: list[dict], choice: int | None = None) -> dict:
     if n_trades > 3:
         dm -= (n_trades - 3) * 2
         why.append([f"잦은 매매({n_trades}번)", -(n_trades - 3) * 2])
-    if orders and fomo:
-        dm -= fomo * 3
-        why.append([f"추격 매수 {fomo}번", -fomo * 3])
     if len(st["pos"]) >= 3:
         dm += 1
         why.append(["나눠 담기", 1])
@@ -439,7 +538,8 @@ def play_turn(st: dict, orders: list[dict], choice: int | None = None) -> dict:
     if ch.get("loss_x") and dm < 0:
         why.append([f"{ch['name']} 멘탈 ×{ch['loss_x']:g}", round(dm * (ch["loss_x"] - 1))])
         dm = round(dm * ch["loss_x"])
-    st["mental"] = max(ch.get("floor", 0), min(100, st["mental"] + dm))
+    floor = max(ch.get("floor", 0), 10 if st.get("luck") == "steel" else 0)
+    st["mental"] = max(floor, min(100, st["mental"] + dm))
     panic = False
     if st["mental"] <= 0 and st["pos"]:
         panic = True
@@ -472,6 +572,7 @@ def play_turn(st: dict, orders: list[dict], choice: int | None = None) -> dict:
         "top": [[str(k), round(x, 4)] for k, x in movers[:3]], "bottom": [[str(k), round(x, 4)] for k, x in movers[-2:]],
         "index": round(p["index"][next_w] / p["index"][trade_w] - 1, 5),
         "rivals": [round(p["channels"][c]["r"][next_w], 5) for c in st["rivals"]],
+        "luck": _weekly_luck(st, t),
     }
     st["hist"].append({"r": week["r"], "v": week["value"], "m": st["mental"], "n": n_trades})
     st["t"] += 1
@@ -487,6 +588,58 @@ def play_turn(st: dict, orders: list[dict], choice: int | None = None) -> dict:
     elif st["t"] in ets:
         st["pending"] = ets.index(st["t"])
     return week
+
+
+def _apply_rules(st: dict, week: int, note: list) -> None:
+    rules = st.get("rules") or {}
+    if not rules or st.get("skip"):
+        return
+    for k in list(st["pos"]):
+        q = st["pos"][k]
+        gain = price(st, k, week) / q["cost"] - 1
+        if rules.get("stop") and gain <= RULES["stop"]["v"]:
+            _sell(st, k, q["qty"], week, note)
+            note[-1].update(auto=True, rule="stop")
+        elif rules.get("take") and gain >= RULES["take"]["v"] and q["qty"] >= 2:
+            _sell(st, k, q["qty"] // 2, week, note)
+            note[-1].update(auto=True, rule="take")
+    if rules.get("dca"):
+        px = price(st, "0", week)
+        qty = int(min(RULES["dca"]["v"], st["cash"]) / (px * (1 + _fee(st, "KRX", 0))))
+        if qty > 0 and ("0" in st["pos"] or len(st["pos"]) < MAX_HOLD):
+            _buy(st, "0", qty, week, note, auto=True)
+            note[-1]["rule"] = "dca"
+    if rules.get("cap"):
+        v = value(st, week)
+        for k in list(st["pos"]):
+            q = st["pos"][k]
+            over = q["qty"] * price(st, k, week) - v * RULES["cap"]["v"]
+            if over > 0:
+                n = math.ceil(over / price(st, k, week))
+                if n > 0:
+                    _sell(st, k, min(n, q["qty"]), week, note)
+                    note[-1].update(auto=True, rule="cap")
+
+
+def _weekly_luck(st: dict, t: int) -> dict | None:
+    """🍀 주간 행운(운 요소). 판마다 다른 난수(nonce)라 새로고침으로 바꿀 수 없다"""
+    rng = _rng(f"{st['seed']}|{st.get('nonce', '')}|w{t}")
+    if st.get("luck") == "golden" and rng.random() < 0.20:
+        st["cash"] += 500_000
+        st["deposits"] += 500_000
+        return {"icon": "🐜", "text": "황금 개미가 +50만 원을 물어 왔어요!", "cash": 500_000}
+    roll = rng.random()
+    if roll < LUCK_BASE:
+        kind = rng.choice(["cash", "cash", "mental"])
+        if kind == "cash":
+            amt = rng.choice([100_000, 200_000, 300_000, 500_000])
+            st["cash"] += amt
+            st["deposits"] += amt
+            text = rng.choice(["길에서 주운 복권이 당첨됐어요", "중고거래로 안 쓰던 물건을 팔았어요", "회사 경품 추첨에 당첨됐어요", "잊고 있던 적금 이자가 들어왔어요"])
+            return {"icon": "🍀", "text": f"{text} +{amt // 10_000}만 원", "cash": amt}
+        st["mental"] = min(100, st["mental"] + 10)
+        return {"icon": "🍀", "text": "푹 자고 일어났더니 개운해요 · 멘탈 +10", "mental": 10}
+    return None
 
 
 def play_weeks(st: dict, n: int) -> list[dict]:
@@ -548,7 +701,11 @@ def view(st: dict) -> dict:
     v = value(st, w)
     return {
         "t": st["t"], "season": slen(st), "mode": st.get("mode", "free"), "char": st.get("char", "office"),
-        "perk": _char(st)["perk"], "missions": missions_of(st), "asksLeft": ASKS - st.get("asks", 0),
+        "perk": _char(st)["perk"], "missions": missions_of(st), "asksLeft": _ask_limit(st) - st.get("asks", 0),
+        "tier": mental_tier(st["mental"]), "rules": st.get("rules", {}),
+        "luck": ({"id": st["luck"], **LUCK[st["luck"]]} if st.get("luck") else None),
+        "luckPick": bool(st.get("luckCards")) and not st.get("luck") and st["t"] == 0,
+        "etf": "0",
         "done": st["done"], "skip": st["skip"],
         "cash": round(st["cash"]), "value": round(v), "twr": round(st["twr"], 5), "mental": st["mental"],
         "deposits": st["deposits"], "pos": pos, "assets": assets, "index": ix,
@@ -683,7 +840,8 @@ def final(st: dict) -> dict:
     board.sort(key=lambda x: -x["ret"])
     rank = next(i for i, b in enumerate(board, 1) if b["who"] == "me")
     ms = missions_of(st, board)
-    stars = sum(1 for m in ms if m["state"] == "done") + {"S": 2, "A": 2, "B": 1}.get(grade_of(me, rank), 0)
+    mstars = sum(1 for m in ms if m["state"] == "done") * (2 if st.get("luck") == "stars" else 1)
+    stars = mstars + {"S": 2, "A": 2, "B": 1}.get(grade_of(me, rank), 0) + _char(st).get("star_bonus", 0)
     reveal = []
     for k, meta in enumerate(st["assets"]):
         a = p["assets"][meta["i"]]

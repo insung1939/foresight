@@ -1,6 +1,7 @@
 // 플레이 화면의 네 판: 피드 · 시장 · 내 계좌 · 라이벌
 import { useMemo, useState } from "react";
 import { Tuber, rivalLine } from "../../components/Characters";
+import { useRunCtx } from "./ctx";
 import { PlazaView } from "../../components/Scene";
 import { Delta, Spark } from "../../components/ui";
 import { pct, views, won } from "../../lib/format";
@@ -106,14 +107,22 @@ export function Feed({ v, onOpen }: { v: View; onOpen: (k: string) => void }) {
 }
 
 // ---------------------------------------------------------------- 시장
-type Sort = "hype" | "chg" | "name";
+type Sort = "hype" | "up" | "down" | "mine";
+const SORTS: { id: Sort; label: string }[] = [
+  { id: "hype", label: "🔥 화제" },
+  { id: "up", label: "▲ 오른" },
+  { id: "down", label: "▼ 내린" },
+  { id: "mine", label: "💼 보유" },
+];
 export function MarketList({ v, orders, onOpen }: { v: View; orders: Order[]; onOpen: (k: string) => void }) {
   const [tab, setTab] = useState<Market | "ALL">("ALL");
   const [sort, setSort] = useState<Sort>("hype");
   const p = preview(v, orders);
   const markets = (["KRX", "US", "CRYPTO"] as Market[]).filter((m) => v.assets.some((a) => a.market === m));
-  let list = v.assets.filter((a) => tab === "ALL" || a.market === tab);
-  list = [...list].sort((a, b) => (sort === "hype" ? b.hype - a.hype || b.chg - a.chg : sort === "chg" ? b.chg - a.chg : a.code.localeCompare(b.code, "ko")));
+  const etf = v.assets.find((a) => a.k === v.etf);
+  let list = v.assets.filter((a) => a.k !== v.etf && (tab === "ALL" || a.market === tab));
+  if (sort === "mine") list = list.filter((a) => p.qty[a.k] || orders.some((o) => o.k === a.k));
+  list = [...list].sort((a, b) => (sort === "hype" || sort === "mine" ? b.hype - a.hype || b.chg - a.chg : sort === "up" ? b.chg - a.chg : a.chg - b.chg));
   return (
     <div className="market">
       {markets.length > 1 && (
@@ -130,19 +139,35 @@ export function MarketList({ v, orders, onOpen }: { v: View; orders: Order[]; on
       </div>
       )}
       {tab !== "ALL" && !v.markets.includes(tab) && <p className="inline-alert">🔒 {lockHint(tab)}. 지금은 구경만 할 수 있어요.</p>}
-      <div className="sort-row">
-        <label>
-          <span className="sr-only">정렬</span>
-          <select value={sort} onChange={(e) => setSort(e.target.value as Sort)}>
-            <option value="hype">화제순</option>
-            <option value="chg">지난주 등락순</option>
-            <option value="name">이름순</option>
-          </select>
-        </label>
-        <span className="muted small">
-          가격은 지난주 금요일 종가예요 · 보유 {p.holdCount}/{v.maxHold}
-        </span>
+      <div className="sort-chips" role="radiogroup" aria-label="정렬·보기" data-ux="Chip Group · Sorting">
+        {SORTS.map((x) => (
+          <button key={x.id} role="radio" aria-checked={sort === x.id} className={`schip ${sort === x.id ? "on" : ""}`} onClick={() => setSort(x.id)}>
+            {x.label}
+            {x.id === "mine" && p.holdCount > 0 && <i>{p.holdCount}</i>}
+          </button>
+        ))}
       </div>
+      <p className="muted small mk-note">
+        가격은 지난주 금요일 종가 · 보유 {p.holdCount}/{v.maxHold}종목
+      </p>
+      {etf && (tab === "ALL" || tab === "KRX") && sort !== "mine" && (
+        <button className="etf-row" onClick={() => onOpen(etf.k)} data-ux="Featured Item">
+          <span className="etf-ic" aria-hidden>
+            📊
+          </span>
+          <span className="ar-name">
+            <b>
+              {etf.code} {p.qty[etf.k] ? <span className="tag held">{p.qty[etf.k].toLocaleString()}주</span> : null}
+            </b>
+            <span className="ar-sub">고민될 땐 시장 전체를 사요 · 유튜버 말 대신 지수</span>
+          </span>
+          <span className="ar-px">
+            <b>{Math.round(etf.price).toLocaleString("ko-KR")}</b>
+            <Delta x={etf.chg} />
+          </span>
+        </button>
+      )}
+      {list.length === 0 && <p className="empty">{sort === "mine" ? "아직 담은 종목이 없어요. 🔥 화제에서 골라 보세요." : "이 시장엔 종목이 없어요."}</p>}
       <ul className="asset-list" data-tour="market" data-ux="List · Sparkline">
         {list.map((a) => {
           const held = v.pos.find((x) => x.k === a.k)?.qty;
@@ -195,6 +220,8 @@ export function Account({ v, orders, onOpen, onCancel, onOrder }: { v: View; ord
           투자 {won(invested)} · 현금 {won(v.cash)}
         </p>
       </section>
+
+      <RulesPanel v={v} />
 
       {orders.length > 0 && (
         <section aria-labelledby="po">
@@ -301,5 +328,55 @@ export function Rivals({ v }: { v: View }) {
         ))}
       </ol>
     </div>
+  );
+}
+
+
+// ---------------------------------------------------------------- 전략 카드(자동 규칙)
+const RULE_CARDS = [
+  { id: "stop", icon: "✂️", name: "자동 손절", desc: "산 값보다 10% 떨어지면 전부 팔아요" },
+  { id: "take", icon: "💎", name: "자동 익절", desc: "산 값보다 20% 오르면 절반 팔아요" },
+  { id: "dca", icon: "🐷", name: "적립식", desc: "매주 50만 원어치 코스피 ETF 를 사요" },
+  { id: "cap", icon: "🧺", name: "몰빵 방지", desc: "한 종목이 40%를 넘으면 넘는 만큼 팔아요" },
+];
+
+export function RulesPanel({ v }: { v: View }) {
+  const ctx = useRunCtx();
+  const [busy, setBusy] = useState<string | null>(null);
+  const toggle = async (id: string) => {
+    if (!ctx) return;
+    setBusy(id);
+    try {
+      await ctx.setRules({ ...v.rules, [id]: !v.rules[id] });
+    } finally {
+      setBusy(null);
+    }
+  };
+  const on = Object.values(v.rules).filter(Boolean).length;
+  return (
+    <section aria-labelledby="rules-h" className="rules" data-ux="Toggle Switch · Automation">
+      <h3 id="rules-h" className="sec-title">
+        🃏 전략 카드 {on > 0 && <span className="tag held">{on}장 켜짐</span>}
+        <span className="muted small">— 켜 두면 매주 알아서 지켜요(▶▶ 빨리 감기와 찰떡)</span>
+      </h3>
+      <ul className="rule-list">
+        {RULE_CARDS.map((r) => (
+          <li key={r.id}>
+            <button className={`rule ${v.rules[r.id] ? "on" : ""}`} role="switch" aria-checked={!!v.rules[r.id]} onClick={() => toggle(r.id)} disabled={busy === r.id || v.done}>
+              <span className="rule-ic" aria-hidden>
+                {r.icon}
+              </span>
+              <span className="rule-tx">
+                <b>{r.name}</b>
+                <small>{r.desc}</small>
+              </span>
+              <span className="switch" aria-hidden>
+                <i />
+              </span>
+            </button>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }

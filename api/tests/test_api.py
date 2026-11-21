@@ -79,7 +79,8 @@ def test_full_run_daily_hides_future_and_ranks():
     r = client.post("/v1/runs", json={"mode": "daily", "nickname": "테스트개미"}).json()
     v = r["view"]
     assert v["t"] == 0 and v["season"] == 26 and v["cash"] == season.START_CASH
-    assert len(v["assets"]) == sum(season.UNIVERSE.values())
+    assert len(v["assets"]) == sum(season.UNIVERSE.values()) + 1  # + 코스피 ETF
+    assert v["assets"][0]["code"] == season.ETF_CODE
     end = play(r["id"], buy_hot)
     fin = end["final"]
     assert fin["grade"] in "SABCDF" and 1 <= fin["rank"] <= fin["of"] == 5
@@ -231,7 +232,7 @@ def test_event_endpoint_applies_before_orders():
 def test_practice_season_is_short_and_simple():
     r = client.post("/v1/runs", json={"mode": "practice", "char": "office"}).json()
     v = r["view"]
-    assert v["season"] == 8 and len(v["assets"]) == 6 and v["markets"] == ["KRX"]
+    assert v["season"] == 8 and len(v["assets"]) == 7 and v["markets"] == ["KRX"]  # 6종목 + 코스피 ETF
     assert all(a["market"] == "KRX" for a in v["assets"]) and len(v["missions"]) == 3
     end = play(r["id"], lambda v: [], pick=1)
     assert end["final"]["len"] == 8 and len(end["final"]["weeks"]) == 8 and "stars" in end["final"]
@@ -247,10 +248,12 @@ def test_characters_change_rules():
     holder["mental"] = 1
     season.play_turn(holder, [])
     assert holder["mental"] >= 20  # 존버 개미는 20 아래로 안 떨어진다
+    season.LUCK_BASE, base = 0.0, season.LUCK_BASE  # 운 요소를 끄고 규칙만 본다
     office = season.new_run("free:c3", ["KRX"], "free", "office")
     for _ in range(4):
         season.play_turn(office, [], 1 if office["pending"] is not None else None)
     assert office["deposits"] == 10_000_000 + 500_000  # 4주째 월급
+    season.LUCK_BASE = base
 
 
 def test_skip_stops_at_event_and_counts_weeks():
@@ -301,3 +304,69 @@ def test_ask_check_requires_the_asked_stock():
     assert not ai.check_ask(off, ctx, "q", {"D1"}, [], focus="자동차 A")["focus"]
     on = {"answer": "자동차 A 는 반도체 A 와 함께 언급됐어요.", "cites": ["D1"]}
     assert ai.check_ask(on, ctx, "q", {"D1"}, [], focus="자동차 A")["focus"]
+
+
+
+# ---------------------------------------------------------------- 3차: ETF · 전략 카드 · 행운 · 멘탈 구간 · 단서 지우기
+def test_etf_tracks_the_index():
+    st = season.new_run("free:etf", ["KRX"], "free", "office", nonce="x")
+    px0 = season.price(st, "0", st["s"] - 1)
+    season.play_turn(st, [{"k": "0", "q": int(st["cash"] * 0.9 / px0)}])
+    P_ = season.pack.load()
+    ix = P_["index"][st["s"]] / P_["index"][st["s"] - 1] - 1
+    assert abs(st["hist"][0]["r"] - ix * 0.9) < 0.01  # 90% 를 담았으니 지수의 약 90%
+
+
+def test_chase_penalty_only_when_it_falls():
+    st = season.new_run("free:chase", ["KRX"], "free", "office", nonce="y")
+    season.LUCK_BASE, base = 0.0, season.LUCK_BASE
+    P_ = season.pack.load()
+    hot = next(k for k in season._hype_rank(st, st["s"] - 1) if k != "0" and P_["assets"][st["assets"][int(k)]["i"]]["market"] == "KRX")
+    px = season.price(st, hot, st["s"] - 1)
+    w = season.play_turn(st, [{"k": hot, "q": int(st["cash"] * 0.5 / px)}])
+    fell = w["mine"].get(hot, 0) < 0
+    assert any("물림" in x[0] for x in w["why"]) == fell
+    season.LUCK_BASE = base
+
+
+def test_rules_auto_trade():
+    st = season.new_run("free:rules", ["KRX"], "free", "office", nonce="z")
+    season.set_rules(st, {"dca": True, "cap": True, "bogus": True})
+    assert st["rules"] == {"dca": True, "cap": True}
+    P_ = season.pack.load()
+    k = next(str(i) for i in range(1, len(st["assets"])) if P_["assets"][st["assets"][i]["i"]]["market"] == "KRX")
+    px = season.price(st, k, st["s"] - 1)
+    w = season.play_turn(st, [{"k": k, "q": int(st["cash"] * 0.9 / px)}])
+    rules = {x.get("rule") for x in w["trades"]}
+    assert "cap" in rules  # 90% 몰빵 → 40% 넘는 만큼 자동 매도
+    assert "0" in st["pos"] or "dca" in rules
+
+
+def test_luck_card_once_and_effects():
+    st = season.new_run("free:luck", ["KRX"], "free", "office", nonce="n1")
+    assert len(st["luckCards"]) == 3
+    st["luckCards"] = ["seed", "vip", "steel"]
+    card = season.pick_luck(st, 0)
+    assert card["id"] == "seed" and st["cash"] == 13_000_000
+    try:
+        season.pick_luck(st, 1)
+        raise AssertionError("두 번 뽑힘")
+    except season.GameError:
+        pass
+    st2 = season.new_run("free:luck", ["KRX"], "free", "office", nonce="n1")
+    st2["luckCards"] = ["vip", "nofee", "stars"]
+    season.pick_luck(st2, 0)
+    assert season._ask_limit(st2) == season.ASKS + 3
+
+
+def test_mental_tiers_change_fees():
+    st = season.new_run("free:tier", ["KRX"], "free", "office", nonce="t")
+    st["mental"] = 90
+    assert season._fee(st, "KRX", 1) == 0  # 침착: 수수료 0
+    st["mental"] = 20
+    assert season._fee(st, "KRX", 1) > season.FEES["KRX"][1]  # 흔들림: 수수료 1.5배
+
+
+def test_scrub_removes_product_codes_and_places():
+    out = season._scrub("HBM4 수혜 ⟦3⟧ 대산단지 투입, ETF 와 AI 는 그대로")
+    assert "HBM4" not in out and "대산" not in out and "ETF" in out and "AI" in out and "⟦3⟧" in out

@@ -14,9 +14,11 @@ export interface Progress {
   char: string; // 마지막으로 고른 내 개미
   outfit: string | null;
   practiced: boolean; // 연습 시즌을 끝냈나
+  boxes: string[]; // 행운 상자를 연 판 id
+  pity: number; // 연속 '작은 보상' 수(3번이면 다음은 큰 보상 확정)
 }
 
-const EMPTY: Progress = { runs: 0, best: null, bestRet: null, titles: {}, dailyDone: null, streak: 0, seen: [], stars: 0, char: "office", outfit: null, practiced: false };
+const EMPTY: Progress = { runs: 0, best: null, bestRet: null, titles: {}, dailyDone: null, streak: 0, seen: [], stars: 0, char: "office", outfit: null, practiced: false, boxes: [], pity: 0 };
 const ORDER = ["F", "D", "C", "B", "A", "S"];
 
 export const ALL_TITLES: { name: string; icon: string; hint: string }[] = [
@@ -80,3 +82,20 @@ export function record(id: string, f: Final): { newTitle: boolean; newMarkets: M
   const after = unlocked(p);
   return { newTitle, newMarkets: after.filter((m) => !before.includes(m)), best, starsBefore, starsAfter: p.stars };
 }
+
+
+/** 행운 상자(판이 끝날 때 한 번): 별 +1(65%) · +2(25%) · +3(9%) · +5(1%). 작은 보상 3번 뒤엔 +3 이상 확정(천장) */
+export function openBox(id: string): { stars: number; label: string; rare: boolean } | null {
+  const p = progress();
+  if (p.boxes.includes(id)) return null;
+  const r = Math.random();
+  let stars = r < 0.01 ? 5 : r < 0.1 ? 3 : r < 0.35 ? 2 : 1;
+  if (p.pity >= 3 && stars < 3) stars = 3;
+  p.pity = stars >= 3 ? 0 : p.pity + 1;
+  p.stars += stars;
+  p.boxes = [...p.boxes.slice(-50), id];
+  write(KEYS.progress, p);
+  const label = stars >= 5 ? "전설의 황금 상자!" : stars >= 3 ? "반짝이는 상자!" : stars === 2 ? "꽤 괜찮은 상자" : "작은 상자";
+  return { stars, label, rare: stars >= 3 };
+}
+export const boxOpened = (id: string) => progress().boxes.includes(id);

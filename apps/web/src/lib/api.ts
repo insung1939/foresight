@@ -2,7 +2,7 @@
 // 개발: vite 가 /api → http://localhost:8000 으로 넘긴다. 배포: VITE_API_URL.
 import { useCallback, useEffect, useState } from "react";
 import { deviceId } from "./device";
-import type { AskOut, Board, Coach, Final, Market, Meta, Mode, RunOut, Trade } from "./types";
+import type { AskOut, Board, Coach, Day, Final, Market, Meta, Mode, RunOut, Trade } from "./types";
 
 const BASE = ((import.meta.env.VITE_API_URL as string | undefined) ?? "/api").replace(/\/$/, "");
 const TIMEOUT_MS = 30_000;
@@ -62,6 +62,10 @@ export const api = {
   nickname: (id: string, nickname: string) => call<{ nickname: string }>(`/v1/runs/${id}/nickname`, { method: "POST", body: { nickname } }),
   coach: (id: string) => call<Coach>(`/v1/runs/${id}/coach`, { method: "POST", timeout: 60_000 }),
   board: (day?: string) => call<Board>(`/v1/leaderboard${day ? `?day=${day}` : ""}`),
+  days: () => call<{ days: Day[]; today: string }>("/v1/leaderboard/days"),
+  hall: () => call<{ rows: (Board["rows"][number] & { day: string })[] }>("/v1/leaderboard/all"),
+  luck: (id: string, card: number) => call<RunOut>(`/v1/runs/${id}/luck`, { method: "POST", body: { card } }),
+  rules: (id: string, rules: Record<string, boolean>) => call<RunOut>(`/v1/runs/${id}/rules`, { method: "POST", body: { rules } }),
   meta: () => call<Meta>("/v1/meta"),
 };
 

@@ -116,7 +116,7 @@ def new_run(request: Request, body: NewRun | None = None, s: S = Depends(db)):
     day = today_kst() if body.mode == "daily" else None
     seed = f"daily:{day}" if day else f"{body.mode}:{rid}"
     markets = None if day else body.markets
-    st = game.new_run(seed, markets, body.mode, body.char)
+    st = game.new_run(seed, markets, body.mode, body.char, nonce=rid)
     r = Run(id=rid, mode=body.mode, day=day, device=(request.headers.get("x-device") or "")[:40] or None,
             nickname=clean_nick(body.nickname), state=st, char=st["char"])
     s.add(r)
@@ -162,6 +162,45 @@ def _finish(s: S, r: Run, st: dict) -> dict | None:
         elif r.mode == "daily":
             r.ranked = True
     return fin
+
+
+class Pick(BaseModel):
+    card: int = Field(..., ge=0, le=2)
+
+
+@app.post("/v1/runs/{rid}/luck", tags=["게임"], summary="행운 카드: 시즌 시작에 뒤집힌 카드 3장 중 1장(운 요소)")
+def luck(rid: str, body: Pick, s: S = Depends(db)):
+    r = get_run(s, rid)
+    st = dict(r.state)
+    try:
+        card = game.pick_luck(st, body.card)
+    except game.GameError as e:
+        raise HTTPException(409, str(e)) from e
+    r.state, r.updated_at = st, now()
+    s.commit()
+    return out(r, card=card)
+
+
+class RulesIn(BaseModel):
+    rules: dict[str, bool] = Field(default_factory=dict, description="stop · take · dca · cap")
+
+
+@app.post("/v1/runs/{rid}/rules", tags=["게임"], summary="전략 카드(자동 규칙) 켜고 끄기: 자동 손절·익절·적립식·몰빵 방지")
+def rules(rid: str, body: RulesIn, s: S = Depends(db)):
+    r = get_run(s, rid)
+    st = dict(r.state)
+    if st["done"]:
+        raise HTTPException(409, "끝난 판이에요")
+    game.set_rules(st, body.rules)
+    r.state, r.updated_at = st, now()
+    s.commit()
+    return out(r)
+
+
+@app.get("/v1/rules", tags=["게임"], summary="전략 카드·행운 카드·멘탈 구간 설명")
+def rules_info():
+    return {"rules": game.RULES, "luck": game.LUCK,
+            "tiers": [game.mental_tier(x) | {"from": x} for x in (80, 50, 30, 0)]}
 
 
 class Skip(BaseModel):
@@ -293,8 +332,8 @@ def ask(rid: str, body: AskIn, s: S = Depends(db)):
     st = dict(r.state)
     if st["done"]:
         raise HTTPException(409, "끝난 판이에요")
-    if st.get("asks", 0) >= game.ASKS:
-        raise HTTPException(409, f"이번 시즌 질문 {game.ASKS}번을 다 썼어요")
+    if st.get("asks", 0) >= game._ask_limit(st):
+        raise HTTPException(409, f"이번 시즌 질문 {game._ask_limit(st)}번을 다 썼어요")
     if not rag.index.ready:
         raise HTTPException(503, "개미 비서가 아직 준비 중이에요")
     p = game.pack.load()
@@ -348,7 +387,7 @@ def ask(rid: str, body: AskIn, s: S = Depends(db)):
     s.commit()
     for c in ans["cites"]:
         c.pop("_line", None)
-    return {**ans, "left": game.ASKS - st.get("asks", 0), "searched": len(cites), "backend": rag.index.backend}
+    return {**ans, "left": game._ask_limit(st) - st.get("asks", 0), "searched": len(cites), "backend": rag.index.backend}
 
 
 class Vote(BaseModel):
@@ -373,6 +412,25 @@ def _place(s: S, r: Run) -> dict | None:
     total = s.scalar(q)
     better = s.scalar(q.where(Run.ret > r.ret))
     return {"rank": better + 1, "total": total, "top": round((better + 1) / total, 3)}
+
+
+@app.get("/v1/leaderboard/days", tags=["랭킹"], summary="지난 날짜별 오늘의 시드(참여 수·1등) — 최근 30일")
+def leaderboard_days(s: S = Depends(db)):
+    rows = s.execute(select(Run.day, func.count(), func.max(Run.ret)).where(Run.ranked.is_(True), Run.day.is_not(None))
+                     .group_by(Run.day).order_by(Run.day.desc()).limit(30)).all()
+    out_ = []
+    for day, n, best in rows:
+        top = s.scalars(select(Run).where(Run.day == day, Run.ranked.is_(True)).order_by(Run.ret.desc()).limit(1)).first()
+        out_.append({"day": day, "n": n, "best": best, "winner": (top.nickname or "익명 개미") if top else None,
+                     "char": top.char if top else None})
+    return {"days": out_, "today": today_kst()}
+
+
+@app.get("/v1/leaderboard/all", tags=["랭킹"], summary="명예의 전당: 모든 날짜를 통틀어 상위 30")
+def leaderboard_all(s: S = Depends(db)):
+    rows = s.scalars(select(Run).where(Run.ranked.is_(True)).order_by(Run.ret.desc()).limit(30)).all()
+    return {"rows": [{"rank": i + 1, "nickname": r.nickname or "익명 개미", "ret": r.ret, "grade": r.grade, "title": r.title,
+                      "char": r.char, "day": r.day} for i, r in enumerate(rows)]}
 
 
 @app.get("/v1/leaderboard", tags=["랭킹"], summary="오늘의 시드 랭킹(기기당 첫 완주만)")
