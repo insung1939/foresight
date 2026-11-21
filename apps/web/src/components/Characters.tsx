@@ -1,4 +1,4 @@
-// 캐릭터: 내 개미(SVG, 6종 × 표정) · 동물 유튜버 라이벌 · 부엉이 박사. 외부 이미지 없이 그린다.
+// 캐릭터: 내 개미(SVG, 6종 × 표정) · 동물 유튜버 라이벌 · 범고래 박사. 외부 이미지 없이 그린다.
 import { motion } from "motion/react";
 import type { CSSProperties } from "react";
 
@@ -138,22 +138,50 @@ export function rivalLine(name: string, r: number, t: number): string {
   return pick(["이번 주는 관망 🍵", "현금도 종목이죠 😌", "조용한 한 주네요"]);
 }
 
-// ---------------------------------------------------------------- 부엉이 박사(코치·개미 비서)
-export function Owl({ size = 56, talking = false }: { size?: number; talking?: boolean }) {
+// ---------------------------------------------------------------- 범고래 박사(코치·개미 비서) — 바다에서 제일 똑똑한 친구
+export function Orca({ size = 56, talking = false }: { size?: number; talking?: boolean }) {
   return (
-    <motion.svg viewBox="0 0 100 100" width={size} height={size} aria-hidden animate={talking ? { rotate: [0, -4, 4, 0] } : undefined} transition={{ duration: 0.8, repeat: talking ? Infinity : 0 }}>
-      <path d="M22 30 L30 12 L40 26 Z M78 30 L70 12 L60 26 Z" fill="#7b5b3a" />
-      <ellipse cx="50" cy="58" rx="34" ry="36" fill="#9c7a52" />
-      <ellipse cx="50" cy="66" rx="22" ry="24" fill="#f1e3c8" />
-      <circle cx="36" cy="44" r="13" fill="#fff" />
-      <circle cx="64" cy="44" r="13" fill="#fff" />
-      <circle cx="36" cy="44" r="13" fill="none" stroke="#1d1640" strokeWidth="2.5" />
-      <circle cx="64" cy="44" r="13" fill="none" stroke="#1d1640" strokeWidth="2.5" />
-      <line x1="49" y1="44" x2="51" y2="44" stroke="#1d1640" strokeWidth="2.5" />
-      <circle cx="37" cy="45" r="5" fill="#1d1640" />
-      <circle cx="63" cy="45" r="5" fill="#1d1640" />
-      <path d="M46 54 L54 54 L50 62 Z" fill="#f59f00" />
-      <path d="M38 76 q4 4 8 0 M54 76 q4 4 8 0" stroke="#c9b28a" strokeWidth="2" fill="none" />
+    <span className="orca-badge" style={{ width: size, height: size }}>
+    <motion.svg
+      viewBox="0 0 100 100"
+      width={size * 0.92}
+      height={size * 0.92}
+      aria-hidden
+      animate={talking ? { rotate: [0, -5, 5, 0], y: [0, -2, 0] } : { y: [0, -1.5, 0] }}
+      transition={{ duration: talking ? 0.8 : 2.4, repeat: Infinity, ease: "easeInOut" }}
+    >
+      {/* 물결 */}
+      <path d="M8 88 q10 -6 20 0 t20 0 t20 0 t20 0" stroke="#74c0fc" strokeWidth="3" fill="none" strokeLinecap="round" opacity="0.7" />
+      {/* 등지느러미 */}
+      <path d="M52 22 Q60 6 66 12 Q60 18 62 28 Z" fill="#1d2433" />
+      {/* 꼬리 */}
+      <path d="M84 60 Q96 50 97 40 Q90 48 82 50 Q92 38 88 30 Q82 44 76 52 Z" fill="#1d2433" />
+      {/* 몸 */}
+      <ellipse cx="48" cy="56" rx="38" ry="30" fill="#1d2433" />
+      {/* 배 */}
+      <path d="M14 62 Q30 84 62 80 Q46 74 40 64 Q26 66 14 62 Z" fill="#ffffff" />
+      {/* 눈 위 흰 무늬 */}
+      <ellipse cx="34" cy="44" rx="9" ry="5.5" fill="#ffffff" transform="rotate(-12 34 44)" />
+      {/* 눈 */}
+      <circle cx="31" cy="51" r="3.6" fill="#ffffff" />
+      <circle cx="31.6" cy="51.4" r="2.2" fill="#1d2433" />
+      <circle cx="32.4" cy="50.4" r="0.8" fill="#ffffff" />
+      {/* 동그란 안경 */}
+      <circle cx="31" cy="51" r="6.5" fill="none" stroke="#f59f00" strokeWidth="2" />
+      <path d="M37.5 50 Q44 47 48 49" stroke="#f59f00" strokeWidth="2" fill="none" />
+      {/* 볼·입 */}
+      <ellipse cx="22" cy="60" rx="4" ry="2.4" fill="#ff8fa3" opacity="0.85" />
+      <path d="M14 58 Q20 64 27 61" stroke="#ffffff" strokeWidth="2.2" fill="none" strokeLinecap="round" />
+      {/* 가슴지느러미 */}
+      <path d="M44 74 Q50 86 60 84 Q54 78 52 70 Z" fill="#1d2433" />
+      {/* 박사 모자 */}
+      <g transform="rotate(-10 40 26)">
+        <path d="M22 24 L42 15 L62 24 L42 32 Z" fill="#5b3fd6" />
+        <rect x="34" y="26" width="16" height="6" rx="2" fill="#4a32b8" />
+        <path d="M58 25 L60 36" stroke="#ffd43b" strokeWidth="2" />
+        <circle cx="60" cy="37" r="2.4" fill="#ffd43b" />
+      </g>
     </motion.svg>
+    </span>
   );
 }

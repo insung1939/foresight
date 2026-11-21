@@ -1,7 +1,7 @@
 // 플레이 화면 위에 뜨는 것들: 종목 바텀시트(매매·개미 비서) · 인생 사건 · 리캡 카드 · 큰 주 결과 · 미션 · 첫 판 안내
 import { motion } from "motion/react";
 import { useEffect, useLayoutEffect, useState } from "react";
-import { Owl, Tuber, rivalLine } from "../../components/Characters";
+import { Orca, Tuber, rivalLine } from "../../components/Characters";
 import { CountUp, Delta, LineChart, Mental, Modal, Sheet, toast } from "../../components/ui";
 import { ApiError, api } from "../../lib/api";
 import { pct, views, won } from "../../lib/format";
@@ -84,31 +84,19 @@ export function AssetSheet({ v, a, orders, runId, onClose, onOrder, onAsked }: {
       {a.titles.length > 0 && (
         <ul className="yt-list compact">
           {a.titles.map((t, i) => (
-            <li key={i} className="yt">
-              <div className="yt-thumb" aria-hidden>
-                ▶
-              </div>
+            <li key={i} className="yt static">
+              <Tuber name={t.ch} size={36} />
               <div className="yt-body">
                 <p className="yt-title">{t.t}</p>
                 <p className="yt-meta">
-                  {t.ch} · 조회 {views(t.v)}
+                  {t.ch} · 조회 {views(t.v)} {t.st === "b" && <span className="tag bull">오른다</span>}
                 </p>
               </div>
             </li>
           ))}
         </ul>
       )}
-      {a.disc.length > 0 && (
-        <ul className="disc-list">
-          {a.disc.map((d, i) => (
-            <li key={i}>
-              <span className="tag">공시</span>
-              <span>{d}</span>
-            </li>
-          ))}
-        </ul>
-      )}
-      {!a.titles.length && !a.disc.length && <p className="empty">지난주엔 영상도 공시도 없었어요. 차트만 보고 판단해야 해요.</p>}
+      {!a.titles.length && <p className="empty">지난주엔 이 종목을 다룬 영상이 없었어요. 조용한 종목은 차트와 화제성(🔥)으로 판단해요.</p>}
 
       {pos && (
         <p className="as-held">
@@ -305,7 +293,7 @@ export function WeekModal({ week, before, after, onNext }: { week: Week | null; 
 // ---------------------------------------------------------------- 첫 판 안내(코치마크 3개)
 const STEPS = [
   { sel: "[data-tour=hud]", title: "진짜 있었던 시장을 버티는 게임이에요", body: "한 턴 = 실제 1주. 총자산과 😎 멘탈을 지키세요. 멘탈이 0이 되면 다 팔아 버려요. 🎯 미션을 깨면 별을 받아요." },
-  { sel: "[data-tour=market]", title: "종목 이름은 코드네임이에요", body: "기억으로 맞히지 못하게 이름을 가렸어요. 하나를 눌러 차트·유튜브·공시를 보고, 마음에 들면 사 보세요. 고민되면 맨 위 📊 코스피 ETF!" },
+  { sel: "[data-tour=market]", title: "종목 이름은 코드네임이에요", body: "기억으로 맞히지 못하게 이름을 가렸어요. 하나를 눌러 차트와 유튜브 영상을 보고, 마음에 들면 사 보세요. 고민되면 맨 위 📊 코스피 ETF!" },
   { sel: "[data-tour=next]", title: "준비되면 다음 주로", body: "주문은 모아 뒀다가 한 번에 체결돼요. 그 주의 실제 가격으로 결과가 나와요. ▶▶는 4주를 그대로 빨리 감아요. 유튜버 라이벌을 이겨 보세요!" },
 ];
 
@@ -352,8 +340,8 @@ export function Tour({ i, onNext, onDone, waiting }: { i: number; onNext: () => 
   );
 }
 
-// ---------------------------------------------------------------- 개미 비서(부엉이 박사, 시점 제한 RAG)
-const SUGGEST = ["왜 요즘 화제야?", "유튜버들은 뭐라고 해?", "최근 공시를 정리해 줘"];
+// ---------------------------------------------------------------- 개미 비서(범고래 박사, 시점 제한 RAG)
+const SUGGEST = ["왜 요즘 화제야?", "유튜버들은 뭐라고 해?", "좋다는 말이 많아, 나쁘다는 말이 많아?"];
 
 function Assistant({ v, a, runId, onAsked }: { v: View; a: Asset; runId: string; onAsked: (left: number) => void }) {
   const [q, setQ] = useState("");
@@ -389,10 +377,10 @@ function Assistant({ v, a, runId, onAsked }: { v: View; a: Asset; runId: string;
   return (
     <section className="assistant" aria-labelledby="ast-h" data-ux="AI Chat · Citations (RAG)">
       <header>
-        <Owl size={40} talking={!!busy} />
+        <Orca size={54} talking={!!busy} />
         <div>
-          <h3 id="ast-h">부엉이 박사에게 묻기</h3>
-          <p className="muted small">지금까지 나온 영상·공시만 찾아서 답해요 · 이번 시즌 {left}번 남음</p>
+          <h3 id="ast-h">범고래 박사에게 묻기</h3>
+          <p className="muted small">지금까지 나온 유튜브 영상만 찾아서 답해요 · 이번 시즌 {left}번 남음</p>
         </div>
       </header>
       {left > 0 && !res && (
@@ -455,7 +443,7 @@ function Assistant({ v, a, runId, onAsked }: { v: View; a: Asset; runId: string;
             <span className="muted small">{res.source === "ai" ? `AI(${res.model}) · 검증 통과 · 자료 ${res.searched}건 중 인용` : "질문 횟수는 줄지 않았어요"}</span>
             {res.logId && (
               <span className="vote">
-                <button className={voted === 1 ? "on" : ""} aria-label="도움 됐어요" onClick={() => (setVoted(1), api.vote(res.logId!, 1).catch(() => {}), toast("고마워요! 🦉"))}>
+                <button className={voted === 1 ? "on" : ""} aria-label="도움 됐어요" onClick={() => (setVoted(1), api.vote(res.logId!, 1).catch(() => {}), toast("고마워요! 🐳"))}>
                   👍
                 </button>
                 <button className={voted === -1 ? "on" : ""} aria-label="별로예요" onClick={() => (setVoted(-1), api.vote(res.logId!, -1).catch(() => {}))}>
@@ -471,7 +459,7 @@ function Assistant({ v, a, runId, onAsked }: { v: View; a: Asset; runId: string;
           )}
         </div>
       )}
-      {left <= 0 && !res && <p className="empty">이번 시즌 질문을 다 썼어요. 다음 시즌에 또 만나요 🦉</p>}
+      {left <= 0 && !res && <p className="empty">이번 시즌 질문을 다 썼어요. 다음 시즌에 또 만나요 🐳</p>}
       <p className="muted small">투자 권유가 아니에요. 사람들이 무엇을 말했는지만 정리해요.</p>
     </section>
   );

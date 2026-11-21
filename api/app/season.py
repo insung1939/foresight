@@ -53,7 +53,7 @@ CHARS = {
 LUCK = {
     "nofee": {"icon": "🎟️", "name": "수수료 면제권", "desc": "이번 시즌 사고팔 때 수수료 0원"},
     "steel": {"icon": "🛡️", "name": "강철 멘탈", "desc": "시작 멘탈 +25, 멘탈 하한 10"},
-    "vip": {"icon": "🦉", "name": "부엉이 VIP", "desc": "부엉이 박사 질문 +3번"},
+    "vip": {"icon": "🐳", "name": "범고래 VIP", "desc": "범고래 박사 질문 +3번"},
     "seed": {"icon": "💵", "name": "비상금 발견", "desc": "현금 +300만 원"},
     "stars": {"icon": "🌟", "name": "별똥별", "desc": "미션 별 2배"},
     "golden": {"icon": "🐜", "name": "황금 개미", "desc": "매주 20% 확률로 보너스 +50만 원"},
@@ -683,7 +683,7 @@ def view(st: dict) -> dict:
             "price": hist[-1], "chg": round(hist[-1] / hist[-2] - 1, 5), "hist": hist,
             "hype": m[0], "hypePrev": mp[0], "bull": m[1], "bear": m[2],
             "titles": [{"t": _code_title(st, x["t"]), "ch": _ch_name(x["ch"]), "st": x["st"], "v": x["v"]} for x in a["titles"][w]],
-            "disc": a["disc"][w][:2],
+            "disc": [],  # 공시는 화면에서 원문을 열어 볼 수 없어 뺐다(눌러도 아무것도 없는 정보는 혼란만 준다)
         })
     rivals = [{"name": p["channels"][c]["name"], "twr": round(_rival_twr(st, c, s + t), 5),
                "picks": p["channels"][c]["n"][w]} for c in st["rivals"]]

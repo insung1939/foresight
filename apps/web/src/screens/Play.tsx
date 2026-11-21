@@ -182,7 +182,10 @@ export default function Play() {
   };
 
   const skip = async () => {
-    if (!run || !v || busy || orders.length) return;
+    if (!run || !v || busy) return;
+    if (orders.length) return toast("담아 둔 주문이 있으면 빨리 감을 수 없어요. 먼저 [다음 주 ▶]로 체결하세요");
+    if (v.pending) return toast("이번 주 사건에 먼저 답해 주세요");
+    if (v.season - v.t <= 1) return toast("마지막 주예요. [다음 주 ▶]로 마감하세요");
     setBusy("skip");
     setRecap(null);
     sfx("whoosh");
@@ -258,9 +261,9 @@ export default function Play() {
           </div>
           <Mental value={v.mental} compact />
           {v.tier.id !== "ok" && (
-            <span className={`tier-chip t-${v.tier.id}`} title={v.tier.desc} aria-label={`멘탈 ${v.tier.name}: ${v.tier.desc}`}>
+            <button className={`tier-chip t-${v.tier.id}`} onClick={() => toast(`${v.tier.icon} 멘탈 ${v.tier.name}: ${v.tier.desc}`)} aria-label={`멘탈 ${v.tier.name}: ${v.tier.desc}`}>
               {v.tier.name}
-            </span>
+            </button>
           )}
           <button className="hud-mission" onClick={() => setMissions(true)} aria-label={`시즌 미션 ${mDone}/${v.missions.length} 달성`} data-ux="Badge · Popover">
             🎯<small>
@@ -311,7 +314,7 @@ export default function Play() {
             <span className="nb-main">{busy === "next" ? "시장이 움직이는 중…" : left === 1 ? "마지막 주 마감 🏁" : "다음 주 ▶"}</span>
             <span className="nb-sub">{nOrders ? `주문 ${nOrders}건 체결` : v.pos.length ? "그대로 들고 가기" : noCash ? "현금으로 버티기" : "아무것도 안 사고 넘기기"}</span>
           </button>
-          <button className="ff-btn" onClick={skip} disabled={!!busy || !canSkip} aria-label="주문 없이 4주 빨리 감기" title={nOrders ? "담아 둔 주문이 있으면 빨리 감을 수 없어요" : "4주 그대로 들고 가기"} data-ux="Shortcut · Fast-forward">
+          <button className={`ff-btn ${canSkip ? "" : "soft"}`} onClick={skip} disabled={!!busy} aria-label="주문 없이 4주 빨리 감기" title={nOrders ? "담아 둔 주문이 있으면 빨리 감을 수 없어요" : "4주 그대로 들고 가기"} data-ux="Shortcut · Fast-forward">
             {busy === "skip" ? "⏩…" : "▶▶"}
             <small>4주</small>
           </button>

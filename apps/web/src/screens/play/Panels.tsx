@@ -27,7 +27,6 @@ export function CodeChip({ a, onOpen }: { a: Asset; onOpen: (k: string) => void 
 export function Feed({ v, onOpen }: { v: View; onOpen: (k: string) => void }) {
   const byK = useMemo(() => Object.fromEntries(v.assets.map((a) => [a.k, a])), [v.assets]);
   const movers = [...v.assets].sort((a, b) => b.chg - a.chg);
-  const discs = v.assets.filter((a) => a.disc.length);
   const ixChg = v.index.length > 1 ? v.index[v.index.length - 1] / v.index[v.index.length - 2] - 1 : 0;
   return (
     <div className="feed">
@@ -50,22 +49,22 @@ export function Feed({ v, onOpen }: { v: View; onOpen: (k: string) => void }) {
 
       <section aria-labelledby="hl">
         <h3 id="hl" className="sec-title">
-          📺 지난주 가장 많이 본 영상
+          📺 지난주 가장 많이 본 영상 <span className="muted small">— 누르면 그 종목으로</span>
         </h3>
         {v.headlines.length === 0 && <p className="empty">지난주엔 우리 종목을 다룬 영상이 없었어요. 조용한 주예요.</p>}
         <ul className="yt-list">
           {v.headlines.map((h, i) => (
-            <li key={i} className="yt">
-              <div className="yt-thumb" aria-hidden>
-                ▶
-              </div>
-              <div className="yt-body">
-                <p className="yt-title">{h.t}</p>
-                <p className="yt-meta">
-                  {h.ch} · 조회 {views(h.v)} {h.st === "b" && <span className="tag bull">오른다</span>}
-                </p>
-                {byK[h.k] && <CodeChip a={byK[h.k]} onOpen={onOpen} />}
-              </div>
+            <li key={i}>
+              <button className="yt" onClick={() => byK[h.k] && onOpen(h.k)} aria-label={`${byK[h.k]?.code ?? ""} 자세히: ${h.t}`}>
+                <Tuber name={h.ch} size={40} />
+                <span className="yt-body">
+                  <span className="yt-title">{h.t}</span>
+                  <span className="yt-meta">
+                    {h.ch} · 조회 {views(h.v)} {h.st === "b" && <span className="tag bull">오른다</span>}
+                  </span>
+                  {byK[h.k] && <span className={`code-chip m-${byK[h.k].market}`}>{byK[h.k].code} 보기 ›</span>}
+                </span>
+              </button>
             </li>
           ))}
         </ul>
@@ -85,23 +84,6 @@ export function Feed({ v, onOpen }: { v: View; onOpen: (k: string) => void }) {
         </div>
       </section>
 
-      <section aria-labelledby="dc">
-        <h3 id="dc" className="sec-title">
-          📑 지난주 공시
-        </h3>
-        {discs.length === 0 ? (
-          <p className="empty">지난주 우리 종목 공시는 없었어요.</p>
-        ) : (
-          <ul className="disc-list">
-            {discs.slice(0, 6).map((a) => (
-              <li key={a.k}>
-                <CodeChip a={a} onOpen={onOpen} />
-                <span>{a.disc[0]}</span>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
     </div>
   );
 }

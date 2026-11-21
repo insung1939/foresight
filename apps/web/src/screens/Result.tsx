@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { CountUp, Delta, ErrorState, LineChart, Loading, TopBar, toast } from "../components/ui";
 import { api, useAsync } from "../lib/api";
 import { dateDot, pct, won } from "../lib/format";
-import { Ant, Owl, Tuber, type CharId } from "../components/Characters";
+import { Ant, Orca, Tuber, type CharId } from "../components/Characters";
 import { RoomView } from "../components/Scene";
 import { boxOpened, openBox, progress, record } from "../lib/progress";
 import { nextFurniture, unlockedFurniture } from "../lib/room";
@@ -211,7 +211,7 @@ function Body({ f, id }: { f: Final; id: string }) {
 
       {f.mode === "practice" && (
         <div className="practice-done card">
-          <Owl size={48} />
+          <Orca size={48} />
           <p>
             <b>연습 끝! 이제 진짜 시즌이에요.</b>
             <br />
@@ -283,7 +283,7 @@ function Body({ f, id }: { f: Final; id: string }) {
 
       <section className="card coach" aria-labelledby="coach">
         <h2 id="coach" className="sec-title">
-          <Owl size={30} /> 부엉이 박사의 한마디(AI 코치)
+          <Orca size={30} /> 범고래 박사의 한마디(AI 코치)
         </h2>
         {!coach ? (
           <>

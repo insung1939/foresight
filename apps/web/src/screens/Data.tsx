@@ -13,7 +13,7 @@ export default function Data() {
         <header className="page-head">
           <p className="eyebrow">데이터 · 분석</p>
           <h1>게임 속 시장은 전부 실제 데이터예요</h1>
-          <p className="lead">지난 학기 hindsight 가 매일 모은 유튜브 언급·주가·공시를 주 단위 &lsquo;시즌 팩&rsquo;으로 바꿔 쓴다.</p>
+          <p className="lead">지난 학기 hindsight 가 매일 모은 유튜브 언급·주가를 주 단위 &lsquo;시즌 팩&rsquo;으로 바꿔 쓴다.</p>
         </header>
         {res.status === "loading" && <Loading slow={res.slow} />}
         {res.status === "error" && <ErrorState title="데이터를 불러오지 못했어요" detail={res.error.message} onRetry={res.retry} />}
@@ -70,7 +70,7 @@ function Body({ m }: { m: Meta }) {
             <span>마지막 시세</span>
           </div>
         </div>
-        <p className="muted small">출처: YouTube Data API(제목·조회수), 공공데이터포털 KRX 시세, Yahoo Finance(미국), 업비트(코인), DART 공시 API — 모두 hindsight 가 매일 07:10 배치로 수집.</p>
+        <p className="muted small">출처: YouTube Data API(제목·조회수), 공공데이터포털 KRX 시세, Yahoo Finance(미국), 업비트(코인), DART 공시 API — 모두 hindsight 가 매일 07:10 배치로 수집(공시는 수집만 하고 게임에선 쓰지 않음).</p>
       </section>
 
       <section className="card">
@@ -86,7 +86,7 @@ function Body({ m }: { m: Meta }) {
             <b>코드네임</b> DART 업종코드(KSIC) → &lsquo;반도체 A&rsquo;. 가격은 판마다 다른 배율로 바꿔 실제 주가로 종목을 알아낼 수 없게
           </li>
           <li>
-            <b>이름 가리기</b> 유튜브 제목·공시 속 종목명·그룹명·사람 이름·가격·날짜를 지운다(api/app/masking.py)
+            <b>이름 가리기</b> 유튜브 제목 속 종목명·그룹명·사람 이름·가격·날짜를 지운다(api/app/masking.py)
           </li>
           <li>
             <b>유튜버 고스트</b> 채널별로 &lsquo;지난주 오른다고 한 종목을 이번 주 똑같이 나눠 샀다면&rsquo;의 주간 수익률 → {gh.n}명
@@ -128,7 +128,7 @@ function Body({ m }: { m: Meta }) {
             <b>이름·시점 가리기</b> {m.quality.masking}
           </li>
           <li>
-            <b>색인</b> 임베딩 무료 한도(모델당 하루 약 1,000문장) 때문에 핵심 공시 → 종목별 인기 제목 순으로 하루씩 늘린다. 색인에 없는 종목은 비서가 &lsquo;자료가 없다&rsquo;고 답한다
+            <b>색인</b> 임베딩 무료 한도(모델당 하루 약 1,000문장) 때문에 종목별 인기 영상 제목부터 하루씩 늘린다. 공시는 화면에서 원문을 열어 볼 수 없어 게임·색인에서 뺐다. 색인에 없는 종목은 비서가 &lsquo;자료가 없다&rsquo;고 답한다
           </li>
         </ul>
       </section>
@@ -316,7 +316,7 @@ function Body({ m }: { m: Meta }) {
         <h2 className="sec-title">AI · 개미 비서(시점 제한 RAG)</h2>
         <ol className="pipe">
           <li>
-            <b>문서</b> 종목-주별 가려진 영상 제목·공시 {n(m.rag.docs)}건
+            <b>문서</b> 종목-주별 가려진 유튜브 영상 제목 {n(m.rag.docs)}건
           </li>
           <li>
             <b>임베딩</b> {m.rag.model} · {m.rag.dim}차원 → {m.rag.backend === "pgvector" ? "Supabase pgvector(rag_docs 표)" : "메모리 검색(개발용)"}

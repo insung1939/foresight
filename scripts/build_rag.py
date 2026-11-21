@@ -5,7 +5,7 @@
 
 무료 한도: Gemini 임베딩은 모델마다 하루 약 1,000건. 그래서 '중요한 문서부터' 하루 예산만큼 임베딩하고,
 다음 날 다시 돌리면 캐시에 없는 다음 순서 문서를 이어서 넣는다(색인이 날마다 자란다). 임베딩이 없는 문서는 색인에서 빠진다.
-중요도: ① 핵심 공시(계약·실적·증자·자사주·최대주주…) ② 종목마다 조회수 높은 영상 제목(주가 다양하게) ③ 나머지
+중요도: 종목마다 조회수 높은 영상 제목(주가 다양하게) → 나머지. (공시는 게임에서 빼서 색인에도 넣지 않는다)
 
 - 입력: data/rag_docs.json(build_season.py 가 만듦) — 종목-주별 가려진 영상 제목·공시 제목
 - 임베딩: Gemini EMBED_MODEL(기본 gemini-embedding-2), RETRIEVAL_DOCUMENT, 256차원(마트료시카 축소) → 정규화 → int8
@@ -73,7 +73,8 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--budget", type=int, default=950, help="오늘 새로 임베딩할 최대 문장 수(무료 한도 ~1,000/일)")
     args = ap.parse_args()
-    docs = json.loads((ROOT / "data" / "rag_docs.json").read_text())
+    # 공시는 화면에서 원문을 열어 볼 수 없어 게임에서 뺐다 → 색인도 영상 제목만
+    docs = [d for d in json.loads((ROOT / "data" / "rag_docs.json").read_text()) if d["k"] == "yt"]
     texts = [doc_text(d) for d in docs]
     hashes = [hashlib.sha1(t.encode()).hexdigest()[:16] for t in texts]
     have: dict[str, list[float]] = {}

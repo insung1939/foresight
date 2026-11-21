@@ -115,12 +115,12 @@ export default function Home() {
             <li>
               <span className="st-ic">📱</span>
               <b>월요일 아침 피드</b>
-              <span>지난주 실제 유튜브 영상·공시가 와요. 종목 이름은 코드네임.</span>
+              <span>지난주 실제 유튜브 영상 제목과 화제성이 와요. 종목 이름은 코드네임.</span>
             </li>
             <li>
               <span className="st-ic">🛒</span>
               <b>사고팔고, 물어보고</b>
-              <span>최대 5종목. 궁금하면 🦉부엉이 박사(AI)에게.</span>
+              <span>최대 5종목. 궁금하면 🐳범고래 박사(AI)에게.</span>
             </li>
             <li>
               <span className="st-ic">▶</span>
@@ -196,7 +196,7 @@ export default function Home() {
         <p className="disclaimer">
           과거 데이터로 만든 학습용 시뮬레이션이에요. 투자 권유가 아니며, 실제 종목명은 판이 끝난 뒤에만 공개해요.
           <br />
-          데이터: hindsight(유튜브 51개 채널 언급 · 국내·미국 주가 · 업비트 · DART 공시) · AI: Gemini · 저장: Supabase
+          데이터: hindsight(유튜브 51개 채널 언급 · 국내·미국 주가 · 업비트 코인 시세) · AI: Gemini · 저장: Supabase
         </p>
       </main>
 

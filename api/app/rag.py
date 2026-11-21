@@ -1,6 +1,7 @@
 """개미 비서의 검색(시점 제한 RAG).
 
-문서 = 종목-주별 가려진 유튜브 제목·공시 제목(scripts/build_season.py → build_rag.py 가 임베딩).
+문서 = 종목-주별 가려진 유튜브 영상 제목(scripts/build_season.py → build_rag.py 가 임베딩).
+공시 문서도 색인에 있지만 검색에서 뺀다 — 화면에서 원문을 열어 볼 수 없는 근거는 인용하지 않는다.
 검색 조건을 SQL 단계에서 건다: 이번 판 종목(a = any) AND 지금 보이는 주 이하(w <= 지금) AND 최근 12주.
 → 미래 문서는 모델에 아예 가지 않는다.
 
@@ -100,12 +101,12 @@ class Index:
         return out
 
     def _recent(self, pool, wmin, wmax, n) -> list[dict]:
-        ds = [d for d in self.docs if d["a"] in pool and wmin <= d["w"] <= wmax]
+        ds = [d for d in self.docs if d["a"] in pool and wmin <= d["w"] <= wmax and d["k"] == "yt"]
         ds.sort(key=lambda d: (-d["w"], -d["v"]))
         return [{**d, "score": 0.0} for d in ds[:n]]
 
     def _mem(self, qv, pool, wmin, wmax, n) -> list[dict]:
-        idx = [i for i, d in enumerate(self.docs) if d["a"] in pool and wmin <= d["w"] <= wmax]
+        idx = [i for i, d in enumerate(self.docs) if d["a"] in pool and wmin <= d["w"] <= wmax and d["k"] == "yt"]
         if not idx:
             return []
         sims = self.emb[idx] @ qv
@@ -116,7 +117,7 @@ class Index:
         vec = "[" + ",".join(f"{x:.5f}" for x in qv) + "]"
         with engine.connect() as c:
             rows = c.execute(text("""select id,a,w,k,t,ch,st,v, 1 - (emb <=> cast(:q as vector)) as score from rag_docs
-                                     where a = any(:pool) and w between :wmin and :wmax
+                                     where a = any(:pool) and w between :wmin and :wmax and k = 'yt'
                                      order by emb <=> cast(:q as vector) limit :n"""),
                              {"q": vec, "pool": list(pool), "wmin": wmin, "wmax": wmax, "n": n}).mappings().all()
         return [dict(r) for r in rows]
