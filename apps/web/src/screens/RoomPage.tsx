@@ -37,7 +37,7 @@ export default function RoomPage() {
           </button>
         </header>
 
-        <RoomView char={char} items={items} mood="happy" height={420} outfit={p.outfit} keys />
+        <RoomView char={char} items={items} mood="happy" height={typeof window !== "undefined" && window.innerWidth < 600 ? 480 : 620} outfit={p.outfit} keys />
 
         <section className="card next-furn" aria-label="다음 가구까지">
           {nf ? (

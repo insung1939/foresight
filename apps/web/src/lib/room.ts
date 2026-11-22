@@ -22,7 +22,7 @@ export const FURNITURE: Furniture[] = [
   { id: "tv", name: "TV와 거실장", icon: "📺", stars: 13, desc: "벽 쪽 낮은 장 위 큰 TV" },
   { id: "table", name: "커피 테이블", icon: "☕", stars: 15, desc: "소파 앞 원목 테이블과 머그컵" },
   { id: "dual", name: "듀얼 모니터", icon: "🖥️", stars: 17, desc: "모니터가 두 대로" },
-  { id: "aquarium", name: "열대어 어항", icon: "🐠", stars: 19, desc: "물고기가 헤엄치는 어항" },
+  { id: "aquarium", name: "대형 수족관", icon: "🐠", stars: 19, desc: "2.4m 수족관: 물고기 떼·엔젤피시·꼬마 범고래·해초·산호·기포" },
   { id: "wide", name: "확장 공사", icon: "📐", stars: 20, desc: "방이 1.5배 넓어져요" },
   { id: "gallery", name: "벽 갤러리", icon: "🖼️", stars: 22, desc: "벽에 거는 그림 세 점과 선반" },
   { id: "cabinet", name: "트로피 장식장", icon: "🏆", stars: 25, desc: "유리 장 속 트로피들" },

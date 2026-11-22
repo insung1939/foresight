@@ -3,7 +3,7 @@
 //  - 재질: 캔버스로 그린 원목 마루·대리석·회벽·패브릭·러그 텍스처(외부 파일 없음)
 //  - 빛: 햇빛 그림자 + 조명 반사(Lightformer 환경광) + (큰 화면) 앰비언트 오클루전·블룸·ACES 톤매핑
 //  - 놀이: 바닥을 누르면 걸어가고, 가구를 누르면 다가가 한마디, 개미·고양이를 누르면 반응, 방향키 이동
-import { ContactShadows, Environment, Html, Lightformer, OrbitControls, RoundedBox } from "@react-three/drei";
+import { ContactShadows, Environment, Html, Lightformer, MeshReflectorMaterial, OrbitControls, RoundedBox } from "@react-three/drei";
 import { Canvas, useFrame, useThree, type ThreeEvent } from "@react-three/fiber";
 import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
@@ -25,6 +25,7 @@ import {
 } from "three";
 import { CHAR_META, type CharId } from "../Characters";
 import { Ant3D } from "./Ant3D";
+import { BigAquarium, TANK } from "./Aquarium";
 
 const Post = lazy(() => import("./Post"));
 
@@ -280,9 +281,9 @@ function useTexRepeat(t: CanvasTexture, x: number, y: number) {
 // ---------------------------------------------------------------- 방 크기
 type Tier = "small" | "wide" | "pent";
 const SIZE: Record<Tier, { hx: number; hz: number; H: number }> = {
-  small: { hx: 3.5, hz: 3.0, H: 3.0 },
-  wide: { hx: 4.5, hz: 3.6, H: 3.1 },
-  pent: { hx: 5.0, hz: 4.0, H: 3.4 },
+  small: { hx: 3.8, hz: 3.3, H: 3.0 },
+  wide: { hx: 4.8, hz: 3.9, H: 3.1 },
+  pent: { hx: 5.6, hz: 4.4, H: 3.4 },
 };
 
 interface Layout {
@@ -520,7 +521,7 @@ function Plant({ L }: { L: Layout }) {
 function ArcLamp({ L }: { L: Layout }) {
   const arc = useMemo(() => new TubeGeometry(new CubicBezierCurve3(new Vector3(0, 0.05, 0), new Vector3(0, 2.0, 0), new Vector3(0.7, 2.35, 0), new Vector3(1.25, 1.85, 0)), 48, 0.018, 8, false), []);
   return (
-    <group position={[-L.hx + 0.4, 0, L.bedZ + 1.4]}>
+    <group position={[-L.hx + 0.4, 0, L.bedZ + 1.3]}>
       <mesh position={[0, 0.04, 0]} castShadow>
         <cylinderGeometry args={[0.2, 0.22, 0.08, 32]} />
         <meshStandardMaterial map={marble()} roughness={0.2} />
@@ -800,60 +801,11 @@ function CoffeeTable({ L }: { L: Layout }) {
     </group>
   );
 }
-function Fish({ phase, color, len }: { phase: number; color: string; len: number }) {
-  const g = useRef<Group>(null);
-  useFrame((st) => {
-    if (!g.current) return;
-    const t = st.clock.elapsedTime * 0.6 + phase;
-    g.current.position.set(Math.sin(t) * len, 0.32 + Math.sin(t * 1.7) * 0.07, Math.cos(t * 0.8) * 0.08);
-    g.current.rotation.y = Math.cos(t) > 0 ? 0 : Math.PI;
-  });
-  return (
-    <group ref={g}>
-      <mesh scale={[1.6, 0.8, 0.5]}>
-        <sphereGeometry args={[0.04, 12, 10]} />
-        <meshStandardMaterial color={color} roughness={0.3} />
-      </mesh>
-      <mesh position={[-0.07, 0, 0]} rotation={[0, 0, Math.PI / 2]}>
-        <coneGeometry args={[0.03, 0.05, 4]} />
-        <meshStandardMaterial color={color} roughness={0.3} />
-      </mesh>
-    </group>
-  );
-}
+/** 왼쪽 벽 앞쪽에 붙인 대형 수족관(앞면이 방 쪽) */
 function Aquarium({ L }: { L: Layout }) {
   return (
-    <group position={[-L.hx + 0.33, 0, L.hz - 0.85]} rotation={[0, Math.PI / 2, 0]}>
-      <RoundedBox args={[1.0, 0.7, 0.42]} radius={0.02} position={[0, 0.35, 0]} castShadow receiveShadow>
-        <Wood c="#2f2a26" r={0.5} />
-      </RoundedBox>
-      <group position={[0, 0.7, 0]}>
-        <mesh position={[0, 0.27, 0]}>
-          <boxGeometry args={[0.96, 0.54, 0.38]} />
-          <meshPhysicalMaterial color="#bfe6ff" transparent opacity={0.18} roughness={0.02} />
-        </mesh>
-        <mesh position={[0, 0.24, 0]}>
-          <boxGeometry args={[0.92, 0.46, 0.34]} />
-          <meshStandardMaterial color="#4dabf7" transparent opacity={0.28} emissive="#1c7ed6" emissiveIntensity={0.25} />
-        </mesh>
-        <mesh position={[0, 0.03, 0]}>
-          <boxGeometry args={[0.92, 0.05, 0.34]} />
-          <meshStandardMaterial color="#d8c3a5" roughness={1} />
-        </mesh>
-        {[-0.3, -0.1, 0.25, 0.35].map((x, i) => (
-          <mesh key={x} position={[x, 0.15 + (i % 2) * 0.04, -0.08]}>
-            <coneGeometry args={[0.04, 0.22 + (i % 2) * 0.1, 6]} />
-            <meshStandardMaterial color="#2b8a3e" />
-          </mesh>
-        ))}
-        <Fish phase={0} color="#ff922b" len={0.36} />
-        <Fish phase={2.1} color="#f03e3e" len={0.32} />
-        <Fish phase={4.2} color="#ffd43b" len={0.3} />
-        <mesh position={[0, 0.55, 0]}>
-          <boxGeometry args={[0.98, 0.03, 0.4]} />
-          <meshStandardMaterial color="#222" emissive="#a5d8ff" emissiveIntensity={0.4} />
-        </mesh>
-      </group>
+    <group position={[-L.hx + TANK.D / 2 + 0.06, 0, L.hz - TANK.W / 2 - 0.25]} rotation={[0, Math.PI / 2, 0]}>
+      <BigAquarium />
     </group>
   );
 }
@@ -880,13 +832,13 @@ const artTex = (seed: number) =>
     g.globalAlpha = 1;
   });
 function Gallery({ L }: { L: Layout }) {
-  const z0 = L.hz - 0.85; // 어항·장식장 위 왼쪽 벽
+  const z0 = L.hz - 1.45; // 수족관 위 왼쪽 벽
   return (
     <group position={[-L.hx + 0.02, 0, 0]} rotation={[0, Math.PI / 2, 0]}>
       {[
-        [-z0 - 0.0, 2.15, 0.55, 0.7, 1],
+        [-z0, 2.3, 0.55, 0.55, 1],
         [-z0 + 0.75, 2.3, 0.45, 0.45, 2],
-        [-z0 + 0.75, 1.75, 0.45, 0.45, 3],
+        [-z0 - 0.75, 2.3, 0.45, 0.45, 3],
       ].map(([x, y, w, h, seed]) => (
         <group key={seed} position={[x, y, 0]}>
           <mesh castShadow>
@@ -900,7 +852,7 @@ function Gallery({ L }: { L: Layout }) {
         </group>
       ))}
       {/* 벽 선반 + 소품 */}
-      <group position={[-z0 + 1.55, 2.05, 0.1]}>
+      <group position={[-z0 + 1.75, 1.75, 0.1]}>
         <mesh castShadow receiveShadow>
           <boxGeometry args={[0.7, 0.03, 0.2]} />
           <Wood c="#a77b54" />
@@ -939,42 +891,65 @@ const cupGeo = (() => {
     ));
 })();
 function Cabinet({ L }: { L: Layout }) {
+  const W = 0.9;
+  const H = 1.75;
+  const D = 0.4;
+  const wood = <Wood c="#3d2b1f" r={0.45} />;
   return (
-    <group position={[-L.hx + 0.28, 0, L.bedZ + 2.45]} rotation={[0, Math.PI / 2, 0]}>
-      <RoundedBox args={[0.9, 1.7, 0.4]} radius={0.015} position={[0, 0.85, -0.02]} castShadow receiveShadow>
-        <Wood c="#3d2b1f" r={0.45} />
-      </RoundedBox>
-      <mesh position={[0, 0.95, 0.19]}>
-        <planeGeometry args={[0.8, 1.4]} />
-        <meshPhysicalMaterial color="#ffffff" transparent opacity={0.14} roughness={0.02} />
+    <group position={[L.deskX + 2.3, 0, -L.hz + 0.25]}>
+      {/* 속이 빈 틀: 뒤판·옆판·위아래 */}
+      <mesh position={[0, H / 2, -D / 2]} receiveShadow>
+        <boxGeometry args={[W, H, 0.02]} />
+        <meshStandardMaterial color="#e8dcc6" emissive="#fff1d6" emissiveIntensity={0.25} />
       </mesh>
-      <mesh position={[0, 0.95, 0.15]}>
-        <planeGeometry args={[0.8, 1.4]} />
-        <meshStandardMaterial color="#2a1f17" />
-      </mesh>
-      {[0.5, 0.95, 1.4].map((y, i) => (
-        <group key={y}>
-          <mesh position={[0, y - 0.22, 0.04]}>
-            <boxGeometry args={[0.8, 0.02, 0.26]} />
-            <meshPhysicalMaterial color="#ffffff" transparent opacity={0.3} />
-          </mesh>
-          {[-0.22, 0.04, 0.26].map((x, j) =>
-            (i + j) % 2 === 0 ? (
-              <mesh key={x} geometry={cupGeo()} position={[x, y - 0.21, 0.04]} scale={0.9 + j * 0.1} castShadow>
-                <Gold />
-              </mesh>
-            ) : (
-              <group key={x} position={[x, y - 0.05, 0.08]}>
-                <mesh>
-                  <cylinderGeometry args={[0.05, 0.05, 0.012, 24]} />
-                  <meshStandardMaterial color={j === 1 ? "#c0c0c8" : "#cd7f32"} metalness={1} roughness={0.25} />
-                </mesh>
-              </group>
-            ),
-          )}
-        </group>
+      {[-W / 2, W / 2].map((x) => (
+        <mesh key={x} position={[x, H / 2, 0]} castShadow>
+          <boxGeometry args={[0.04, H, D]} />
+          {wood}
+        </mesh>
       ))}
-      <pointLight position={[0, 1.6, 0.15]} intensity={1.2} distance={1.5} color="#fff2d0" />
+      {[0.06, H - 0.02].map((y) => (
+        <mesh key={y} position={[0, y, 0]} castShadow receiveShadow>
+          <boxGeometry args={[W + 0.04, y < 1 ? 0.12 : 0.04, D]} />
+          {wood}
+        </mesh>
+      ))}
+      {[0.62, 1.12].map((y) => (
+        <mesh key={y} position={[0, y, 0]}>
+          <boxGeometry args={[W - 0.04, 0.015, D - 0.04]} />
+          <meshPhysicalMaterial color="#ffffff" transparent opacity={0.35} roughness={0.05} />
+        </mesh>
+      ))}
+      {[0.12, 0.63, 1.13].map((y, i) =>
+        [-0.24, 0.02, 0.25].map((x, j) =>
+          (i + j) % 2 === 0 ? (
+            <mesh key={`${y}${x}`} geometry={cupGeo()} position={[x, y, 0]} scale={1 + j * 0.15} castShadow>
+              <Gold />
+            </mesh>
+          ) : (
+            <group key={`${y}${x}`} position={[x, y + 0.12, -0.1]} rotation={[0.15, 0, 0]}>
+              <mesh rotation={[Math.PI / 2, 0, 0]}>
+                <cylinderGeometry args={[0.06, 0.06, 0.012, 32]} />
+                <meshStandardMaterial color={j === 1 ? "#c0c0c8" : "#cd7f32"} metalness={1} roughness={0.2} />
+              </mesh>
+              <mesh position={[0, 0.1, -0.005]}>
+                <boxGeometry args={[0.03, 0.14, 0.004]} />
+                <meshStandardMaterial color={j === 1 ? "#1971c2" : "#c92a2a"} />
+              </mesh>
+            </group>
+          ),
+        ),
+      )}
+      {/* 유리문 */}
+      <mesh position={[0, H / 2 + 0.03, D / 2]}>
+        <planeGeometry args={[W - 0.04, H - 0.14]} />
+        <meshPhysicalMaterial color="#ffffff" transparent opacity={0.1} roughness={0} clearcoat={1} depthWrite={false} />
+      </mesh>
+      <mesh position={[0, H / 2 + 0.03, D / 2 + 0.005]}>
+        <boxGeometry args={[0.012, H - 0.14, 0.01]} />
+        {wood}
+      </mesh>
+      <pointLight position={[0, H - 0.12, 0.05]} intensity={1.5} distance={1.6} color="#fff2d0" />
     </group>
   );
 }
@@ -1092,7 +1067,7 @@ function Cat({ L, onTap }: { L: Layout; onTap: () => void }) {
 }
 function Statue({ L, pent }: { L: Layout; pent: boolean }) {
   return (
-    <group position={pent ? [L.hx - 0.6, 0, -1.6] : [L.hx - 0.75, 0, 0.1]}>
+    <group position={pent ? [L.hx - 0.6, 0, -1.6] : [L.hx - 0.7, 0, -1.0]}>
       <RoundedBox args={[0.6, 0.7, 0.6]} radius={0.02} position={[0, 0.35, 0]} castShadow receiveShadow>
         <meshStandardMaterial map={marble()} roughness={0.15} />
       </RoundedBox>
@@ -1255,7 +1230,7 @@ function Rig({ L, explore }: { L: Layout; explore: boolean }) {
     const aspect = size.width / Math.max(1, size.height);
     const vHalf = (cam.fov * Math.PI) / 360;
     const hHalf = Math.atan(Math.tan(vHalf) * aspect);
-    const radius = Math.hypot(L.hx, L.hz) * (aspect < 1 ? 1.12 : 0.92); // 세로 화면(휴대폰)은 양옆이 잘리지 않게 조금 더 멀리
+    const radius = Math.hypot(L.hx, L.hz) * (aspect < 1 ? 1.05 : 0.8); // 세로 화면(휴대폰)은 양옆이 잘리지 않게 조금 더 멀리
     const dist = radius / Math.sin(Math.min(vHalf * 1.25, hHalf));
     const dir = new Vector3(0.95, 0.85, 1.15).normalize();
     cam.position.copy(dir.multiplyScalar(dist)).add(new Vector3(0, 0.4, 0));
@@ -1287,7 +1262,7 @@ const LINES: Record<string, string[]> = {
   window: ["바깥 날씨 좋다 ☀️", "저 빌딩 중 하나는 내 거…?"],
   tv: ["오늘 뉴스 뭐 나왔지? 📺", "드라마 한 편만…"],
   table: ["커피 한 잔 ☕", "여유가 생겼어"],
-  aquarium: ["물고기야 안녕 🐠", "너희도 떼로 몰려다니는구나"],
+  aquarium: ["물고기야 안녕 🐠", "너희도 떼로 몰려다니는구나", "앗, 범고래 박사님…?! 🐳"],
   cabinet: ["내 트로피들 반짝반짝 🏆", "다음 시즌도 1등 가자!"],
   safe: ["금괴 세는 중… 하나, 둘 💰", "티끌 모아 태산!"],
   statue: ["황금 개미 선배님…!", "언젠가 나도 황금 개미"],
@@ -1401,7 +1376,12 @@ export function Room({ char = "office", items, mood = "happy", height = 300, out
         {/* 바닥(누르면 걸어감) · 벽 · 걸레받이 */}
         <mesh rotation={[-Math.PI / 2, 0, 0]} receiveShadow onClick={onFloor}>
           <planeGeometry args={[L.hx * 2, L.hz * 2]} />
-          <meshStandardMaterial map={floorMap} roughness={pent ? 0.18 : 0.5} metalness={pent ? 0.05 : 0} />
+          {hq ? (
+            // 큰 화면: 바닥에 가구·불빛이 은은하게 비친다(대리석은 더 또렷하게)
+            <MeshReflectorMaterial map={floorMap} blur={[400, 120]} resolution={1024} mixBlur={1} mixStrength={pent ? 1.4 : 0.7} mirror={0} roughness={pent ? 0.25 : 0.6} depthScale={1.1} minDepthThreshold={0.4} maxDepthThreshold={1.3} metalness={0} />
+          ) : (
+            <meshStandardMaterial map={floorMap} roughness={pent ? 0.18 : 0.5} metalness={pent ? 0.05 : 0} />
+          )}
         </mesh>
         <mesh position={[0, -0.075, 0]} receiveShadow>
           <boxGeometry args={[L.hx * 2 + 0.3, 0.12, L.hz * 2 + 0.3]} />
@@ -1463,7 +1443,7 @@ export function Room({ char = "office", items, mood = "happy", height = 300, out
           </Spot>
         )}
         {has("lamp") && (
-          <Spot onVisit={visit} id="lamp" stand={[-L.hx + 1.0, L.bedZ + 1.5]}>
+          <Spot onVisit={visit} id="lamp" stand={[-L.hx + 1.3, L.bedZ + 1.5]}>
             <ArcLamp L={L} />
           </Spot>
         )}
@@ -1493,7 +1473,7 @@ export function Room({ char = "office", items, mood = "happy", height = 300, out
           </Spot>
         )}
         {has("aquarium") && (
-          <Spot onVisit={visit} id="aquarium" stand={[-L.hx + 1.1, L.hz - 0.85]}>
+          <Spot onVisit={visit} id="aquarium" stand={[-L.hx + 1.4, L.hz - 1.45]}>
             <Aquarium L={L} />
           </Spot>
         )}
@@ -1503,7 +1483,7 @@ export function Room({ char = "office", items, mood = "happy", height = 300, out
           </Spot>
         )}
         {has("cabinet") && (
-          <Spot onVisit={visit} id="cabinet" stand={[-L.hx + 1.0, L.bedZ + 2.45]}>
+          <Spot onVisit={visit} id="cabinet" stand={[L.deskX + 2.3, -L.hz + 1.2]}>
             <Cabinet L={L} />
           </Spot>
         )}
@@ -1513,7 +1493,7 @@ export function Room({ char = "office", items, mood = "happy", height = 300, out
           </Spot>
         )}
         {has("statue") && (
-          <Spot onVisit={visit} id="statue" stand={pent ? [L.hx - 1.3, -1.3] : [L.hx - 1.4, 0.4]}>
+          <Spot onVisit={visit} id="statue" stand={pent ? [L.hx - 1.3, -1.3] : [L.hx - 1.4, -0.6]}>
             <Statue L={L} pent={pent} />
           </Spot>
         )}
