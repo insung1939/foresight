@@ -798,8 +798,38 @@ def missions_of(st: dict, board: list | None = None) -> list[dict]:
             state = "fail" if tr["panic"] else ("done" if tr["trades"] >= 5 and end else "fail" if end else "ing")
         elif mid == "saver":
             state = "done" if tr.get("saves", 0) >= n else ("fail" if end else "ing")
-        out.append({"id": mid, "icon": m["icon"], "label": label, "state": state})
+        out.append({"id": mid, "icon": m["icon"], "label": label, "state": state, **_mission_now(st, mid, n)})
     return out
+
+
+def _mission_now(st: dict, mid: str, n) -> dict:
+    """미션 진행 상황을 숫자로(후기: '패닉셀 없이 거래 5번'인데 지금 몇 번 했는지 안 보인다)
+    now = 화면에 보일 한 줄, cur/goal = 진행 바(없으면 None)"""
+    tr = st["traits"]
+    me = st["twr"] - 1
+    w = st["s"] + min(st["t"], slen(st))
+    if mid == "beat2yt":
+        beat = sum(1 for c in st["rivals"] if _rival_twr(st, c, w) - 1 < me)
+        return {"now": f"지금 이기는 유튜버 {beat}명 / 3명", "cur": beat, "goal": 2}
+    if mid == "beat_ix":
+        ix = _index_twr(st, w) - 1
+        return {"now": f"나 {me * 100:+.1f}% · 코스피 {ix * 100:+.1f}%", "cur": None, "goal": None}
+    if mid == "calm":
+        return {"now": f"지금 멘탈 {st['mental']} · 가장 낮았을 때 {tr.get('min_m', 100)}", "cur": None, "goal": None}
+    if mid == "spread":
+        return {"now": f"{tr.get('spread', 0)}주 / {n}주", "cur": tr.get("spread", 0), "goal": n}
+    if mid == "nofomo":
+        return {"now": f"거래 {tr['trades']}번 / 3번 · 추격 매수 {tr['fomo']}번", "cur": min(tr["trades"], 3), "goal": 3}
+    if mid == "profit":
+        return {"now": f"지금 {me * 100:+.1f}% / 목표 +{n}%", "cur": max(0.0, round(me * 100, 1)), "goal": n}
+    if mid == "bigwin":
+        g = tr.get("max_gain", 0) * 100
+        return {"now": f"한 종목 최고 {g:+.0f}% / 목표 +{n}%", "cur": max(0, round(g)), "goal": n}
+    if mid == "nopanic":
+        return {"now": f"거래 {tr['trades']}번 / 5번 · 패닉셀 {tr['panic']}번", "cur": min(tr["trades"], 5), "goal": 5}
+    if mid == "saver":
+        return {"now": f"{tr.get('saves', 0)}번 / {n}번", "cur": tr.get("saves", 0), "goal": n}
+    return {"now": "", "cur": None, "goal": None}
 
 
 # ---------------------------------------------------------------- 결산

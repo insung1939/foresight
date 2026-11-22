@@ -809,3 +809,16 @@ span.code-chip { display: inline-flex; align-items: center; }
 .gi-next { font-size: 13px; background: var(--warn-bg); padding: 8px 10px; border-radius: 10px; width: 100%; }
 .mb-box { font-size: 84px; line-height: 1; background: none; border: 0; cursor: pointer; }
 .mb-prize { font-size: 44px; font-weight: 900; color: #f59f00; }
+
+/* 미션 진행 · 한눈에 보기 */
+.ms-body { display: grid; gap: 3px; min-width: 0; }
+.ms-now { font-size: 11.5px; color: var(--text-2); font-weight: 600; }
+.ms-bar { height: 5px; width: 100%; max-width: 220px; }
+.ms-bar i { background: var(--brand); }
+.glance { background: var(--surface-2); border-radius: 14px; padding: 12px; margin: 10px 0; display: grid; gap: 8px; }
+.glance h4 { margin: 0; font-size: 14px; }
+.glance p { margin: 0; font-size: 13px; line-height: 1.5; }
+.gl-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.gl-grid > div { background: var(--surface); border-radius: 10px; padding: 6px 8px; display: grid; gap: 2px; font-size: 12px; }
+.gl-grid span { color: var(--text-2); font-size: 11px; }
+@media (max-width: 420px) { .gl-grid { grid-template-columns: repeat(2, 1fr); } }

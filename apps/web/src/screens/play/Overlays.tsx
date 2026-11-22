@@ -70,6 +70,8 @@ export function AssetSheet({ v, a, orders, runId, onClose, onOrder, onAsked }: {
       </div>
       <LineChart series={[{ data: a.hist.map((x) => x / a.hist[0]), label: "12주 전 대비", cls: "line-me", bold: true }]} h={260} xLabel={(i) => (i === 0 ? "12주 전" : "지난주")} />
 
+      <Glance a={a} />
+
       <div className="as-facts">
         <div>
           <span className="muted small">지난주 유튜브 언급</span>
@@ -527,7 +529,15 @@ export function MissionsSheet({ open, onClose, v }: { open: boolean; onClose: ()
             <span className="ms-ic" aria-hidden>
               {m.icon}
             </span>
-            <span>{m.label}</span>
+            <span className="ms-body">
+              {m.label}
+              {m.now && <small className="ms-now">{m.now}</small>}
+              {m.state === "ing" && m.goal ? (
+                <span className="hbar ms-bar" aria-hidden>
+                  <i style={{ width: `${Math.min(100, ((m.cur ?? 0) / m.goal) * 100)}%` }} />
+                </span>
+              ) : null}
+            </span>
             <b>{m.state === "done" ? "✓ 달성" : m.state === "fail" ? "✕ 실패" : "진행 중"}</b>
           </li>
         ))}
@@ -732,5 +742,54 @@ export function MileBox({ got, onClose }: { got: { at: number[]; stars: number; 
         )}
       </div>
     </Modal>
+  );
+}
+
+/** 종목 한눈에 보기(후기: 영상 제목·썸네일만으로는 판단할 게 없다) — 지난주까지의 숫자만으로 사실을 정리. 권유 없음 */
+function Glance({ a }: { a: Asset }) {
+  const h = a.hist;
+  if (h.length < 3) return null;
+  const last = h[h.length - 1];
+  const r4 = last / h[Math.max(0, h.length - 5)] - 1;
+  const r12 = last / h[0] - 1;
+  const wk = h.slice(1).map((x, i) => Math.abs(x / h[i] - 1));
+  const swing = wk.reduce((s, x) => s + x, 0) / wk.length;
+  const swingLabel = swing >= 0.08 ? "아주 심함 🎢" : swing >= 0.04 ? "심한 편" : swing >= 0.02 ? "보통" : "잔잔함";
+  const fromTop = last / Math.max(...h) - 1;
+  const ups = h.slice(1).filter((x, i) => x > h[i]).length;
+  const nVid = a.titles.length;
+  const nBull = a.titles.filter((t) => t.st === "b").length;
+  const trend = a.hype > a.hypePrev ? "늘었고" : a.hype < a.hypePrev ? "줄었고" : "그대로고";
+  const sentence =
+    `12주 동안 ${r12 >= 0 ? "+" : ""}${(r12 * 100).toFixed(0)}%, 최근 4주는 ${r4 >= 0 ? "+" : ""}${(r4 * 100).toFixed(0)}% 움직였어요. ` +
+    `한 주에 평균 ${(swing * 100).toFixed(1)}%씩 출렁였고(${swingLabel.replace(/ .*/, "")}), ` +
+    (fromTop < -0.005 ? `12주 최고점보다 ${(-fromTop * 100).toFixed(0)}% 아래예요. ` : "지금이 12주 중 가장 높아요. ") +
+    (a.hype ? `유튜브 언급은 지난주 ${a.hype}건으로 ${trend}, ${nVid ? `대표 영상 ${nVid}개 중 ${nBull}개가 '오른다' 쪽이에요.` : "'오른다' 대 '내린다'는 " + a.bull + " : " + a.bear + "예요."}` : "유튜브에선 조용했어요.");
+  return (
+    <section className="glance" aria-label="한눈에 보기" data-ux="Summary Card · Data Storytelling">
+      <h4>📋 한눈에 보기</h4>
+      <div className="gl-grid">
+        <div>
+          <span>최근 4주</span>
+          <Delta x={r4} />
+        </div>
+        <div>
+          <span>12주</span>
+          <Delta x={r12} />
+        </div>
+        <div>
+          <span>출렁임</span>
+          <b>{swingLabel}</b>
+        </div>
+        <div>
+          <span>오른 주</span>
+          <b>
+            {ups}/{h.length - 1}주
+          </b>
+        </div>
+      </div>
+      <p>{sentence}</p>
+      <p className="muted small">영상 내용 자체는 범고래 박사에게 &lsquo;유튜버들은 뭐라고 해?&rsquo;를 눌러 보세요. 그때까지 나온 영상들을 모아 정리해 줘요.</p>
+    </section>
   );
 }

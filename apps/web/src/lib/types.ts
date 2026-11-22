@@ -39,6 +39,9 @@ export interface Mission {
   icon: string;
   label: string;
   state: "ing" | "done" | "fail";
+  now?: string; // 지금 진행 상황 한 줄
+  cur?: number | null;
+  goal?: number | null;
 }
 
 export interface Cite {
