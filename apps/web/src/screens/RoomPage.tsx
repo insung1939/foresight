@@ -67,7 +67,8 @@ export default function RoomPage() {
                 <li key={f.id} className={p.stars >= f.stars ? "on" : ""}>
                   <span aria-hidden>{p.stars >= f.stars ? f.icon : "🔒"}</span>
                   <b>{f.name}</b>
-                  <span className="muted small">{p.stars >= f.stars ? "방에 있어요" : `⭐${f.stars}`}</span>
+                  <span className="furn-desc">{f.desc}</span>
+                  <span className="muted small">{p.stars >= f.stars ? "✅ 방에 있어요" : `🔒 ⭐${f.stars}`}</span>
                 </li>
               ))}
             </ul>

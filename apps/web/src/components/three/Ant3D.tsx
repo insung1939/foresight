@@ -3,7 +3,13 @@ import { useFrame } from "@react-three/fiber";
 import { useRef, useState } from "react";
 import type { Group } from "three";
 
-export function Ant3D({ color = "#5b3fd6", accent = "#e5383b", position = [0, 0, 0] as [number, number, number], scale = 1, mood = "calm", outfit, face = 0, onTap, walking }: { color?: string; accent?: string; position?: [number, number, number]; scale?: number; mood?: string; outfit?: string | null; face?: number; onTap?: () => void; walking?: { current: boolean } }) {
+/** 몸: 말랑한 플라스틱 장난감 느낌(클리어코트). 동상은 금속 */
+function Body({ color, metal, r = 0.45 }: { color: string; metal: boolean; r?: number }) {
+  return metal ? <meshStandardMaterial color={color} metalness={0.9} roughness={0.28} emissive="#7a5200" emissiveIntensity={0.3} /> : <meshPhysicalMaterial color={color} roughness={r} clearcoat={0.8} clearcoatRoughness={0.25} />;
+}
+
+export function Ant3D({ color = "#5b3fd6", accent = "#e5383b", position = [0, 0, 0] as [number, number, number], scale = 1, mood = "calm", outfit, face = 0, onTap, walking, metal = false }: { color?: string; accent?: string; position?: [number, number, number]; scale?: number; mood?: string; outfit?: string | null; face?: number; onTap?: () => void; walking?: { current: boolean }; metal?: boolean }) {
+
   const g = useRef<Group>(null);
   const [jump, setJump] = useState(0);
   useFrame((st, dt) => {
@@ -33,16 +39,16 @@ export function Ant3D({ color = "#5b3fd6", accent = "#e5383b", position = [0, 0,
       {/* 배·가슴 */}
       <mesh position={[0, 0.35, -0.35]} castShadow>
         <sphereGeometry args={[0.42, 24, 24]} />
-        <meshStandardMaterial color={color} roughness={0.45} />
+        <Body color={color} metal={metal} />
       </mesh>
       <mesh position={[0, 0.5, 0.05]} castShadow>
         <sphereGeometry args={[0.28, 24, 24]} />
-        <meshStandardMaterial color={color} roughness={0.45} />
+        <Body color={color} metal={metal} />
       </mesh>
       {/* 머리 */}
       <mesh position={[0, 0.98, 0.25]} castShadow>
         <sphereGeometry args={[0.46, 32, 32]} />
-        <meshStandardMaterial color={color} roughness={0.4} />
+        <Body color={color} metal={metal} r={0.4} />
       </mesh>
       {/* 눈 */}
       {[-0.17, 0.17].map((x) => (

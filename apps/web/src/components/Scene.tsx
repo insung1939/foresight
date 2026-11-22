@@ -6,7 +6,7 @@ import { FURNITURE } from "../lib/room";
 import { Ant, type CharId, type Mood } from "./Characters";
 import type { Stall } from "./three/Scenes";
 
-const Room3D = lazy(() => import("./three/Scenes").then((m) => ({ default: m.Room })));
+const Room3D = lazy(() => import("./three/Room3D").then((m) => ({ default: m.Room })));
 const Plaza3D = lazy(() => import("./three/Scenes").then((m) => ({ default: m.Plaza })));
 
 const KEY = "ant:3d:v1";
@@ -57,7 +57,7 @@ export function RoomView({ char, items, mood = "happy", height = 300, outfit, ke
           </div>
         </div>
       )}
-      {on && <p className="room-hint">👆 바닥을 누르면 걸어가요 · 가구와 개미를 눌러 보세요{keys ? " · ⌨️ 방향키로도 움직여요" : ""}</p>}
+      {on && <p className="room-hint">👆 바닥을 누르면 걸어가요 · 가구와 개미를 눌러 보세요{keys && window.matchMedia?.("(pointer: fine)").matches ? " · ⌨️ 방향키로도 움직여요 · 끌어서 둘러보기" : keys ? " · 끌어서 둘러보기" : ""}</p>}
       <Toggle on={on} set={set} />
     </div>
   );
