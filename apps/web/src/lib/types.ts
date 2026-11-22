@@ -118,6 +118,8 @@ export interface View {
   maxHold: number;
   fees: Record<Market, { buy: number; sell: number }>;
   headlines: (Title & { k: string })[];
+  goal?: { i: number; stars: number } | null; // 이번 시즌 목표 라이벌(rivals[i])
+  miles?: { at: number; stars: number; hit: boolean }[]; // 중간 상자: 수익률 선
 }
 
 export interface Trade {
@@ -145,6 +147,7 @@ export interface Week {
   rivals: number[];
   salary?: number;
   luck?: { icon: string; text: string; cash?: number; mental?: number } | null;
+  miles?: { at: number; stars: number }[];
 }
 
 export interface Final {
@@ -164,6 +167,8 @@ export interface Final {
   mental: number[];
   missions: Mission[];
   stars: number;
+  goal?: { name: string; ret: number; hit: boolean; stars: number } | null;
+  mileStars?: number;
   char: string;
   len: number;
   place?: { rank: number; total: number; top: number } | null;

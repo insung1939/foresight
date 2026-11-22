@@ -1,12 +1,14 @@
 // 플레이 화면 위에 뜨는 것들: 종목 바텀시트(매매·개미 비서) · 인생 사건 · 리캡 카드 · 큰 주 결과 · 미션 · 첫 판 안내
 import { motion } from "motion/react";
 import { useEffect, useLayoutEffect, useState } from "react";
-import { Orca, Tuber, rivalLine } from "../../components/Characters";
+import { Ant, Orca, Tuber, rivalLine, type CharId } from "../../components/Characters";
 import { CountUp, Delta, LineChart, Mental, Modal, Sheet, toast } from "../../components/ui";
 import { ApiError, api } from "../../lib/api";
+import { sfx } from "../../lib/sfx";
 import { pct, views, won } from "../../lib/format";
 import type { AskOut, Asset, EventCard, View, Week } from "../../lib/types";
 import { sectorOf } from "../../lib/sectors";
+import { nextFurniture, unlockedFurniture, FURNITURE } from "../../lib/room";
 import { MARKET_KO, canBuy, flames, maxBuy, preview, type Order } from "./logic";
 
 // ---------------------------------------------------------------- 종목 시트
@@ -637,6 +639,98 @@ export function ShakyConfirm({ text, onYes, onNo }: { text: string | null; onYes
           </div>
         </div>
       )}
+    </Modal>
+  );
+}
+
+/** 시즌 목표 카드: 시작할 때 '누구를 이기면 무엇을 받는지'를 먼저 보여 준다(돈을 모으는 이유) */
+export function GoalIntro({ open, v, stars, onClose }: { open: boolean; v: View; stars: number; onClose: () => void }) {
+  if (!open || !v.goal || !v.rivals[v.goal.i]) return <Modal open={false} label="">{null}</Modal>;
+  const rival = v.rivals[v.goal.i];
+  const miles = v.miles ?? [];
+  const nf = nextFurniture(stars);
+  return (
+    <Modal open label="이번 시즌 목표">
+      <div className="goal-intro" data-ux="Goal Setting · Reward Preview">
+        <p className="eyebrow">이번 시즌 목표</p>
+        <div className="gi-vs">
+          <span className="gi-me">
+            <Ant char={v.char as CharId} size={44} mood="happy" />나
+          </span>
+          <b>VS</b>
+          <span className="gi-rival">
+            <Tuber name={rival.name} size={44} />
+            {rival.name}
+          </span>
+        </div>
+        <h2>{rival.name}보다 많이 벌기</h2>
+        <p className="muted small">시즌이 끝났을 때 이 유튜버의 &lsquo;오른다&rsquo; 따라 사기보다 수익률이 높으면 성공!</p>
+        <ul className="gi-rewards">
+          <li>
+            <span>🎯</span>
+            <span>목표 성공</span>
+            <b>⭐+{v.goal.stars}</b>
+          </li>
+          {miles.map((m) => (
+            <li key={m.at}>
+              <span>🎁</span>
+              <span>수익률 +{Math.round(m.at * 100)}% 넘는 순간 상자</span>
+              <b>⭐+{m.stars}</b>
+            </li>
+          ))}
+        </ul>
+        {nf && (
+          <p className="gi-next">
+            별 {nf.stars - stars}개만 더 모으면 내 방에 <b>{nf.icon} {nf.name}</b> 등장!
+          </p>
+        )}
+        <button className="btn primary block" onClick={onClose}>
+          좋아, 해 보자 ▶
+        </button>
+      </div>
+    </Modal>
+  );
+}
+
+/** 중간 상자: 수익률 선을 넘는 순간 바로 별(=가구)로 */
+export function MileBox({ got, onClose }: { got: { at: number[]; stars: number; before: number; after: number } | null; onClose: () => void }) {
+  const [open, setOpen] = useState(false);
+  useEffect(() => setOpen(false), [got]);
+  if (!got) return <Modal open={false} label="">{null}</Modal>;
+  const fresh = unlockedFurniture(got.after).filter((x) => !unlockedFurniture(got.before).includes(x));
+  const newF = FURNITURE.filter((f) => fresh.includes(f.id));
+  const nf = nextFurniture(got.after);
+  return (
+    <Modal open label="상자 획득">
+      <div className="mile-box" data-ux="Variable Reward · Celebration">
+        <p className="eyebrow">수익률 +{Math.round(Math.max(...got.at) * 100)}% 돌파!</p>
+        {!open ? (
+          <>
+            <motion.button className="mb-box" onClick={() => (setOpen(true), sfx("level"))} animate={{ rotate: [0, -6, 6, -4, 4, 0] }} transition={{ repeat: Infinity, duration: 1.4, repeatDelay: 0.6 }} aria-label="상자 열기">
+              🎁
+            </motion.button>
+            <h2>가구 상자가 왔어요</h2>
+            <p className="muted small">눌러서 열어 보세요</p>
+          </>
+        ) : (
+          <>
+            <motion.div className="mb-prize" initial={{ scale: 0.4, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}>
+              ⭐ +{got.stars}
+            </motion.div>
+            {newF.length ? (
+              <h2>
+                새 가구: {newF.map((f) => `${f.icon} ${f.name}`).join(", ")}!
+              </h2>
+            ) : (
+              <h2>별 {got.after}개</h2>
+            )}
+            <p className="muted small">{nf ? `${nf.stars - got.after}개 더 모으면 ${nf.icon} ${nf.name}` : "가구를 다 모았어요!"} · 내 방에 바로 들어가요</p>
+            <button className="btn primary block" onClick={onClose}>
+              계속하기
+            </button>
+          </>
+        )}
+      </div>
     </Modal>
   );
 }

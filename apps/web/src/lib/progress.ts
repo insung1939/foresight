@@ -16,9 +16,10 @@ export interface Progress {
   practiced: boolean; // 연습 시즌을 끝냈나
   boxes: string[]; // 행운 상자를 연 판 id
   pity: number; // 연속 '작은 보상' 수(3번이면 다음은 큰 보상 확정)
+  miles: string[]; // 받은 중간 상자: '판id:선'
 }
 
-const EMPTY: Progress = { runs: 0, best: null, bestRet: null, titles: {}, dailyDone: null, streak: 0, seen: [], stars: 0, char: "office", outfit: null, practiced: false, boxes: [], pity: 0 };
+const EMPTY: Progress = { runs: 0, best: null, bestRet: null, titles: {}, dailyDone: null, streak: 0, seen: [], stars: 0, char: "office", outfit: null, practiced: false, boxes: [], pity: 0, miles: [] };
 const ORDER = ["F", "D", "C", "B", "A", "S"];
 
 export const ALL_TITLES: { name: string; icon: string; hint: string; desc: string }[] = [
@@ -99,3 +100,15 @@ export function openBox(id: string): { stars: number; label: string; rare: boole
   return { stars, label, rare: stars >= 3 };
 }
 export const boxOpened = (id: string) => progress().boxes.includes(id);
+
+/** 중간 상자: 서버가 '넘었다'고 한 수익률 선 중 아직 안 받은 것을 바로 별로 넣는다(같은 판·같은 선은 한 번만) */
+export function claimMiles(runId: string, miles: { at: number; stars: number; hit: boolean }[] | undefined): { at: number[]; stars: number; before: number; after: number } | null {
+  if (!miles) return null;
+  const p = progress();
+  const fresh = miles.filter((m) => m.hit && !p.miles.includes(`${runId}:${m.at}`));
+  if (!fresh.length) return null;
+  const before = p.stars;
+  const stars = fresh.reduce((a, m) => a + m.stars, 0);
+  save({ stars: before + stars, miles: [...p.miles.slice(-80), ...fresh.map((m) => `${runId}:${m.at}`)] });
+  return { at: fresh.map((m) => m.at), stars, before, after: before + stars };
+}

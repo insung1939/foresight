@@ -56,9 +56,10 @@ def play(rid: str, strategy, pick: int = 0) -> dict:
         words = " ".join([x["t"] for a in v["assets"] for x in a["titles"]] + [d for a in v["assets"] for d in a["disc"]] + [h["t"] for h in v["headlines"]])
         m = re.search(r"20\d\d|\b\d{2}\.\d{1,2}\.\d{1,2}|\d+월", words)
         assert not m, f"날짜 노출: {words[max(0, m.start() - 20):m.end() + 20]}"
-        choice = pick if v["pending"] else None
+        if v["pending"]:  # 화면처럼 사건에 먼저 답하고(그 답으로 '이번 주 거래 불가'가 될 수 있다) 주문을 낸다
+            v = client.post(f"/v1/runs/{rid}/event", json={"choice": pick}).json()["view"]
         orders = [] if v["skip"] else strategy(v)
-        r = client.post(f"/v1/runs/{rid}/turn", json={"orders": orders, "choice": choice})
+        r = client.post(f"/v1/runs/{rid}/turn", json={"orders": orders, "choice": None})
         assert r.status_code == 200, r.text
         body = r.json()
         assert body["week"]["t"] == v["t"]
@@ -272,7 +273,7 @@ def test_missions_are_judged_at_the_end():
     states = {m["id"]: m["state"] for m in fin["missions"]}
     assert states["nofomo"] == "fail"  # 거래 3번 미만
     assert states["profit"] == "fail"  # 현금만: 0%
-    assert fin["stars"] == sum(1 for m in fin["missions"] if m["state"] == "done") + {"S": 2, "A": 2, "B": 1}.get(fin["grade"], 0)
+    assert fin["stars"] == sum(1 for m in fin["missions"] if m["state"] == "done") + {"S": 2, "A": 2, "B": 1}.get(fin["grade"], 0) + (season.GOAL_STARS if fin["goal"]["hit"] else 0)
 
 
 def test_rag_search_never_returns_future_docs():
@@ -405,3 +406,23 @@ def test_max_buy_never_rejected_for_any_character_or_mood():
                 q = int((v["cash"] * 0.9995) / (a["price"] * (1 + v["fees"][a["market"]]["buy"])))
                 trial = json.loads(json.dumps(st))
                 season.play_turn(trial, [{"k": a["k"], "q": q}])  # GameError 면 테스트 실패
+
+
+def test_season_goal_and_mid_season_boxes():
+    st = season.new_run("free:goal", ["KRX", "US", "CRYPTO"], "free", "office", nonce="g")
+    v = season.view(st)
+    assert v["goal"]["stars"] == season.GOAL_STARS and 0 <= v["goal"]["i"] < len(v["rivals"])
+    assert [m["at"] for m in v["miles"]] == [a for a, _ in season.MILES] and not any(m["hit"] for m in v["miles"])
+    # 수익률이 선을 넘으면 그 주 결과에 상자가 한 번만 나온다
+    st["twr"] = 1.12
+    w = season.play_turn(st, [])
+    got = {m["at"] for m in w["miles"]}
+    if st["twr"] - 1 >= 0.10:
+        assert {0.05, 0.10} <= got
+    again = season.play_turn(st, [])
+    assert not ({m["at"] for m in again["miles"]} & got)
+    while not st["done"]:
+        season.play_turn(st, [], 0 if st.get("pending") is not None else None)
+    f = season.final(st)
+    assert f["goal"]["hit"] == (f["ret"] > f["goal"]["ret"])
+    assert f["mileStars"] == sum(n for a, n in season.MILES if a in st["miles"])

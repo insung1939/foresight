@@ -787,3 +787,25 @@ span.code-chip { display: inline-flex; align-items: center; }
 .m-sec { display: block; font-size: 10.5px; color: var(--text-2); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .sec-info { display: flex; gap: 8px; align-items: flex-start; font-size: 13px; line-height: 1.45; background: var(--surface-2); border-radius: 12px; padding: 10px 12px; margin: 0 0 10px; }
 .sec-info > span:first-child { font-size: 20px; line-height: 1; }
+
+/* 시즌 목표 · 중간 상자 */
+.hud-goal { display: flex; align-items: center; gap: 10px; width: 100%; max-width: 1180px; margin: 6px auto 0; padding: 6px 12px; border-radius: 12px; border: 1.5px solid var(--line); background: var(--surface); font-size: 12px; font-weight: 700; text-align: left; }
+.hud-goal .hg-who { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; flex: 1 1 auto; }
+.hud-goal .hg-gap { white-space: nowrap; }
+.hud-goal.ahead .hg-gap { color: var(--up); }
+.hud-goal.behind .hg-gap { color: var(--down, #1c64d6); }
+.hud-goal .hg-mile { display: flex; align-items: center; gap: 6px; white-space: nowrap; color: var(--text-2); }
+.hud-goal .hbar { width: 56px; height: 6px; }
+.hud-goal .hbar i { background: linear-gradient(90deg, #ffd43b, #f59f00); }
+@media (max-width: 420px) { .hud-goal { gap: 6px; font-size: 11px; } .hud-goal .hbar { width: 36px; } }
+.goal-intro, .mile-box { display: grid; gap: 10px; text-align: center; justify-items: center; }
+.gi-vs { display: flex; align-items: center; gap: 14px; font-weight: 800; }
+.gi-vs b { color: var(--brand); font-size: 18px; }
+.gi-me, .gi-rival { display: grid; justify-items: center; gap: 4px; font-size: 13px; }
+.gi-me { font-size: 13px; } .gi-me::before { content: ""; }
+.gi-rewards { list-style: none; padding: 0; margin: 0; width: 100%; display: grid; gap: 6px; }
+.gi-rewards li { display: grid; grid-template-columns: 24px 1fr auto; gap: 8px; align-items: center; text-align: left; font-size: 13px; padding: 8px 10px; background: var(--surface-2); border-radius: 10px; }
+.gi-rewards b { color: #e8590c; }
+.gi-next { font-size: 13px; background: var(--warn-bg); padding: 8px 10px; border-radius: 10px; width: 100%; }
+.mb-box { font-size: 84px; line-height: 1; background: none; border: 0; cursor: pointer; }
+.mb-prize { font-size: 44px; font-weight: 900; color: #f59f00; }

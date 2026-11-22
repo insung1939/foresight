@@ -197,6 +197,22 @@ function Body({ f, id }: { f: Final; id: string }) {
               <b>{m.state === "done" ? "★ 달성" : "✕"}</b>
             </li>
           ))}
+          {f.goal && (
+            <li className={f.goal.hit ? "done" : "fail"}>
+              <span className="ms-ic">🎯</span>
+              <span>
+                목표: {f.goal.name}보다 많이 벌기 ({f.goal.name} {pct(f.goal.ret)})
+              </span>
+              <b>{f.goal.hit ? `★${f.goal.stars}` : "✕"}</b>
+            </li>
+          )}
+          {!!f.mileStars && (
+            <li className="done">
+              <span className="ms-ic">🎁</span>
+              <span>시즌 중 받은 가구 상자(이미 받음)</span>
+              <b>★{f.mileStars}</b>
+            </li>
+          )}
           {["S", "A", "B"].includes(f.grade) && (
             <li className="done">
               <span className="ms-ic">🏅</span>

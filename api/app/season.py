@@ -82,6 +82,17 @@ def mental_tier(m: int) -> dict:
 
 
 # 시즌 미션(판마다 3개). 숫자는 정규 시즌 기준, 연습 시즌은 short 값
+# 시즌 목표: 라이벌 유튜버 한 명을 정해 이기면 별 +2 (동생 후기 '돈 모아서 뭐 하는지 모르겠다')
+GOAL_STARS = 2
+# 중간 보상: 수익률이 이 선을 처음 넘는 순간 가구 상자(별) — 결산까지 기다리지 않게
+MILES = [(0.05, 1), (0.10, 1), (0.20, 2), (0.35, 3)]
+MILES_SHORT = [(0.02, 1), (0.05, 1), (0.10, 2), (0.20, 3)]  # 8주 연습 시즌
+
+
+def miles_of(st: dict) -> list:
+    return MILES_SHORT if st.get("mode") == "practice" else MILES
+
+
 MISSIONS = {
     "beat2yt": {"label": "유튜버 라이벌 2명 이상 이기기", "icon": "📺"},
     "beat_ix": {"label": "코스피 이기기", "icon": "📊"},
@@ -239,11 +250,12 @@ def new_run(seed: str, markets: list[str] | None = None, mode: str = "free", cha
     if mode == "practice":  # 연습 시즌은 쉬운 사건부터
         deck = [d for d in ["payday", "bonus", "trip", "leading"] if d in EV][:len(cfg["events"])]
     missions = rng.sample(list(MISSIONS), 3)
+    goal = _rng(f"{seed}|goal").randrange(len(rivals)) if rivals else 0  # 목표 라이벌은 무작위(결과를 보고 고르지 않는다)
     luck = _rng(f"{seed}|{nonce}|luck").sample(list(LUCK), 3)  # 카드 3장(판마다 다르게)
     return {
         "v": 2, "seed": seed, "s": s, "t": 0, "len": L, "mode": mode, "char": char if char in CHARS else "office",
         "eventTurns": list(cfg["events"]), "markets": markets,
-        "assets": assets, "rivals": rivals, "events": deck[:len(cfg["events"])], "missions": missions, "asks": 0,
+        "assets": assets, "rivals": rivals, "events": deck[:len(cfg["events"])], "missions": missions, "asks": 0, "goal": goal, "miles": [],
         "cash": ch["cash"], "pos": {}, "mental": ch["mental"], "twr": 1.0, "deposits": ch["cash"],
         "hist": [], "traits": {"trades": 0, "fomo": 0, "panic": 0, "cut": 0, "take": 0, "chase_coin": 0,
                                "hold_weeks": 0, "cash_ratio": 0.0, "max_w": 0.0, "events": [],
@@ -574,6 +586,9 @@ def play_turn(st: dict, orders: list[dict], choice: int | None = None) -> dict:
         "rivals": [round(p["channels"][c]["r"][next_w], 5) for c in st["rivals"]],
         "luck": _weekly_luck(st, t),
     }
+    hit = [at for at, _ in miles_of(st) if st["twr"] - 1 >= at and at not in st.setdefault("miles", [])]
+    st["miles"] += hit
+    week["miles"] = [{"at": at, "stars": n} for at, n in miles_of(st) if at in hit]
     st["hist"].append({"r": week["r"], "v": week["value"], "m": st["mental"], "n": n_trades})
     st["t"] += 1
     st["skip"] = False
@@ -710,6 +725,8 @@ def view(st: dict) -> dict:
         "cash": round(st["cash"]), "value": round(v), "twr": round(st["twr"], 5), "mental": st["mental"],
         "deposits": st["deposits"], "pos": pos, "assets": assets, "index": ix,
         "rivals": rivals, "kospi": round(_index_twr(st, s + t), 5),
+        "goal": {"i": st.get("goal", 0), "stars": GOAL_STARS} if rivals else None,
+        "miles": [{"at": at, "stars": n, "hit": at in st.get("miles", [])} for at, n in miles_of(st)],
         "pending": pending, "hist": st["hist"], "markets": st["markets"], "maxHold": MAX_HOLD,
         # 실제로 매길 수수료(캐릭터·멘탈 구간·행운 카드·큰손 슬리피지 반영) — 화면의 '최대' 계산이 서버와 같도록
         "fees": {m: {"buy": round(_fee(st, m, 0), 6), "sell": round(_fee(st, m, 1), 6)} for m in FEES},
@@ -842,7 +859,16 @@ def final(st: dict) -> dict:
     rank = next(i for i, b in enumerate(board, 1) if b["who"] == "me")
     ms = missions_of(st, board)
     mstars = sum(1 for m in ms if m["state"] == "done") * (2 if st.get("luck") == "stars" else 1)
-    stars = mstars + {"S": 2, "A": 2, "B": 1}.get(grade_of(me, rank), 0) + _char(st).get("star_bonus", 0)
+    goal = None
+    if st["rivals"]:
+        gi = min(st.get("goal", 0), len(st["rivals"]) - 1)
+        gc = st["rivals"][gi]
+        gret = round(_rival_twr(st, gc, end) - 1, 5)
+        goal = {"name": p["channels"][gc]["name"], "ret": gret, "hit": me > gret, "stars": GOAL_STARS}
+    # 중간 상자 별은 화면이 받는 순간 바로 넣어 줬으니 여기 stars 에는 더하지 않는다(mileStars 는 보여 주기용)
+    mile_stars = sum(n for at, n in miles_of(st) if at in st.get("miles", []))
+    stars = (mstars + {"S": 2, "A": 2, "B": 1}.get(grade_of(me, rank), 0) + _char(st).get("star_bonus", 0)
+             + (GOAL_STARS if goal and goal["hit"] else 0))
     reveal = []
     for k, meta in enumerate(st["assets"]):
         a = p["assets"][meta["i"]]
@@ -864,7 +890,7 @@ def final(st: dict) -> dict:
     return {
         "ret": round(me, 5), "value": st["hist"][-1]["v"] if st["hist"] else st["deposits"], "deposits": st["deposits"],
         "grade": grade_of(me, rank), "rank": rank, "of": len(board), "board": board,
-        "title": title_of(st), "reveal": reveal, "curves": curves, "missions": ms, "stars": stars,
+        "title": title_of(st), "reveal": reveal, "curves": curves, "missions": ms, "stars": stars, "goal": goal, "mileStars": mile_stars,
         "mode": st.get("mode", "free"), "char": st.get("char", "office"), "len": slen(st),
         "rivalNames": [p["channels"][c]["name"] for c in st["rivals"]],
         "period": {"from": p["weeks"][s], "to": p["weeks"][end - 1]},

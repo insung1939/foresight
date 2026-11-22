@@ -5,14 +5,14 @@ import { Ant, moodOf, type CharId } from "../components/Characters";
 import { Delta, ErrorState, Loading, Mental, SoundToggle, toast } from "../components/ui";
 import { ApiError, api } from "../lib/api";
 import { pct, won } from "../lib/format";
-import { progress } from "../lib/progress";
+import { claimMiles, progress } from "../lib/progress";
 import { go, query } from "../lib/router";
 import { buzz, sfx } from "../lib/sfx";
 import { KEYS, read, write } from "../lib/storage";
 import type { RunOut, View, Week } from "../lib/types";
 import { canBuy, merge, preview, type Order } from "./play/logic";
 import { RunContext } from "./play/ctx";
-import { AssetSheet, EventModal, LuckPick, MissionsSheet, Recap, ShakyConfirm, Temptation, Tour, WeekModal } from "./play/Overlays";
+import { AssetSheet, EventModal, GoalIntro, LuckPick, MileBox, MissionsSheet, Recap, ShakyConfirm, Temptation, Tour, WeekModal } from "./play/Overlays";
 import { Account, Feed, MarketList, Rivals } from "./play/Panels";
 
 type Tab = "feed" | "market" | "account" | "rivals";
@@ -54,6 +54,8 @@ export default function Play() {
   const [shaky, setShaky] = useState<Order | null>(null);
   const [temptSeen, setTemptSeen] = useState(-1);
   const [luckRun, setLuckRun] = useState<RunOut | null>(null);
+  const [goalSeen, setGoalSeen] = useState(() => !!(id && read(`ant:goal:${id}`)));
+  const [mile, setMile] = useState<ReturnType<typeof claimMiles>>(null);
 
   useEffect(() => {
     if (!id) {
@@ -91,6 +93,13 @@ export default function Play() {
   useEffect(() => {
     if (run) write(KEYS.orders, { id: run.id, t: run.view.t, orders });
   }, [orders, run]);
+
+  // 중간 상자: 서버가 넘었다고 한 수익률 선을 받는 즉시 별로(새로고침해도 한 번만)
+  useEffect(() => {
+    if (!run || isDemo()) return;
+    const got = claimMiles(run.id, run.view.miles);
+    if (got) setMile(got);
+  }, [run]);
 
   const v = run?.view;
   const openSheet = (k: string | null) => {
@@ -272,6 +281,7 @@ export default function Play() {
           </button>
           <SoundToggle />
         </div>
+        {v.goal && v.rivals[v.goal.i] && <GoalBar v={v} />}
         {v.mode === "practice" && v.t === 0 && <p className="hud-note info">🐜 연습 시즌: 8주 · 국내 6종목. 마음 편히 사고팔아 보세요!</p>}
         {v.skip && <p className="hud-note">✈️ 이번 주는 거래할 수 없어요. 그대로 다음 주로 넘어가요.</p>}
         {v.tier.id === "calm" && !v.skip && <p className="hud-note info">😎 침착 보너스: 이번 주 수수료 0원</p>}
@@ -361,6 +371,16 @@ export default function Play() {
         }}
       />
       <WeekModal week={big?.week ?? null} before={big?.before ?? null} after={big?.after.view ?? null} onNext={afterBig} />
+      <GoalIntro
+        open={!goalSeen && v.t === 0 && !v.luckPick && !luckRun && !tour && !isDemo()}
+        v={v}
+        stars={progress().stars}
+        onClose={() => {
+          write(`ant:goal:${run.id}`, true);
+          setGoalSeen(true);
+        }}
+      />
+      <MileBox got={!big && !recap?.after.done ? mile : null} onClose={() => setMile(null)} />
       <MissionsSheet open={missions} onClose={() => setMissions(false)} v={v} />
       {tour && (
         <Tour
@@ -378,5 +398,43 @@ export default function Play() {
       </span>
     </div>
     </RunContext.Provider>
+  );
+}
+
+/** 화면 위 목표 줄: 목표 라이벌과의 차이 + 다음 상자까지 */
+function GoalBar({ v }: { v: View }) {
+  const rival = v.rivals[v.goal!.i];
+  const me = v.twr - 1;
+  const them = rival.twr - 1;
+  const gap = me - them;
+  const next = (v.miles ?? []).find((m) => !m.hit);
+  const prev = [...(v.miles ?? [])].reverse().find((m) => m.hit)?.at ?? 0;
+  const fill = next ? Math.max(0, Math.min(1, (me - prev) / (next.at - prev))) : 1;
+  return (
+    <button
+      className={`hud-goal ${gap >= 0 ? "ahead" : "behind"}`}
+      onClick={() =>
+        toast(`🎯 목표: 시즌이 끝날 때 ${rival.name}보다 많이 벌면 ⭐+${v.goal!.stars}. ${next ? `수익률 +${Math.round(next.at * 100)}%를 넘으면 🎁 상자(⭐+${next.stars})` : "상자는 다 받았어요!"}`, { ms: 5000 })
+      }
+      aria-label={`목표 ${rival.name} 이기기. 지금 ${gap >= 0 ? "앞서는" : "뒤지는"} 중`}
+      data-ux="Goal Gradient · Progress"
+    >
+      <span className="hg-who">
+        🎯 vs {rival.name}
+      </span>
+      <span className="hg-gap">{gap >= 0 ? `▲ ${(gap * 100).toFixed(1)}%p 앞섬` : `▼ ${(-gap * 100).toFixed(1)}%p 뒤짐`}</span>
+      <span className="hg-mile">
+        {next ? (
+          <>
+            🎁 +{Math.round(next.at * 100)}%
+            <span className="hbar" aria-hidden>
+              <i style={{ width: `${fill * 100}%` }} />
+            </span>
+          </>
+        ) : (
+          "🎁 상자 다 받음"
+        )}
+      </span>
+    </button>
   );
 }
