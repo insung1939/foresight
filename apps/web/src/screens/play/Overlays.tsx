@@ -6,6 +6,7 @@ import { CountUp, Delta, LineChart, Mental, Modal, Sheet, toast } from "../../co
 import { ApiError, api } from "../../lib/api";
 import { pct, views, won } from "../../lib/format";
 import type { AskOut, Asset, EventCard, View, Week } from "../../lib/types";
+import { sectorOf } from "../../lib/sectors";
 import { MARKET_KO, canBuy, flames, maxBuy, preview, type Order } from "./logic";
 
 // ---------------------------------------------------------------- 종목 시트
@@ -53,6 +54,12 @@ export function AssetSheet({ v, a, orders, runId, onClose, onOrder, onAsked }: {
         )
       }
     >
+      <p className="sec-info">
+        <span aria-hidden>{sectorOf(a.sector).icon}</span>
+        <span>
+          <b>{sectorOf(a.sector).short}</b> {sectorOf(a.sector).desc}
+        </span>
+      </p>
       <div className="as-price">
         <b>{Math.round(a.price).toLocaleString("ko-KR")}</b>
         <span>

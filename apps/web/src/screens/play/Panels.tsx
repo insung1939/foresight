@@ -6,6 +6,7 @@ import { PlazaView } from "../../components/Scene";
 import { Delta, Spark } from "../../components/ui";
 import { pct, views, won } from "../../lib/format";
 import type { Asset, Market, View } from "../../lib/types";
+import { sectorOf } from "../../lib/sectors";
 import { MARKET_KO, flames, lockHint, preview, weekEmoji, type Order } from "./logic";
 
 const Fire = ({ n }: { n: number }) =>
@@ -17,7 +18,7 @@ const Fire = ({ n }: { n: number }) =>
 
 export function CodeChip({ a, onOpen }: { a: Asset; onOpen: (k: string) => void }) {
   return (
-    <button className={`code-chip m-${a.market}`} onClick={() => onOpen(a.k)}>
+    <button className={`code-chip m-${a.market}`} onClick={() => onOpen(a.k)} title={`${a.code}: ${sectorOf(a.sector).desc}`}>
       {a.code}
     </button>
   );
@@ -76,8 +77,9 @@ export function Feed({ v, onOpen }: { v: View; onOpen: (k: string) => void }) {
         </h3>
         <div className="mover-row">
           {[...movers.slice(0, 2), ...movers.slice(-2).reverse()].map((a) => (
-            <button key={a.k} className="mover" onClick={() => onOpen(a.k)}>
+            <button key={a.k} className="mover" onClick={() => onOpen(a.k)} title={sectorOf(a.sector).desc}>
               <span className="m-code">{a.code}</span>
+              <span className="m-sec">{sectorOf(a.sector).icon} {sectorOf(a.sector).short}</span>
               <Delta x={a.chg} />
             </button>
           ))}
@@ -156,10 +158,13 @@ export function MarketList({ v, orders, onOpen }: { v: View; orders: Order[]; on
           const pend = orders.find((o) => o.k === a.k);
           return (
             <li key={a.k}>
-              <button className={`asset-row ${a.locked ? "locked" : ""}`} onClick={() => onOpen(a.k)}>
+              <button className={`asset-row ${a.locked ? "locked" : ""}`} onClick={() => onOpen(a.k)} title={sectorOf(a.sector).desc}>
                 <span className="ar-name">
                   <b>{a.code}</b>
                   <span className="ar-sub">
+                    <span className="sec-tag">
+                      {sectorOf(a.sector).icon} {sectorOf(a.sector).short}
+                    </span>
                     {MARKET_KO[a.market]}
                     {held ? <span className="tag held">{held.toLocaleString()}주</span> : null}
                     {pend && <span className={`tag ${pend.q > 0 ? "buy" : "sell"}`}>{pend.q > 0 ? "매수 대기" : "매도 대기"}</span>}
