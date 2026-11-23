@@ -1,4 +1,5 @@
 // 플레이(#/play): 한 턴 = 실제 1주. 피드(화제 광장) → (사건) → 매매(개미 비서) → [다음 주 ▶] / [▶▶ 4주] → 리캡
+import { Manual } from "../components/Manual";
 import { AnimatePresence, motion } from "motion/react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Ant, moodOf, type CharId } from "../components/Characters";
@@ -50,6 +51,7 @@ export default function Play() {
   const [recap, setRecap] = useState<{ weeks: Week[]; before: View; after: View } | null>(null);
   const [missions, setMissions] = useState(false);
   const [tour, setTour] = useState(false);
+  const [manual, setManual] = useState(false);
   const [tourStep, setTourStep] = useState(0);
   const [shaky, setShaky] = useState<Order | null>(null);
   const [temptSeen, setTemptSeen] = useState(-1);
@@ -252,6 +254,9 @@ export default function Play() {
           <button className="icon-btn" onClick={() => go("/")} aria-label="홈으로(진행은 저장돼요)">
             ←
           </button>
+          <button className="icon-btn" onClick={() => setManual(true)} aria-label="게임 방법 보기" title="게임 방법">
+            ❓
+          </button>
           <span className="hud-ant" aria-hidden>
             <Ant char={char} mood={moodOf(v.mental)} size={34} />
           </span>
@@ -353,6 +358,7 @@ export default function Play() {
       </div>
 
       <AssetSheet v={v} a={asset} orders={orders} runId={run.id} onClose={() => openSheet(null)} onOrder={addOrder} onAsked={(left) => setRun({ ...run, view: { ...v, asksLeft: left } })} />
+      <Manual open={manual} onClose={() => setManual(false)} />
       <EventModal ev={!big && !tour && !v.luckPick ? v.pending : null} busy={busy === "event"} onChoose={choose} />
       <LuckPick
         open={(v.luckPick || !!luckRun) && !tour}

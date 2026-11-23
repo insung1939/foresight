@@ -2,6 +2,7 @@
 import { motion } from "motion/react";
 import { useEffect, useState } from "react";
 import { Ant, CHAR_META, type CharId } from "../components/Characters";
+import { Manual } from "../components/Manual";
 import { RoomView } from "../components/Scene";
 import { Delta, Sheet, TopBar, toast } from "../components/ui";
 import { api, useAsync } from "../lib/api";
@@ -23,6 +24,8 @@ export default function Home() {
   const [cont, setCont] = useState<RunOut | null>(null);
   const [busy, setBusy] = useState<Mode | null>(null);
   const [pick, setPick] = useState<Mode | null>(null);
+  // 처음 온 사람에게는 설명서를 한 번 저절로 보여 준다(후기: '게임을 이해하기 어렵다')
+  const [manual, setManual] = useState(() => !read("ant:manual") && !read<string>(KEYS.run));
   const board = useAsync(() => api.board(), []);
   const first = !p.practiced && p.runs === 0;
   const playedToday = p.dailyDone === todayKst();
@@ -67,8 +70,11 @@ export default function Home() {
               <br />
               <span className="grad">부자 될 수 있을까?</span>
             </h1>
-            <p className="lead">1,000만 원과 폰 하나 들고, 진짜 있었던 시장의 반년으로 떨어졌다. 유튜버보다, 코스피보다 더 벌 수 있을까?</p>
+            <p className="lead">1,000만 원과 폰 하나 들고, 진짜 있었던 시장의 석 달(12주)로 떨어졌다. 유튜버보다, 코스피보다 더 벌 수 있을까?</p>
             <div className="cta">
+              <button className="btn manual-btn block" onClick={() => setManual(true)} data-ux="Help · Onboarding">
+                📖 게임 방법 1분 만에 보기
+              </button>
               {cont && (
                 <button className="btn primary block" onClick={() => go("/play")}>
                   이어하기 · {cont.view.t + 1}/{cont.view.season}주 <Delta x={cont.view.twr - 1} />
@@ -90,7 +96,7 @@ export default function Home() {
                     {playedToday ? "오늘의 시드 다시 하기(순위엔 첫 판만)" : `🗓️ 오늘의 시드 도전 · 12주(5분)${p.streak ? ` · 🔥${p.streak}일 연속` : ""}`}
                   </button>
                   <button className="btn ghost block" onClick={() => setPick("free")} disabled={!!busy}>
-                    🎲 자유 플레이 · 26주 (무작위 시장)
+                    🎲 자유 플레이 · 12주 (무작위 시장)
                   </button>
                 </>
               )}
@@ -132,6 +138,9 @@ export default function Home() {
               <span>유튜버랑 순위를 겨루고, 모은 별로 내 방을 꾸며요.</span>
             </li>
           </ol>
+          <button className="link center" onClick={() => setManual(true)}>
+            📖 자세한 게임 방법 보기 →
+          </button>
         </section>
 
         <div className="home-grid">
@@ -192,9 +201,18 @@ export default function Home() {
         </p>
       </main>
 
+      <Manual
+        open={manual}
+        onClose={() => {
+          setManual(false);
+          write("ant:manual", true);
+        }}
+        onStart={first && !cont ? () => start("practice") : undefined}
+      />
+
       {/* 내 개미 고르기(킥루의 선수 고르기) */}
       <Sheet open={!!pick} onClose={() => setPick(null)} title="어떤 개미로 갈까요?" wide>
-        <p className="muted small">개미마다 특성이 달라서 전략이 바뀌어요. {pick === "daily" ? "오늘의 시드는 모두 같은 시장에서 12주 · 12종목으로 가볍게 겨뤄요." : "자유 플레이는 시장 구간이 무작위인 26주예요."}</p>
+        <p className="muted small">개미마다 특성이 달라서 전략이 바뀌어요. {pick === "daily" ? "오늘의 시드는 모두 같은 시장에서 12주 · 12종목으로 가볍게 겨뤄요." : "자유 플레이는 시장 구간이 무작위인 12주 · 20종목이에요."}</p>
         <ul className="char-grid" data-ux="Card Select · Radio Group">
           {CHARS.map((c) => {
             const m = CHAR_META[c];

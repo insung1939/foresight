@@ -413,20 +413,21 @@ def test_season_goal_and_mid_season_boxes():
     st = season.new_run("free:goal", ["KRX", "US", "CRYPTO"], "free", "office", nonce="g")
     v = season.view(st)
     assert v["goal"]["stars"] == season.GOAL_STARS and 0 <= v["goal"]["i"] < len(v["rivals"])
-    assert [m["at"] for m in v["miles"]] == [a for a, _ in season.MILES] and not any(m["hit"] for m in v["miles"])
+    assert st["len"] == 12  # 후기: 26주는 너무 길다 → 메인(자유)도 12주
+    assert [m["at"] for m in v["miles"]] == [a for a, _ in season.MILES_MID] and not any(m["hit"] for m in v["miles"])
     # 수익률이 선을 넘으면 그 주 결과에 상자가 한 번만 나온다
     st["twr"] = 1.12
     w = season.play_turn(st, [])
     got = {m["at"] for m in w["miles"]}
-    if st["twr"] - 1 >= 0.10:
-        assert {0.05, 0.10} <= got
+    if st["twr"] - 1 >= 0.07:
+        assert {0.03, 0.07} <= got
     again = season.play_turn(st, [])
     assert not ({m["at"] for m in again["miles"]} & got)
     while not st["done"]:
         season.play_turn(st, [], 0 if st.get("pending") is not None else None)
     f = season.final(st)
     assert f["goal"]["hit"] == (f["ret"] > f["goal"]["ret"])
-    assert f["mileStars"] == sum(n for a, n in season.MILES if a in st["miles"])
+    assert f["mileStars"] == sum(n for a, n in season.MILES_MID if a in st["miles"])
 
 
 def test_short_selling_rules():

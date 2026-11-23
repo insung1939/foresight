@@ -1,6 +1,6 @@
 """「타임슬립 개미」 게임 엔진 — 서버가 모든 규칙을 가진다(화면은 보여주기만).
 
-한 판 = 26턴(자유) · 12턴(오늘의 시드) · 8턴(연습 시즌), 한 턴 = 실제 1주.
+한 판 = 12턴(자유·오늘의 시드) · 8턴(연습 시즌), 한 턴 = 실제 1주.
   턴 t 의 월요일: 지난주(s+t-1)까지의 종가·언급·공시만 보인다. 지난주 종가로 사고판다.
   [다음 주 ▶]: 이번 주(s+t) 종가로 평가가 바뀐다 → 수익률·멘탈·라이벌 순위 갱신.
 미래 정보 차단: 화면에 가는 값은 view() 가 만든다. 다음 주 가격은 턴을 제출해야 계산되고, 진짜 이름·날짜는 끝나야 공개된다.
@@ -19,11 +19,13 @@ from pathlib import Path
 
 from .settings import DATA_DIR
 
-SEASON = 26
+# 후기: 26주는 너무 길어서 끝까지 안 한다 → 메인(자유)도 12주. 옛 판(len 없음)은 26주로 본다
+SEASON = 12
+OLD_SEASON = 26
 START_CASH = 10_000_000
 HIST = 12                 # 차트에 보여줄 지난 주 수
 UNIVERSE = {"KRX": 10, "US": 5, "CRYPTO": 5}
-EVENT_TURNS = (3, 7, 11, 15, 19, 23)
+EVENT_TURNS = (3, 7, 10)
 # 오늘의 시드는 짧고 가볍게(후기: '너무 길고 머리를 많이 쓴다') — 12주 · 국내 6 + 미국 3 + 코인 3
 DAILY_LEN = 12
 DAILY_UNIVERSE = {"KRX": 6, "US": 3, "CRYPTO": 3}
@@ -36,7 +38,7 @@ FEES = {"KRX": (0.00015, 0.00215), "US": (0.0025, 0.0025), "CRYPTO": (0.0005, 0.
 MARKET_KO = {"KRX": "국내 주식", "US": "미국 주식", "CRYPTO": "코인"}
 LETTERS = "ABCDEFGHJK"
 
-# 시즌 종류: 연습(첫 판, 8주·국내 6종목) · 오늘의 시드(12주·12종목) · 자유(26주·20종목)
+# 시즌 종류: 연습(첫 판, 8주·국내 6종목) · 오늘의 시드(12주·12종목, 모두 같은 시장) · 자유(12주·20종목, 무작위 시장)
 MODES = {
     "practice": {"len": 8, "universe": {"KRX": 6}, "events": (3, 6)},
     "daily": {"len": DAILY_LEN, "universe": DAILY_UNIVERSE, "events": (3, 7, 10)},
@@ -274,7 +276,7 @@ def new_run(seed: str, markets: list[str] | None = None, mode: str = "free", cha
 
 
 def slen(st: dict) -> int:
-    return st.get("len", SEASON)
+    return st.get("len", OLD_SEASON)
 
 
 def _char(st: dict) -> dict:
@@ -727,7 +729,7 @@ def play_turn(st: dict, orders: list[dict], choice: int | None = None) -> dict:
         st["cash"] += salary
         st["deposits"] += salary
         week["salary"] = salary
-    ets = st.get("eventTurns", list(EVENT_TURNS))
+    ets = st.get("eventTurns", [3, 7, 11, 15, 19, 23])  # 옛 26주 판
     if st["t"] >= slen(st):
         st["done"] = True
     elif st["t"] in ets:
