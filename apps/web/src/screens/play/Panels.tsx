@@ -7,7 +7,7 @@ import { Delta, Spark } from "../../components/ui";
 import { pct, views, won } from "../../lib/format";
 import type { Asset, Market, View } from "../../lib/types";
 import { sectorOf } from "../../lib/sectors";
-import { MARKET_KO, flames, lockHint, preview, weekEmoji, type Order } from "./logic";
+import { MARKET_KO, flames, lockHint, orderVerb, preview, weekEmoji, type Order } from "./logic";
 
 const Fire = ({ n }: { n: number }) =>
   n ? (
@@ -27,31 +27,27 @@ export function CodeChip({ a, onOpen }: { a: Asset; onOpen: (k: string) => void 
 // ---------------------------------------------------------------- 피드
 export function Feed({ v, onOpen }: { v: View; onOpen: (k: string) => void }) {
   const byK = useMemo(() => Object.fromEntries(v.assets.map((a) => [a.k, a])), [v.assets]);
-  const movers = [...v.assets].sort((a, b) => b.chg - a.chg);
   const ixChg = v.index.length > 1 ? v.index[v.index.length - 1] / v.index[v.index.length - 2] - 1 : 0;
   return (
     <div className="feed">
       <section aria-labelledby="plz">
         <h3 id="plz" className="sec-title">
-          🏟️ 화제 광장 <span className="muted small">지난주 개미들이 몰린 곳</span>
+          🏟️ 화제 광장 <span className="muted small">지난주 개미가 몰린 종목</span>
         </h3>
         <PlazaView stalls={v.assets.filter((a) => !a.locked).map((a) => ({ k: a.k, code: a.code, hype: a.hype, chg: a.chg }))} onOpen={onOpen} />
       </section>
-      <section className="card market-line" aria-label="시장 한 줄">
-        <div>
-          <p className="eyebrow">지난주 시장</p>
-          <p className="big">
-            개미지수 <b>{v.index[v.index.length - 1].toLocaleString("ko-KR")}</b> <Delta x={ixChg} />
-          </p>
-          <p className="muted small">실제 코스피를 1,000에서 시작하게 바꾼 값이에요</p>
-        </div>
-        <Spark data={v.index} w={96} h={40} />
+      <section className="market-line" aria-label="지난주 시장" title="개미지수 = 실제 코스피를 시즌 시작 때 1,000으로 맞춘 값">
+        <span className="muted small">지난주 시장</span>
+        <b>개미지수 {v.index[v.index.length - 1].toLocaleString("ko-KR")}</b>
+        <Delta x={ixChg} />
+        <Spark data={v.index} w={64} h={24} />
       </section>
 
       <section aria-labelledby="hl">
         <h3 id="hl" className="sec-title">
           📺 지난주 인기 영상 <span className="muted small">누르면 그 종목으로 가요</span>
         </h3>
+        <p className="mask-note">🕶️ 회사 이름·주가 수준·날짜는 가렸어요. 회사를 짐작해도 &lsquo;언제&rsquo;인지는 끝날 때까지 비밀이라 다음 주 가격은 아무도 몰라요.</p>
         {v.headlines.length === 0 && <p className="empty">지난주엔 우리 종목을 다룬 영상이 없었어요. 조용한 주예요.</p>}
         <ul className="yt-list">
           {v.headlines.map((h, i) => (
@@ -69,21 +65,6 @@ export function Feed({ v, onOpen }: { v: View; onOpen: (k: string) => void }) {
             </li>
           ))}
         </ul>
-      </section>
-
-      <section aria-labelledby="mv" className="movers">
-        <h3 id="mv" className="sec-title">
-          ⚡ 지난주 급등·급락
-        </h3>
-        <div className="mover-row">
-          {[...movers.slice(0, 2), ...movers.slice(-2).reverse()].map((a) => (
-            <button key={a.k} className="mover" onClick={() => onOpen(a.k)} title={sectorOf(a.sector).desc}>
-              <span className="m-code">{a.code}</span>
-              <span className="m-sec">{sectorOf(a.sector).icon} {sectorOf(a.sector).short}</span>
-              <Delta x={a.chg} />
-            </button>
-          ))}
-        </div>
       </section>
 
     </div>
@@ -166,8 +147,8 @@ export function MarketList({ v, orders, onOpen }: { v: View; orders: Order[]; on
                       {sectorOf(a.sector).icon} {sectorOf(a.sector).short}
                     </span>
                     {MARKET_KO[a.market]}
-                    {held ? <span className="tag held">{held.toLocaleString()}주</span> : null}
-                    {pend && <span className={`tag ${pend.q > 0 ? "buy" : "sell"}`}>{pend.q > 0 ? "매수 대기" : "매도 대기"}</span>}
+                    {held ? <span className={`tag ${held < 0 ? "short" : "held"}`}>{held < 0 ? `🐻 공매도 ${(-held).toLocaleString()}주` : `${held.toLocaleString()}주`}</span> : null}
+                    {pend && <span className={`tag ${pend.s ? "short" : pend.q > 0 ? "buy" : "sell"}`}>{orderVerb(v, pend)} 대기</span>}
                   </span>
                 </span>
                 <Spark data={a.hist} />
@@ -191,7 +172,9 @@ export function MarketList({ v, orders, onOpen }: { v: View; orders: Order[]; on
 export function Account({ v, orders, onOpen, onCancel, onOrder }: { v: View; orders: Order[]; onOpen: (k: string) => void; onCancel: (k: string) => void; onOrder: (o: Order) => void }) {
   const byK = Object.fromEntries(v.assets.map((a) => [a.k, a]));
   const p = preview(v, orders);
-  const invested = v.value - v.cash;
+  const longV = v.pos.reduce((s, x) => s + (x.qty > 0 ? x.value : 0), 0);
+  const debt = v.pos.reduce((s, x) => s + (x.qty < 0 ? -x.value : 0), 0);
+  const gross = longV + Math.max(0, v.cash);
   return (
     <div className="account">
       <section className="card acct-sum">
@@ -200,12 +183,31 @@ export function Account({ v, orders, onOpen, onCancel, onOrder }: { v: View; ord
         <p>
           누적 수익률 <Delta x={v.twr - 1} /> <span className="muted small">· 넣은 돈 {won(v.deposits)}</span>
         </p>
-        <div className="alloc" aria-label={`주식·코인 ${pct(invested / v.value, 0)}, 현금 ${pct(v.cash / v.value, 0)}`}>
-          <i style={{ width: `${(invested / v.value) * 100}%` }} />
+        <div className="alloc" aria-label={`주식·코인 ${pct(longV / (gross || 1), 0)}, 현금 ${pct(Math.max(0, v.cash) / (gross || 1), 0)}`}>
+          <i style={{ width: `${(longV / (gross || 1)) * 100}%` }} />
         </div>
-        <p className="muted small">
-          투자 {won(invested)} · 현금 {won(v.cash)}
-        </p>
+        <dl className="acct-grid">
+          <div>
+            <dt>💵 현금</dt>
+            <dd>{won(v.cash)}</dd>
+          </div>
+          <div>
+            <dt>📦 주식·코인</dt>
+            <dd>{longV ? won(longV) : "없음"}</dd>
+          </div>
+          {debt > 0 && (
+            <div className="short">
+              <dt>🐻 공매도 갚을 돈</dt>
+              <dd>−{won(debt)}</dd>
+            </div>
+          )}
+          {orders.length > 0 && (
+            <div className="after">
+              <dt>🧾 주문 체결 뒤 현금</dt>
+              <dd>{won(p.cash)}</dd>
+            </div>
+          )}
+        </dl>
       </section>
 
       <RulesPanel v={v} />
@@ -219,45 +221,54 @@ export function Account({ v, orders, onOpen, onCancel, onOrder }: { v: View; ord
             {orders.map((o) => {
               const a = byK[o.k];
               return (
-                <li key={o.k}>
-                  <span className={`tag ${o.q > 0 ? "buy" : "sell"}`}>{o.q > 0 ? "사기" : "팔기"}</span>
+                <li key={o.k + (o.s ? ":s" : "")}>
+                  <span className={`tag ${o.s ? "short" : o.q > 0 ? "buy" : "sell"}`}>{orderVerb(v, o)}</span>
                   <b>{a.code}</b> {Math.abs(o.q).toLocaleString()}주
                   <span className="muted small"> ≈ {won(Math.abs(o.q) * a.price)}</span>
-                  <button className="icon-btn" onClick={() => onCancel(o.k)} aria-label={`${a.code} 주문 취소`}>
+                  <button className="icon-btn" onClick={() => onCancel(o.k + (o.s ? ":s" : ""))} aria-label={`${a.code} 주문 취소`}>
                     ✕
                   </button>
                 </li>
               );
             })}
           </ul>
-          <p className="muted small">주문 뒤 현금 {won(p.cash)}</p>
+          <p className="muted small">주문 뒤 현금 {won(p.cash)}{p.shortUsed > 0 ? ` · 공매도 ${won(p.shortUsed)}` : ""}</p>
         </section>
       )}
 
       <section aria-labelledby="hd">
         <h3 id="hd" className="sec-title">
-          💼 보유 종목 {v.pos.length}/{v.maxHold}
+          💼 보유 종목 {v.pos.length}/{v.maxHold} {v.pos.some((x) => x.short) && <span className="muted small">공매도 포함</span>}
         </h3>
         {v.pos.length === 0 ? (
           <p className="empty">아직 아무것도 안 샀어요. 시장 탭에서 종목을 눌러 보세요.</p>
         ) : (
           <ul className="pos-list">
             {v.pos.map((x) => (
-              <li key={x.k} className="pos-row">
+              <li key={x.k} className={`pos-row ${x.short ? "short" : ""}`}>
                 <button className="pos" onClick={() => onOpen(x.k)}>
                   <span>
                     <b>{byK[x.k].code}</b>
-                    <span className="muted small"> {x.qty.toLocaleString()}주 · 평단 {Math.round(x.cost).toLocaleString()}</span>
+                    <span className="muted small">
+                      {" "}
+                      {x.short ? `🐻 공매도 ${(-x.qty).toLocaleString()}주 · 판 값` : `${x.qty.toLocaleString()}주 · 평단`} {Math.round(x.cost).toLocaleString()}
+                    </span>
                   </span>
                   <span className="pos-r">
-                    <b>{won(x.value)}</b>
+                    <b>{x.short ? `갚을 돈 ${won(-x.value)}` : won(x.value)}</b>
                     <Delta x={x.gain} />
                   </span>
                 </button>
-                <button className="sell-all" disabled={v.skip || orders.some((o) => o.k === x.k)} onClick={() => onOrder({ k: x.k, q: -x.qty })} aria-label={`${byK[x.k].code} 전부 팔기 주문`} data-ux="Quick Action">
+                <button
+                  className="sell-all"
+                  disabled={v.skip || orders.some((o) => o.k === x.k)}
+                  onClick={() => onOrder({ k: x.k, q: -x.qty })}
+                  aria-label={`${byK[x.k].code} ${x.short ? "전부 갚기" : "전부 팔기"} 주문`}
+                  data-ux="Quick Action"
+                >
                   전부
                   <br />
-                  팔기
+                  {x.short ? "갚기" : "팔기"}
                 </button>
               </li>
             ))}
@@ -319,8 +330,8 @@ export function Rivals({ v }: { v: View }) {
 
 // ---------------------------------------------------------------- 전략 카드(자동 규칙)
 const RULE_CARDS = [
-  { id: "stop", icon: "✂️", name: "자동 손절", desc: "산 값보다 10% 떨어지면 전부 팔아요" },
-  { id: "take", icon: "💎", name: "자동 익절", desc: "산 값보다 20% 오르면 절반 팔아요" },
+  { id: "stop", icon: "✂️", name: "자동 손절", desc: "손실이 10%를 넘으면 전부 정리해요(공매도는 갚아요)" },
+  { id: "take", icon: "💎", name: "자동 익절", desc: "수익이 20%를 넘으면 절반 정리해요" },
   { id: "dca", icon: "🐷", name: "적립식", desc: "매주 50만 원어치 코스피 ETF 를 사요" },
   { id: "cap", icon: "🧺", name: "몰빵 방지", desc: "한 종목이 40%를 넘으면 넘는 만큼 팔아요" },
 ];

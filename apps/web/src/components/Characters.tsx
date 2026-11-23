@@ -5,13 +5,22 @@ import type { CSSProperties } from "react";
 export type CharId = "office" | "student" | "whale" | "holder" | "trader" | "coin";
 export type Mood = "happy" | "calm" | "worried" | "panic" | "wow";
 
-export const CHAR_META: Record<CharId, { name: string; body: string; accent: string; perk: string; icon: string; unlock?: string }> = {
-  office: { name: "직장인 개미", body: "#5b3fd6", accent: "#e5383b", perk: "4주마다 월급 +50만 원", icon: "💼" },
-  student: { name: "대학생 개미", body: "#1f9d6b", accent: "#1d1640", perk: "시작 600만 원 · 멘탈 회복 2배 · 끝내면 별 +1", icon: "🎓" },
-  whale: { name: "큰손 개미", body: "#c78a00", accent: "#2b2b2b", perk: "시작 3,000만 원 · 사건 금액 3배 · 살 때 0.3% 비쌈 · 손실에 약함", icon: "💰", unlock: "한 판 끝내면" },
-  holder: { name: "존버 개미", body: "#6b6984", accent: "#3c3a55", perk: "멘탈이 20 아래로 안 떨어짐 · 수수료 2배", icon: "🗿" },
-  trader: { name: "단타 개미", body: "#e8590c", accent: "#ffd43b", perk: "수수료 절반 · 쉬어도 멘탈 회복 없음", icon: "⚡" },
-  coin: { name: "코인 개미", body: "#f59f00", accent: "#5b3fd6", perk: "코인 처음부터 · 코인 수수료 0 · 주식 수수료 2배 · 시작 멘탈 50", icon: "🪙", unlock: "B 등급 받으면" },
+// cash = 시작 금액(서버 season.CHARS 와 같게) — 카드에 따로 크게 보여 준다(후기: 직장인은 시작 금액이 안 보임)
+export const CHAR_META: Record<CharId, { name: string; body: string; accent: string; perk: string; cash: number; icon: string; unlock?: string }> = {
+  office: { name: "직장인 개미", body: "#5b3fd6", accent: "#e5383b", cash: 10_000_000, perk: "4주마다 월급 +50만 원", icon: "💼" },
+  student: { name: "대학생 개미", body: "#1f9d6b", accent: "#1d1640", cash: 6_000_000, perk: "멘탈 회복 2배 · 끝내면 별 +1", icon: "🎓" },
+  whale: {
+    name: "큰손 개미",
+    body: "#c78a00",
+    accent: "#2b2b2b",
+    cash: 30_000_000,
+    perk: "인생 사건의 돈이 3배(월급·성과급 +100만 → +300만, 수리비 −80만 → −240만) · 큰돈이라 살 때 0.3% 비쌈 · 잃으면 멘탈이 더 깎임",
+    icon: "💰",
+    unlock: "한 판 끝내면",
+  },
+  holder: { name: "존버 개미", body: "#6b6984", accent: "#3c3a55", cash: 10_000_000, perk: "멘탈이 20 아래로 안 떨어짐 · 수수료 2배", icon: "🗿" },
+  trader: { name: "단타 개미", body: "#e8590c", accent: "#ffd43b", cash: 10_000_000, perk: "수수료 절반 · 쉬어도 멘탈 회복 없음", icon: "⚡" },
+  coin: { name: "코인 개미", body: "#f59f00", accent: "#5b3fd6", cash: 10_000_000, perk: "코인 처음부터 · 코인 수수료 0 · 주식 수수료 2배 · 시작 멘탈 50", icon: "🪙", unlock: "B 등급 받으면" },
 };
 
 export const moodOf = (mental: number): Mood => (mental >= 80 ? "happy" : mental >= 55 ? "calm" : mental >= 30 ? "worried" : "panic");

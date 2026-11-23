@@ -232,7 +232,7 @@ function Body({ m }: { m: Meta }) {
           </div>
           <div>
             <b>{n(m.plays.done)}</b>
-            <span>26주 완주</span>
+            <span>완주한 판</span>
           </div>
           <div>
             <b>{m.plays.median !== null ? pct(m.plays.median) : "-"}</b>

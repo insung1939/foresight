@@ -1,6 +1,6 @@
 """「타임슬립 개미」 API.
 
-흐름: POST /v1/runs(새 판) → POST /v1/runs/{id}/turn × 26(한 주씩) → GET /v1/runs/{id}/final(결산·정체 공개)
+흐름: POST /v1/runs(새 판) → POST /v1/runs/{id}/turn × 12·26(한 주씩) → GET /v1/runs/{id}/final(결산·정체 공개)
 규칙은 season.py, 화면은 보여주기만 한다. 다음 주 가격·진짜 이름·날짜는 턴을 제출하거나 판이 끝나야 나간다.
 """
 from __future__ import annotations
@@ -92,7 +92,8 @@ class NewRun(BaseModel):
 
 class Order(BaseModel):
     k: str = Field(..., description="종목 번호(view.assets[].k)")
-    q: int = Field(..., description="수량. 사면 +, 팔면 −")
+    q: int = Field(..., description="수량. 사면 +(공매도 종목이면 갚기), 팔면 −")
+    s: bool = Field(False, description="공매도(q 는 −). 가진 게 없는 종목을 빌려서 판다")
 
 
 class Turn(BaseModel):

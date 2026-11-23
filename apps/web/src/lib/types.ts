@@ -72,8 +72,9 @@ export interface Position {
   qty: number;
   cost: number;
   price: number;
-  value: number;
-  gain: number;
+  value: number; // 공매도면 음수(갚을 돈)
+  gain: number; // 내 쪽 수익률(공매도는 떨어지면 +)
+  short?: boolean;
 }
 
 export interface Rival {
@@ -119,6 +120,7 @@ export interface View {
   hist: { r: number; v: number; m: number; n: number }[];
   markets: Market[];
   maxHold: number;
+  short?: { cap: number; used: number; stop: number }; // 공매도 한도(총자산 대비)·지금 공매도 총액·강제 청산 선
   fees: Record<Market, { buy: number; sell: number }>;
   headlines: (Title & { k: string })[];
   goal?: { i: number; stars: number } | null; // 이번 시즌 목표 라이벌(rivals[i])
@@ -131,6 +133,8 @@ export interface Trade {
   px: number;
   auto?: boolean;
   gain?: number;
+  short?: boolean; // 공매도(빌려서 팔기)
+  cover?: boolean; // 공매도 갚기
 }
 
 export interface Week {

@@ -3,6 +3,7 @@
     cd api && ../.venv/bin/python -m pytest -q
 """
 import json
+import pytest
 import os
 import random
 import re
@@ -79,13 +80,13 @@ def buy_hot(v):
 def test_full_run_daily_hides_future_and_ranks():
     r = client.post("/v1/runs", json={"mode": "daily", "nickname": "테스트개미"}).json()
     v = r["view"]
-    assert v["t"] == 0 and v["season"] == 26 and v["cash"] == season.START_CASH
-    assert len(v["assets"]) == sum(season.UNIVERSE.values()) + 1  # + 코스피 ETF
+    assert v["t"] == 0 and v["season"] == season.DAILY_LEN and v["cash"] == season.START_CASH
+    assert len(v["assets"]) == sum(season.DAILY_UNIVERSE.values()) + 1  # + 코스피 ETF
     assert v["assets"][0]["code"] == season.ETF_CODE
     end = play(r["id"], buy_hot)
     fin = end["final"]
     assert fin["grade"] in "SABCDF" and 1 <= fin["rank"] <= fin["of"] == 5
-    assert len(fin["weeks"]) == 26 and len(fin["curves"]["me"]) == 27
+    assert len(fin["weeks"]) == season.DAILY_LEN and len(fin["curves"]["me"]) == season.DAILY_LEN + 1
     # 결산에서만 진짜 이름이 나온다
     assert all(x["name"] for x in fin["reveal"])
     # 끝난 판은 더 못 민다
@@ -426,3 +427,32 @@ def test_season_goal_and_mid_season_boxes():
     f = season.final(st)
     assert f["goal"]["hit"] == (f["ret"] > f["goal"]["ret"])
     assert f["mileStars"] == sum(n for a, n in season.MILES if a in st["miles"])
+
+
+def test_short_selling_rules():
+    """공매도: 받은 돈은 현금으로, 총자산은 그대로(수수료만큼 빠짐) · 한도 50% · 가진 종목은 공매도 불가 · 갚기"""
+    st = season.new_run("short-test", mode="free", char="office")
+    w = st["s"] - 1
+    v0 = season.value(st, w)
+    k = "1"
+    px = season.price(st, k, w)
+    qty = int(v0 * 0.3 / px)
+    note: list = []
+    season._short(st, k, qty, w, note)
+    assert st["pos"][k]["qty"] == -qty and st["cash"] > v0
+    assert abs(season.value(st, w) - v0) < v0 * 0.01  # 공매도만으로 자산이 늘지 않는다
+    with pytest.raises(season.GameError):
+        season._short(st, "2", int(v0 * 0.3 / season.price(st, "2", w)), w, note)  # 한도 50% 초과
+    with pytest.raises(season.GameError):
+        season._sell(st, k, 1, w, note)  # 공매도 종목은 팔기 대신 갚기
+    season._buy(st, k, qty, w, note)  # 갚기
+    assert k not in st["pos"]
+
+
+def test_short_turn_and_view():
+    st = season.new_run("short-turn", mode="free", char="office")
+    week = season.play_turn(st, [{"k": "1", "q": -10, "s": True}])
+    v = season.view(st)
+    p = next(x for x in v["pos"] if x["k"] == "1")
+    assert p["short"] and p["qty"] == -10 and v["short"]["used"] > 0
+    assert "1" in week["mine"]

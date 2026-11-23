@@ -9,26 +9,33 @@ import { pct, views, won } from "../../lib/format";
 import type { AskOut, Asset, EventCard, View, Week } from "../../lib/types";
 import { sectorOf } from "../../lib/sectors";
 import { nextFurniture, unlockedFurniture, FURNITURE } from "../../lib/room";
-import { MARKET_KO, canBuy, flames, maxBuy, preview, type Order } from "./logic";
+import { MARKET_KO, canBuy, canShort, tradeVerb, flames, maxBuy, maxCover, maxShort, preview, type Order } from "./logic";
 
 // ---------------------------------------------------------------- 종목 시트
 export function AssetSheet({ v, a, orders, runId, onClose, onOrder, onAsked }: { v: View; a: Asset | null; orders: Order[]; runId: string; onClose: () => void; onOrder: (o: Order) => void; onAsked: (left: number) => void }) {
-  const [side, setSide] = useState<"buy" | "sell">("buy");
+  const [side, setSide] = useState<"buy" | "sell" | "short">("buy");
   const [qty, setQty] = useState(0);
   const p = preview(v, orders);
-  const held = a ? (p.qty[a.k] ?? 0) : 0;
+  const held = a ? (p.qty[a.k] ?? 0) : 0; // 공매도면 음수
+  const shorted = held < 0;
   useEffect(() => {
-    setSide(held && a && canBuy(v, p, a) ? "buy" : held ? "sell" : "buy");
+    setSide(held > 0 && a && canBuy(v, p, a) ? "buy" : held > 0 ? "sell" : "buy");
     setQty(0);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [a?.k]);
   if (!a) return <Sheet open={false} onClose={onClose} title="">{null}</Sheet>;
-  const block = side === "buy" ? canBuy(v, p, a) : v.skip ? "이번 주는 거래할 수 없어요" : held ? null : "가진 수량이 없어요";
-  const limit = side === "buy" ? maxBuy(v, p, a) : held;
+  const cover = side === "buy" && shorted; // 공매도한 종목의 '사기' = 갚기
+  const block =
+    side === "short" ? canShort(v, p, a)
+    : cover ? (v.skip ? "이번 주는 거래할 수 없어요" : maxCover(v, p, a) < 1 ? "갚을 현금이 부족해요" : null)
+    : side === "buy" ? canBuy(v, p, a)
+    : v.skip ? "이번 주는 거래할 수 없어요" : held > 0 ? null : "가진 수량이 없어요";
+  const limit = side === "short" ? maxShort(v, p, a) : cover ? maxCover(v, p, a) : side === "buy" ? maxBuy(v, p, a) : held;
   const fee = side === "buy" ? v.fees[a.market].buy : v.fees[a.market].sell;
   const amount = qty * a.price;
   const pos = v.pos.find((x) => x.k === a.k);
-  const chips = side === "buy" ? [0.1, 0.25, 0.5, 1] : [0.25, 0.5, 1];
+  const chips = side === "buy" && !cover ? [0.1, 0.25, 0.5, 1] : side === "short" ? [0.25, 0.5, 1] : [0.25, 0.5, 1];
+  const verb = side === "short" ? "공매도" : cover ? "갚기" : side === "buy" ? "사기" : "팔기";
   const hypeUp = a.hype - a.hypePrev;
   return (
     <Sheet
@@ -44,14 +51,14 @@ export function AssetSheet({ v, a, orders, runId, onClose, onOrder, onAsked }: {
           <p className="inline-alert">{block}</p>
         ) : (
           <button
-            className={`btn block ${side === "buy" ? "buy" : "sell"}`}
+            className={`btn block ${side === "buy" ? "buy" : side === "short" ? "short" : "sell"}`}
             disabled={qty < 1}
             onClick={() => {
-              onOrder({ k: a.k, q: side === "buy" ? qty : -qty });
+              onOrder(side === "short" ? { k: a.k, q: -qty, s: true } : { k: a.k, q: side === "buy" ? qty : -qty });
               onClose();
             }}
           >
-            {qty < 1 ? "수량을 골라 주세요" : `${qty.toLocaleString()}주 ${side === "buy" ? "사기" : "팔기"} 주문 담기 · ${won(amount)}`}
+            {qty < 1 ? "수량을 골라 주세요" : `${qty.toLocaleString()}주 ${verb} 주문 담기 · ${won(amount)}`}
           </button>
         )
       }
@@ -68,6 +75,11 @@ export function AssetSheet({ v, a, orders, runId, onClose, onOrder, onAsked }: {
           지난주 <Delta x={a.chg} />
         </span>
       </div>
+      {pos && (
+        <p className={`as-held top ${pos.short ? "short" : ""}`}>
+          {pos.short ? `🐻 공매도 ${(-pos.qty).toLocaleString()}주 · 판 값` : `💼 보유 ${pos.qty.toLocaleString()}주 · 평단`} {Math.round(pos.cost).toLocaleString()} · 내 수익 <Delta x={pos.gain} />
+        </p>
+      )}
       <LineChart series={[{ data: a.hist.map((x) => x / a.hist[0]), label: "12주 전 대비", cls: "line-me", bold: true }]} h={260} xLabel={(i) => (i === 0 ? "12주 전" : "지난주")} />
 
       <Glance a={a} />
@@ -109,29 +121,33 @@ export function AssetSheet({ v, a, orders, runId, onClose, onOrder, onAsked }: {
       )}
       {!a.titles.length && <p className="empty">지난주엔 이 종목을 다룬 영상이 없었어요. 조용한 종목은 차트와 화제성(🔥)으로 판단해요.</p>}
 
-      {pos && (
-        <p className="as-held">
-          보유 {pos.qty.toLocaleString()}주 · 평단 {Math.round(pos.cost).toLocaleString()} · <Delta x={pos.gain} />
-        </p>
-      )}
-
       <Assistant v={v} a={a} runId={runId} onAsked={onAsked} />
 
       <div className="trade">
-        <div className="seg two" role="tablist" aria-label="사기 또는 팔기">
+        <div className="seg three" role="tablist" aria-label="사기 · 팔기 · 공매도">
           <button role="tab" aria-selected={side === "buy"} className={side === "buy" ? "on buy" : ""} onClick={() => (setSide("buy"), setQty(0))}>
-            사기
+            {shorted ? "갚기" : "사기"}
           </button>
-          <button role="tab" aria-selected={side === "sell"} className={side === "sell" ? "on sell" : ""} onClick={() => (setSide("sell"), setQty(0))} disabled={!held}>
+          <button role="tab" aria-selected={side === "sell"} className={side === "sell" ? "on sell" : ""} onClick={() => (setSide("sell"), setQty(0))} disabled={held <= 0}>
             팔기
           </button>
+          <button role="tab" aria-selected={side === "short"} className={side === "short" ? "on short" : ""} onClick={() => (setSide("short"), setQty(0))} disabled={held > 0}>
+            🐻 공매도
+          </button>
         </div>
+        {side === "short" && (
+          <p className="short-help">
+            <b>공매도</b>는 주식을 빌려서 지금 팔고, 나중에 사서 갚는 거예요. <span className="up">떨어지면 벌고</span> <span className="down">오르면 잃어요</span>. 총자산의{" "}
+            {Math.round((v.short?.cap ?? 0.5) * 100)}%까지 · 판 값보다 {Math.round((v.short?.stop ?? 0.5) * 100)}% 넘게 오르면 강제로 갚아요.
+          </p>
+        )}
+        {cover && <p className="short-help">공매도한 {(-held).toLocaleString()}주를 사서 갚아요. 다 갚으면 공매도가 끝나요.</p>}
         {!block && (
           <>
             <div className="chips">
               {chips.map((c) => (
                 <button key={c} className={`chip ${qty === Math.floor(limit * c) && qty > 0 ? "on" : ""}`} onClick={() => setQty(Math.max(1, Math.floor(limit * c)))}>
-                  {c === 1 ? (side === "buy" ? "최대" : "전부") : `${c * 100}%`}
+                  {c === 1 ? (side === "buy" && !cover ? "최대" : side === "short" ? "최대" : "전부") : `${c * 100}%`}
                 </button>
               ))}
             </div>
@@ -154,7 +170,14 @@ export function AssetSheet({ v, a, orders, runId, onClose, onOrder, onAsked }: {
               </button>
             </div>
             <p className="muted small center">
-              {side === "buy" ? `현금 ${won(p.cash)} · 최대 ${limit.toLocaleString()}주` : `보유 ${held.toLocaleString()}주`} · 수수료{side === "sell" && a.market === "KRX" ? "·세금" : ""} {pct(fee, 2)}
+              {side === "short"
+                ? `공매도 한도까지 ${limit.toLocaleString()}주`
+                : cover
+                  ? `갚을 ${(-held).toLocaleString()}주 · 현금 ${won(p.cash)}`
+                  : side === "buy"
+                    ? `현금 ${won(p.cash)} · 최대 ${limit.toLocaleString()}주`
+                    : `보유 ${held.toLocaleString()}주`}{" "}
+              · 수수료{side !== "buy" && a.market === "KRX" ? "·세금" : ""} {pct(fee, 2)}
             </p>
           </>
         )}
@@ -163,7 +186,7 @@ export function AssetSheet({ v, a, orders, runId, onClose, onOrder, onAsked }: {
   );
 }
 
-const RULE_KO: Record<string, string> = { stop: "자동 손절", take: "자동 익절", dca: "적립식", cap: "몰빵 방지" };
+const RULE_KO: Record<string, string> = { stop: "자동 손절", take: "자동 익절", dca: "적립식", cap: "몰빵 방지", margin: "공매도 강제 청산", panic: "패닉셀", close: "정리" };
 
 // ---------------------------------------------------------------- 인생 사건
 export function EventModal({ ev, busy, onChoose }: { ev: EventCard | null; busy: boolean; onChoose: (i: number) => void }) {
@@ -260,7 +283,7 @@ export function WeekModal({ week, before, after, onNext }: { week: Week | null; 
         )}
         {auto.length > 0 && (
           <p className="muted small">
-            자동 매매: {auto.map((t) => `${byK[t.k]?.code} ${t.q > 0 ? "매수" : "매도"} ${Math.abs(t.q)}주${(t as { rule?: string }).rule ? `(${RULE_KO[(t as { rule?: string }).rule!]})` : ""}`).join(", ")}
+            자동 매매: {auto.map((t) => `${byK[t.k]?.code} ${tradeVerb(t)} ${Math.abs(t.q)}주${(t as { rule?: string }).rule ? `(${RULE_KO[(t as { rule?: string }).rule!]})` : ""}`).join(", ")}
           </p>
         )}
 

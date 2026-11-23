@@ -75,20 +75,29 @@ export function PlazaView({ stalls, onOpen }: { stalls: Stall[]; onOpen: (k: str
         </Suspense>
       ) : (
         <ul className="plaza2d">
-          {top.map((s) => (
-            <li key={s.k}>
-              <button onClick={() => onOpen(s.k)}>
-                <span>{s.code}</span>
-                <span className="crowd" aria-hidden>
-                  <i style={{ width: `${(s.hype / max) * 100}%` }} />
-                </span>
-                <b>🔥{s.hype}</b>
-              </button>
-            </li>
-          ))}
+          {top.map((s) => {
+            const up = s.chg >= 0;
+            return (
+              <li key={s.k}>
+                <button className={up ? "up" : "down"} onClick={() => onOpen(s.k)} aria-label={`${s.code}: 개미 ${s.hype}마리(언급 ${s.hype}건), 지난주 ${up ? "상승" : "하락"} ${(Math.abs(s.chg) * 100).toFixed(1)}%`}>
+                  <span className="pz-code">{s.code}</span>
+                  <span className="crowd" aria-hidden>
+                    <i style={{ width: `${Math.max(4, (s.hype / max) * 100)}%` }} />
+                  </span>
+                  <b className="pz-n">🐜{s.hype}</b>
+                  <b className="pz-chg">
+                    {up ? "▲" : "▼"}
+                    {(Math.abs(s.chg) * 100).toFixed(1)}%
+                  </b>
+                </button>
+              </li>
+            );
+          })}
         </ul>
       )}
-      <p className="plaza-cap">개미가 많이 몰린 가게일수록 유튜브에서 많이 떠든 종목이에요. <span className="up">빨간 가게▲</span>는 지난주에 오른 곳, <span className="down">파란 가게▼</span>는 내린 곳. 눌러 보세요!</p>
+      <p className="plaza-cap">
+        🐜 개미 한 마리 = 지난주 유튜브 언급 1건 · <span className="up">빨강▲ 오름</span> · <span className="down">파랑▼ 내림</span>
+      </p>
       <Toggle on={on} set={set} />
     </div>
   );

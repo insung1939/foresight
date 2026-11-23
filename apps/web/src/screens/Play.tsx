@@ -10,7 +10,7 @@ import { go, query } from "../lib/router";
 import { buzz, sfx } from "../lib/sfx";
 import { KEYS, read, write } from "../lib/storage";
 import type { RunOut, View, Week } from "../lib/types";
-import { canBuy, merge, preview, type Order } from "./play/logic";
+import { canBuy, merge, orderVerb, preview, tradeVerb, type Order } from "./play/logic";
 import { RunContext } from "./play/ctx";
 import { AssetSheet, EventModal, GoalIntro, LuckPick, MileBox, MissionsSheet, Recap, ShakyConfirm, Temptation, Tour, WeekModal } from "./play/Overlays";
 import { Account, Feed, MarketList, Rivals } from "./play/Panels";
@@ -132,7 +132,7 @@ export default function Play() {
       const a = v.assets.find((x) => x.k === o.k)!;
       sfx("coin");
       buzz(12);
-      toast(`${a.code} ${Math.abs(o.q).toLocaleString()}주 ${o.q > 0 ? "사기" : "팔기"} 주문을 담았어요`, { action: { label: "되돌리기", run: () => setOrders(prev) } });
+      toast(`${a.code} ${Math.abs(o.q).toLocaleString()}주 ${orderVerb(v, o)} 주문을 담았어요`, { action: { label: "되돌리기", run: () => setOrders(prev) } });
     },
     [orders, v],
   );
@@ -147,7 +147,7 @@ export default function Play() {
       const auto = r.event.trades;
       if (auto.length) {
         const byK = Object.fromEntries(r.view.assets.map((a) => [a.k, a]));
-        toast(`자동 매매: ${auto.map((t) => `${byK[t.k].code} ${t.q > 0 ? "매수" : "매도"} ${Math.abs(t.q)}주`).join(", ")}`, { tone: "warn", ms: 5000 });
+        toast(`자동 매매: ${auto.map((t) => `${byK[t.k].code} ${tradeVerb(t)} ${Math.abs(t.q)}주`).join(", ")}`, { tone: "warn", ms: 5000 });
       }
     } catch (e) {
       toast((e as ApiError).message, { tone: "warn" });
@@ -281,7 +281,19 @@ export default function Play() {
           </button>
           <SoundToggle />
         </div>
-        {v.goal && v.rivals[v.goal.i] && <GoalBar v={v} />}
+        <div className="hud-strip" data-ux="Status Bar · Glanceable">
+          <button className="hs-item" onClick={() => (setTab("account"), window.scrollTo({ top: 0 }))} aria-label={`현금 ${won(p.cash)}${nOrders ? "(주문 체결 뒤)" : ""}. 내 계좌 보기`}>
+            <small>{nOrders ? "주문 뒤 현금" : "현금"}</small>
+            <b>{won(p.cash)}</b>
+          </button>
+          <button className="hs-item" onClick={() => (setTab("account"), window.scrollTo({ top: 0 }))} aria-label={`보유 ${p.holdCount}종목 / 최대 ${v.maxHold}종목. 내 계좌 보기`}>
+            <small>보유</small>
+            <b>
+              {p.holdCount}/{v.maxHold}종목
+            </b>
+          </button>
+          {v.goal && v.rivals[v.goal.i] && <GoalBar v={v} />}
+        </div>
         {v.mode === "practice" && v.t === 0 && <p className="hud-note info">🐜 연습 시즌: 8주 · 국내 6종목. 마음 편히 사고팔아 보세요!</p>}
         {v.skip && <p className="hud-note">✈️ 이번 주는 거래할 수 없어요. 그대로 다음 주로 넘어가요.</p>}
         {v.tier.id === "calm" && !v.skip && <p className="hud-note info">😎 침착 보너스: 이번 주 수수료 0원</p>}
@@ -299,7 +311,7 @@ export default function Play() {
         </section>
         <section className="panel p-account" aria-label="내 계좌">
           <h2 className="panel-h">💼 내 계좌</h2>
-          <Account v={v} orders={orders} onOpen={openSheet} onCancel={(k) => setOrders(orders.filter((o) => o.k !== k))} onOrder={addOrder} />
+          <Account v={v} orders={orders} onOpen={openSheet} onCancel={(id) => setOrders(orders.filter((o) => o.k + (o.s ? ":s" : "") !== id))} onOrder={addOrder} />
         </section>
         <section className="panel p-rivals" aria-label="라이벌">
           <h2 className="panel-h">🏁 라이벌</h2>
@@ -362,7 +374,7 @@ export default function Play() {
         }}
       />
       <ShakyConfirm
-        text={shaky ? `${v.assets.find((a) => a.k === shaky.k)?.code} ${Math.abs(shaky.q).toLocaleString()}주 ${shaky.q > 0 ? "사기" : "팔기"}` : null}
+        text={shaky ? `${v.assets.find((a) => a.k === shaky.k)?.code} ${Math.abs(shaky.q).toLocaleString()}주 ${orderVerb(v, shaky)}` : null}
         onNo={() => setShaky(null)}
         onYes={() => {
           const o = shaky!;
@@ -401,40 +413,22 @@ export default function Play() {
   );
 }
 
-/** 화면 위 목표 줄: 목표 라이벌과의 차이 + 다음 상자까지 */
+/** 목표 칩: 목표 라이벌과의 차이(누르면 상자까지 자세히) */
 function GoalBar({ v }: { v: View }) {
   const rival = v.rivals[v.goal!.i];
-  const me = v.twr - 1;
-  const them = rival.twr - 1;
-  const gap = me - them;
+  const gap = v.twr - rival.twr;
   const next = (v.miles ?? []).find((m) => !m.hit);
-  const prev = [...(v.miles ?? [])].reverse().find((m) => m.hit)?.at ?? 0;
-  const fill = next ? Math.max(0, Math.min(1, (me - prev) / (next.at - prev))) : 1;
   return (
     <button
-      className={`hud-goal ${gap >= 0 ? "ahead" : "behind"}`}
+      className={`hs-item hs-goal ${gap >= 0 ? "ahead" : "behind"}`}
       onClick={() =>
         toast(`🎯 목표: 시즌이 끝날 때 ${rival.name}보다 많이 벌면 ⭐+${v.goal!.stars}. ${next ? `수익률 +${Math.round(next.at * 100)}%를 넘으면 🎁 상자(⭐+${next.stars})` : "상자는 다 받았어요!"}`, { ms: 5000 })
       }
-      aria-label={`목표 ${rival.name} 이기기. 지금 ${gap >= 0 ? "앞서는" : "뒤지는"} 중`}
-      data-ux="Goal Gradient · Progress"
+      aria-label={`목표 ${rival.name} 이기기. 지금 ${(Math.abs(gap) * 100).toFixed(1)}%p ${gap >= 0 ? "앞서는" : "뒤지는"} 중`}
+      data-ux="Goal Gradient"
     >
-      <span className="hg-who">
-        🎯 vs {rival.name}
-      </span>
-      <span className="hg-gap">{gap >= 0 ? `▲ ${(gap * 100).toFixed(1)}%p 앞섬` : `▼ ${(-gap * 100).toFixed(1)}%p 뒤짐`}</span>
-      <span className="hg-mile">
-        {next ? (
-          <>
-            🎁 +{Math.round(next.at * 100)}%
-            <span className="hbar" aria-hidden>
-              <i style={{ width: `${fill * 100}%` }} />
-            </span>
-          </>
-        ) : (
-          "🎁 상자 다 받음"
-        )}
-      </span>
+      <small>🎯 vs {rival.name}</small>
+      <b>{gap >= 0 ? `▲ ${(gap * 100).toFixed(1)}%p 앞섬` : `▼ ${(-gap * 100).toFixed(1)}%p 뒤짐`}</b>
     </button>
   );
 }

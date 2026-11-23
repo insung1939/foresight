@@ -226,7 +226,7 @@ function Body({ f, id }: { f: Final; id: string }) {
           <p>
             <b>연습 끝! 이제 진짜 시즌이에요.</b>
             <br />
-            <span className="muted small">26주 · 국내·미국 주식 · 유튜버 라이벌 3명 · 내 개미를 골라서 시작해요.</span>
+            <span className="muted small">오늘의 시드 12주 · 국내·미국 주식 · 유튜버 라이벌 3명 · 내 개미를 골라서 시작해요.</span>
           </p>
           <button className="btn primary" onClick={() => go("/")}>
             진짜 시즌 시작 ▶
@@ -312,7 +312,7 @@ function Body({ f, id }: { f: Final; id: string }) {
 
       <section className="card" aria-labelledby="curve">
         <h2 id="curve" className="sec-title">
-          📈 26주 동안
+          📈 {f.len}주 동안
         </h2>
         <LineChart
           h={220}
@@ -321,7 +321,7 @@ function Body({ f, id }: { f: Final; id: string }) {
             ...f.curves.rivals.map((d, i) => ({ data: d, label: f.rivalNames[i], cls: `line-yt${i + 1}` })),
             { data: f.curves.index, label: "코스피", cls: "line-ix", dash: true },
           ]}
-          xLabel={(i) => (i === 0 ? "시작" : "26주")}
+          xLabel={(i) => (i === 0 ? "시작" : `${f.len}주`)}
         />
         <p className="muted small">멘탈 최저 {Math.min(...f.mental)} · 거래 {f.title.stats.trades}번 · 추격 매수 {f.title.stats.fomo}번</p>
       </section>

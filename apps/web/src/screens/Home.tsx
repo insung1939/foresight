@@ -5,7 +5,7 @@ import { Ant, CHAR_META, type CharId } from "../components/Characters";
 import { RoomView } from "../components/Scene";
 import { Delta, Sheet, TopBar, toast } from "../components/ui";
 import { api, useAsync } from "../lib/api";
-import { todayKst } from "../lib/format";
+import { todayKst, won } from "../lib/format";
 import { ALL_TITLES, charUnlocked, progress, save, unlocked } from "../lib/progress";
 import { nextFurniture, unlockedFurniture } from "../lib/room";
 import { go } from "../lib/router";
@@ -61,7 +61,7 @@ export default function Home() {
       <main className="page home">
         <section className="hero">
           <div className="hero-copy">
-            <p className="eyebrow">실제 과거 시장 · 26주 투자 시뮬레이션</p>
+            <p className="eyebrow">실제 과거 시장 · 주 단위 투자 시뮬레이션</p>
             <h1>
               그때로 돌아가면
               <br />
@@ -87,10 +87,10 @@ export default function Home() {
               ) : (
                 <>
                   <button className={`btn ${cont ? "ghost" : "primary"} block`} onClick={() => setPick("daily")} disabled={!!busy}>
-                    {playedToday ? "오늘의 시드 다시 하기(순위엔 첫 판만)" : `🗓️ 오늘의 시드 도전${p.streak ? ` · 🔥${p.streak}일 연속` : ""}`}
+                    {playedToday ? "오늘의 시드 다시 하기(순위엔 첫 판만)" : `🗓️ 오늘의 시드 도전 · 12주(5분)${p.streak ? ` · 🔥${p.streak}일 연속` : ""}`}
                   </button>
                   <button className="btn ghost block" onClick={() => setPick("free")} disabled={!!busy}>
-                    🎲 자유 플레이 (무작위 시장)
+                    🎲 자유 플레이 · 26주 (무작위 시장)
                   </button>
                 </>
               )}
@@ -194,7 +194,7 @@ export default function Home() {
 
       {/* 내 개미 고르기(킥루의 선수 고르기) */}
       <Sheet open={!!pick} onClose={() => setPick(null)} title="어떤 개미로 갈까요?" wide>
-        <p className="muted small">개미마다 특성이 달라서 전략이 바뀌어요. {pick === "daily" ? "오늘의 시드는 모두 같은 시장이에요." : "자유 플레이는 시장 구간이 무작위예요."}</p>
+        <p className="muted small">개미마다 특성이 달라서 전략이 바뀌어요. {pick === "daily" ? "오늘의 시드는 모두 같은 시장에서 12주 · 12종목으로 가볍게 겨뤄요." : "자유 플레이는 시장 구간이 무작위인 26주예요."}</p>
         <ul className="char-grid" data-ux="Card Select · Radio Group">
           {CHARS.map((c) => {
             const m = CHAR_META[c];
@@ -215,6 +215,7 @@ export default function Home() {
                   <b>
                     {m.icon} {m.name}
                   </b>
+                  <span className="cc-cash">💵 시작 {won(m.cash)}</span>
                   <span className="muted small">{ok ? m.perk : `🔒 ${m.unlock}`}</span>
                 </button>
               </li>

@@ -186,7 +186,7 @@ def _gemini_once(model: str, system: str, user: str, schema: dict, usage: Usage,
 
 
 # ------------------------------------------------------------ 코치
-COACH_SYSTEM = """너는 투자 시뮬레이션 게임 '타임슬립 개미'의 코치다. 플레이어가 실제 과거 시장 26주를 방금 끝냈다.
+COACH_SYSTEM = """너는 투자 시뮬레이션 게임 '타임슬립 개미'의 코치다. 플레이어가 실제 과거 시장 한 시즌(연습 8주·오늘의 시드 12주·자유 26주)을 방금 끝냈다. 공매도(떨어지면 버는 거래)도 할 수 있는 게임이다.
 규칙:
 - 주어진 결산 자료의 숫자만 쓴다. 새 숫자를 만들지 않는다.
 - 앞으로 무엇을 사라·팔라 같은 투자 권유, 종목 추천, 시장 전망을 하지 않는다. '습관'에 대해서만 말한다.
@@ -221,7 +221,7 @@ def _numbers(text: str) -> set[str]:
 def check(resp: dict, context: str) -> dict:
     """검증 결과 {항목: 통과?, ...}"""
     text = " ".join([resp.get("headline", ""), *resp.get("points", []), resp.get("tip", "")])
-    allowed = _numbers(context) | {str(i) for i in range(0, 11)} | {"26", "100"}
+    allowed = _numbers(context) | {str(i) for i in range(0, 11)} | {"8", "12", "26", "50", "100"}
     bad_nums = sorted(_numbers(text) - allowed)
     out = {
         "format": isinstance(resp.get("points"), list) and len(resp["points"]) == 3 and bool(resp.get("headline")) and bool(resp.get("tip")),
