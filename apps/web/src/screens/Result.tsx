@@ -1,7 +1,7 @@
 // 결산(#/result?id=): 등급 → 순위 → 칭호 → 곡선 → 코드네임 정체 공개 → 공유·코치·이름
 import { motion } from "motion/react";
-import { useEffect, useRef, useState } from "react";
-import { CountUp, Delta, ErrorState, LineChart, Loading, TopBar, toast } from "../components/ui";
+import { useEffect, useRef, useState, type RefObject } from "react";
+import { CountUp, Delta, ErrorState, LineChart, Loading, Sheet, TopBar, toast } from "../components/ui";
 import { api, useAsync } from "../lib/api";
 import { dateDot, pct, won } from "../lib/format";
 import { Ant, Orca, Tuber, type CharId } from "../components/Characters";
@@ -68,37 +68,14 @@ function Body({ f, id }: { f: Final; id: string }) {
   const yts = f.board.filter((b) => b.who === "yt");
   const beatYt = yts.filter((b) => b.ret < f.ret).length;
   const shareText = [
-    `타임슬립 개미 ${f.mode === "daily" && f.day ? `${f.day} 오늘의 시드` : "자유 플레이"} 🐜`,
+    `타임슬립 개미 ${f.mode === "daily" && f.day ? `${f.day} 오늘의 시드` : f.mode === "practice" ? "연습 시즌" : "자유 플레이"} 🐜`,
     `${f.grade} 등급 · ${pct(f.ret)} · ${f.title.icon} ${f.title.name}`,
     `유튜버 ${yts.length}명 중 ${beatYt}명 이김${f.place ? ` · ${f.place.total}명 중 ${f.place.rank}등` : ""}`,
     f.weeks.map(weekEmoji).join(""),
     window.location.origin,
   ].join("\n");
 
-  const share = async () => {
-    try {
-      if (navigator.share) await navigator.share({ text: shareText });
-      else {
-        await navigator.clipboard.writeText(shareText);
-        toast("결과를 복사했어요. 단톡방에 붙여 넣어 보세요!", { tone: "ok" });
-      }
-    } catch {
-      /* 공유 취소 */
-    }
-  };
-  const saveImage = async () => {
-    if (!card.current) return;
-    try {
-      const { toPng } = await import("html-to-image");
-      const url = await toPng(card.current, { pixelRatio: 2, backgroundColor: "#ffffff" });
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `timeslip-ant-${f.grade}.png`;
-      a.click();
-    } catch {
-      toast("이미지를 만들지 못했어요. 캡처로 저장해 주세요.", { tone: "warn" });
-    }
-  };
+  const [shareOpen, setShareOpen] = useState(false);
   const askCoach = async () => {
     setCoachBusy(true);
     try {
@@ -126,6 +103,9 @@ function Body({ f, id }: { f: Final; id: string }) {
   return (
     <>
       <div className="res-card" ref={card}>
+        <button className="icon-btn res-share no-cap" onClick={() => setShareOpen(true)} aria-label="결과 공유하기">
+          📤
+        </button>
         <p className="eyebrow">
           {f.len}주 결산 · {f.mode === "daily" ? `오늘의 시드 ${f.day}` : f.mode === "practice" ? "연습 시즌" : "자유 플레이"}
         </p>
@@ -179,7 +159,18 @@ function Body({ f, id }: { f: Final; id: string }) {
             오늘의 시드 <b>{f.place.total.toLocaleString()}명 중 {f.place.rank}등</b> (상위 {Math.max(1, Math.round(f.place.top * 100))}%)
           </p>
         )}
+        <p className="res-foot">🐜 타임슬립 개미 · {window.location.host}</p>
       </div>
+
+      <div className="res-actions">
+        <button className="btn primary" onClick={() => setShareOpen(true)}>
+          📤 결과 공유
+        </button>
+        <button className="btn ghost" onClick={() => go("/")}>
+          🔁 한 판 더
+        </button>
+      </div>
+      <ShareSheet open={shareOpen} onClose={() => setShareOpen(false)} card={card} text={shareText} file={`timeslip-ant-${f.grade}.png`} />
 
       {!demo && <LuckyBox id={id} onOpen={(n) => setStarsNow((s) => s + n)} />}
 
@@ -289,18 +280,6 @@ function Body({ f, id }: { f: Final; id: string }) {
         </section>
       )}
 
-      <div className="res-actions">
-        <button className="btn primary" onClick={share}>
-          결과 공유
-        </button>
-        <button className="btn ghost" onClick={saveImage}>
-          이미지 저장
-        </button>
-        <button className="btn ghost" onClick={() => go("/")}>
-          한 판 더
-        </button>
-      </div>
-
       <section className="card" aria-labelledby="reveal">
         <h2 id="reveal" className="sec-title">
           🎭 코드네임의 정체
@@ -377,6 +356,92 @@ function Body({ f, id }: { f: Final; id: string }) {
   );
 }
 
+
+// ---------------------------------------------------------------- 공유 시트
+// 결산 카드를 PNG로 만들어 미리 보여 주고 → 휴대폰 공유창(이미지+문구) / 이미지 저장 / 문구 복사.
+// 공유창은 '누른 순간'에 불러야 해서(사파리) 이미지는 시트가 열릴 때 미리 만들어 둔다.
+// 카카오톡·인스타 안 브라우저는 내려받기가 막혀 있어 미리보기를 길게 눌러 저장하도록 안내한다.
+const HAS_SHARE = typeof navigator.share === "function";
+const IN_APP = /KAKAOTALK|Instagram|FBAN|FBAV|NAVER|Line\//i.test(navigator.userAgent);
+
+function ShareSheet({ open, onClose, card, text, file }: { open: boolean; onClose: () => void; card: RefObject<HTMLDivElement>; text: string; file: string }) {
+  const [img, setImg] = useState<{ url: string; blob: Blob } | null>(null);
+  const [fail, setFail] = useState(false);
+  useEffect(() => {
+    if (!open || img || !card.current) return;
+    let alive = true;
+    (async () => {
+      try {
+        const { toBlob } = await import("html-to-image");
+        const bg = getComputedStyle(document.body).backgroundColor || "#ffffff";
+        const blob = await toBlob(card.current!, { pixelRatio: 2, backgroundColor: bg, filter: (n) => !(n instanceof HTMLElement && n.classList.contains("no-cap")) });
+        if (!blob) throw new Error("empty");
+        if (alive) setImg({ blob, url: URL.createObjectURL(blob) });
+      } catch {
+        if (alive) setFail(true);
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [open, img, card]);
+  useEffect(() => () => void (img && URL.revokeObjectURL(img.url)), [img]);
+
+  const pngFile = img ? new File([img.blob], file, { type: "image/png" }) : null;
+  const canShareFile = !!pngFile && !!navigator.canShare?.({ files: [pngFile] });
+  const shareNative = async () => {
+    try {
+      if (canShareFile) await navigator.share({ files: [pngFile!], text });
+      else if (HAS_SHARE) await navigator.share({ text });
+      else return copy();
+      onClose();
+    } catch {
+      /* 공유 취소 */
+    }
+  };
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(text);
+      toast("결과 문구를 복사했어요. 단톡방에 붙여 넣어 보세요!", { tone: "ok" });
+    } catch {
+      toast("복사하지 못했어요. 아래 문구를 길게 눌러 복사해 주세요.", { tone: "warn" });
+    }
+  };
+  const save = () => {
+    if (!img) return;
+    if (IN_APP) {
+      toast("이 앱 안에서는 바로 저장이 안 돼요. 위 이미지를 길게 눌러 저장해 주세요.", { tone: "warn", ms: 5000 });
+      return;
+    }
+    const a = document.createElement("a");
+    a.href = img.url;
+    a.download = file;
+    a.click();
+  };
+
+  return (
+    <Sheet open={open} onClose={onClose} title="📤 결과 공유하기">
+      <div className="share-preview" data-ux="Share Sheet · Preview">
+        {img ? <img src={img.url} alt="결산 카드 이미지" /> : fail ? <p className="muted small">이미지를 만들지 못했어요. 화면 캡처로 저장해 주세요.</p> : <p className="muted small">카드 이미지를 만드는 중…</p>}
+      </div>
+      {img && <p className="muted small share-hint">{IN_APP ? "👆 이미지를 길게 눌러 저장하거나 보낼 수 있어요" : "이미지를 길게 누르거나 아래 버튼으로 저장할 수 있어요"}</p>}
+      <div className="share-btns">
+        <button className="btn primary block" onClick={shareNative} disabled={!img && !fail} data-autofocus>
+          {canShareFile ? "📲 이미지로 공유하기 (카톡·인스타)" : HAS_SHARE ? "📲 공유하기" : "📋 결과 문구 복사"}
+        </button>
+        <div className="share-row">
+          <button className="btn ghost" onClick={save} disabled={!img}>
+            🖼️ 이미지 저장
+          </button>
+          <button className="btn ghost" onClick={copy}>
+            📋 문구 복사
+          </button>
+        </div>
+      </div>
+      <pre className="share-text">{text}</pre>
+    </Sheet>
+  );
+}
 
 // ---------------------------------------------------------------- 행운 상자(운 요소 + 천장)
 function LuckyBox({ id, onOpen }: { id: string; onOpen: (stars: number) => void }) {
