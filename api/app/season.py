@@ -44,6 +44,8 @@ MODES = {
     "daily": {"len": DAILY_LEN, "universe": DAILY_UNIVERSE, "events": (3, 7, 10)},
     "free": {"len": SEASON, "universe": UNIVERSE, "events": EVENT_TURNS},
 }
+# 자유 플레이는 기간을 고른다(후기: '12주·24주 중 고를 수 있으면') — 기본 12주
+FREE_LENS = {12: EVENT_TURNS, 24: (3, 7, 11, 15, 19, 22)}
 
 # 내 개미: 특성이 전략을 바꾼다(킥루의 선수 고르기)
 CHARS = {
@@ -207,10 +209,12 @@ def _nice(x: float) -> float:
     return round(x / e) * e
 
 
-def new_run(seed: str, markets: list[str] | None = None, mode: str = "free", char: str = "office", nonce: str = "") -> dict:
+def new_run(seed: str, markets: list[str] | None = None, mode: str = "free", char: str = "office", nonce: str = "", weeks: int | None = None) -> dict:
     p = pack.load()
     rng = _rng(seed)
     cfg = MODES.get(mode, MODES["free"])
+    if mode == "free" and weeks in FREE_LENS:
+        cfg = {**cfg, "len": weeks, "events": FREE_LENS[weeks]}
     L = cfg["len"]
     ch = CHARS.get(char, CHARS["office"])
     n, f0 = p["nweeks"], p["feedFrom"]

@@ -88,6 +88,7 @@ class NewRun(BaseModel):
     char: str = Field("office", pattern="^(office|student|whale|holder|trader|coin)$", description="내 개미(특성이 다르다)")
     markets: list[str] | None = Field(None, description="거래할 수 있는 시장(KRX·US·CRYPTO). 오늘의 시드는 무시하고 모두 연다")
     nickname: str | None = None
+    weeks: int | None = Field(None, description="자유 플레이 기간(12 또는 24주, 기본 12). 다른 모드는 무시")
 
 
 class Order(BaseModel):
@@ -117,7 +118,7 @@ def new_run(request: Request, body: NewRun | None = None, s: S = Depends(db)):
     day = today_kst() if body.mode == "daily" else None
     seed = f"daily:{day}" if day else f"{body.mode}:{rid}"
     markets = None if day else body.markets
-    st = game.new_run(seed, markets, body.mode, body.char, nonce=rid)
+    st = game.new_run(seed, markets, body.mode, body.char, nonce=rid, weeks=body.weeks)
     r = Run(id=rid, mode=body.mode, day=day, device=(request.headers.get("x-device") or "")[:40] or None,
             nickname=clean_nick(body.nickname), state=st, char=st["char"])
     s.add(r)

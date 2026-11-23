@@ -457,3 +457,18 @@ def test_short_turn_and_view():
     p = next(x for x in v["pos"] if x["k"] == "1")
     assert p["short"] and p["qty"] == -10 and v["short"]["used"] > 0
     assert "1" in week["mine"]
+
+
+def test_free_season_length_choice():
+    """자유 플레이는 12주(기본)·24주를 고를 수 있다. 이상한 값은 기본 12주, 다른 모드는 무시"""
+    assert season.new_run("len:a", mode="free")["len"] == 12
+    st = season.new_run("len:b", mode="free", weeks=24)
+    assert st["len"] == 24 and len(st["events"]) == 6 and st["eventTurns"][-1] < 24
+    assert [m["at"] for m in season.view(st)["miles"]] == [a for a, _ in season.MILES]
+    assert season.new_run("len:c", mode="free", weeks=99)["len"] == 12
+    assert season.new_run("len:d", mode="practice", weeks=24)["len"] == 8
+    r = client.post("/v1/runs", json={"mode": "free", "weeks": 24}).json()
+    assert r["view"]["season"] == 24
+    while not st["done"]:
+        season.play_turn(st, [], 0 if st.get("pending") is not None else None)
+    assert season.final(st)["len"] == 24

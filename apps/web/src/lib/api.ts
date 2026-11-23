@@ -51,8 +51,8 @@ async function call<T>(path: string, init?: { method?: string; body?: unknown; t
 }
 
 export const api = {
-  newRun: (mode: Mode, markets?: Market[], nickname?: string | null, char = "office") =>
-    call<RunOut>("/v1/runs", { method: "POST", body: { mode, markets: markets ?? null, nickname: nickname || null, char } }),
+  newRun: (mode: Mode, markets?: Market[], nickname?: string | null, char = "office", weeks?: number) =>
+    call<RunOut>("/v1/runs", { method: "POST", body: { mode, markets: markets ?? null, nickname: nickname || null, char, weeks: weeks ?? null } }),
   skip: (id: string, weeks = 4) => call<RunOut>(`/v1/runs/${id}/skip`, { method: "POST", body: { weeks } }),
   ask: (id: string, question: string, k?: string) => call<AskOut>(`/v1/runs/${id}/ask`, { method: "POST", body: { question, k: k ?? null }, timeout: 60_000 }),
   vote: (logId: number, vote: 1 | -1) => call<{ ok: boolean }>(`/v1/ai/${logId}/feedback`, { method: "POST", body: { vote } }),

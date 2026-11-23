@@ -24,6 +24,8 @@ export default function Home() {
   const [cont, setCont] = useState<RunOut | null>(null);
   const [busy, setBusy] = useState<Mode | null>(null);
   const [pick, setPick] = useState<Mode | null>(null);
+  // 자유 플레이 기간: 12주(약 5분) · 24주(약 10분). 고른 값은 기억한다
+  const [weeks, setWeeks] = useState<number>(() => (read<number>("ant:weeks") === 24 ? 24 : 12));
   // 처음 온 사람에게는 설명서를 한 번 저절로 보여 준다(후기: '게임을 이해하기 어렵다')
   const [manual, setManual] = useState(() => !read("ant:manual") && !read<string>(KEYS.run));
   const board = useAsync(() => api.board(), []);
@@ -45,7 +47,7 @@ export default function Home() {
     setBusy(mode);
     sfx("confirm");
     try {
-      const r = await api.newRun(mode, mode === "free" ? open : undefined, read<string>(KEYS.nick), mode === "practice" ? "office" : c);
+      const r = await api.newRun(mode, mode === "free" ? open : undefined, read<string>(KEYS.nick), mode === "practice" ? "office" : c, mode === "free" ? weeks : undefined);
       write(KEYS.run, r.id);
       write(KEYS.orders, null);
       go("/play");
@@ -96,7 +98,7 @@ export default function Home() {
                     {playedToday ? "오늘의 시드 다시 하기(순위엔 첫 판만)" : `🗓️ 오늘의 시드 도전 · 12주(5분)${p.streak ? ` · 🔥${p.streak}일 연속` : ""}`}
                   </button>
                   <button className="btn ghost block" onClick={() => setPick("free")} disabled={!!busy}>
-                    🎲 자유 플레이 · 12주 (무작위 시장)
+                    🎲 자유 플레이 · 12주/24주 (무작위 시장)
                   </button>
                 </>
               )}
@@ -212,7 +214,30 @@ export default function Home() {
 
       {/* 내 개미 고르기(킥루의 선수 고르기) */}
       <Sheet open={!!pick} onClose={() => setPick(null)} title="어떤 개미로 갈까요?" wide>
-        <p className="muted small">개미마다 특성이 달라서 전략이 바뀌어요. {pick === "daily" ? "오늘의 시드는 모두 같은 시장에서 12주 · 12종목으로 가볍게 겨뤄요." : "자유 플레이는 시장 구간이 무작위인 12주 · 20종목이에요."}</p>
+        {pick === "free" && (
+          <div className="len-pick" role="radiogroup" aria-label="시즌 기간" data-ux="Segmented Control">
+            {[
+              [12, "12주", "약 5분 · 가볍게"],
+              [24, "24주", "약 10분 · 길게 버티기"],
+            ].map(([n, label, sub]) => (
+              <button
+                key={n}
+                role="radio"
+                aria-checked={weeks === n}
+                className={weeks === n ? "on" : ""}
+                onClick={() => {
+                  setWeeks(n as number);
+                  write("ant:weeks", n);
+                  sfx("tick");
+                }}
+              >
+                <b>⏱️ {label}</b>
+                <span className="muted small">{sub}</span>
+              </button>
+            ))}
+          </div>
+        )}
+        <p className="muted small">개미마다 특성이 달라서 전략이 바뀌어요. {pick === "daily" ? "오늘의 시드는 모두 같은 시장에서 12주 · 12종목으로 가볍게 겨뤄요." : `자유 플레이는 시장 구간이 무작위인 ${weeks}주 · 20종목이에요.`}</p>
         <ul className="char-grid" data-ux="Card Select · Radio Group">
           {CHARS.map((c) => {
             const m = CHAR_META[c];
@@ -241,7 +266,7 @@ export default function Home() {
           })}
         </ul>
         <button className="btn primary block" onClick={() => pick && start(pick, char)} disabled={!!busy}>
-          {busy ? "시장을 여는 중…" : `${CHAR_META[char].name}로 시작 ▶`}
+          {busy ? "시장을 여는 중…" : `${CHAR_META[char].name}로 ${pick === "free" ? `${weeks}주 ` : ""}시작 ▶`}
         </button>
       </Sheet>
 
