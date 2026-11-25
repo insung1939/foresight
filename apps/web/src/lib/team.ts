@@ -2,7 +2,7 @@
 // 비어 있으면 화면에 '배포 후 추가' 처럼 표시된다.
 
 export const TEAM = {
-  name: "5조",
+  name: "2조",
   course: "KAIST 디지털금융MBA · 금융빅데이터분석실습 (선수: 클라우드컴퓨팅실습 hindsight)",
   // hindsight 와 같은 5조. 역할은 확정되면 role·did 에
   members: [
