@@ -1,4 +1,5 @@
 // 데이터·분석(#/data): 출처 → 가공 → 게임에 쓰인 곳 → 분석 3가지 → 플레이 통계 → 응답 속도
+import { ReqCheck } from "../components/ReqCheck";
 import { Delta, ErrorState, Loading, TopBar } from "../components/ui";
 import { loadMeta, useAsync } from "../lib/api";
 import { dateDot, pct } from "../lib/format";
@@ -17,7 +18,12 @@ export default function Data() {
         </header>
         {res.status === "loading" && <Loading slow={res.slow} />}
         {res.status === "error" && <ErrorState title="데이터를 불러오지 못했어요" detail={res.error.message} onRetry={res.retry} />}
-        {res.status === "ready" && <Body m={res.data} />}
+        {res.status === "ready" && (
+          <>
+            <ReqCheck p95={res.data.perf.find((x) => x.path.endsWith("/turn"))?.p95} />
+            <Body m={res.data} />
+          </>
+        )}
       </main>
     </>
   );

@@ -6,6 +6,7 @@ import { api, useAsync } from "../lib/api";
 import { dateDot, pct, won } from "../lib/format";
 import { Ant, Orca, Tuber, type CharId } from "../components/Characters";
 import { RoomView } from "../components/Scene";
+import { Epilogue } from "../components/Story";
 import { boxOpened, openBox, progress, record } from "../lib/progress";
 import { nextFurniture, unlockedFurniture } from "../lib/room";
 import { go, query } from "../lib/router";
@@ -161,6 +162,8 @@ function Body({ f, id }: { f: Final; id: string }) {
         )}
         <p className="res-foot">🐜 타임슬립 개미 · {window.location.host}</p>
       </div>
+
+      <Epilogue f={f} />
 
       <div className="res-actions">
         <button className="btn primary" onClick={() => setShareOpen(true)}>

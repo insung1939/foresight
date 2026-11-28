@@ -17,6 +17,11 @@ export class ApiError extends Error {
   }
 }
 
+export interface Health {
+  ok: boolean; pack: boolean; db: boolean; dbMs: number; ai: string; rag: string; uptime: number;
+  data: { builtAt: string | null; lastWeek: string | null; weeks: number };
+}
+
 async function call<T>(path: string, init?: { method?: string; body?: unknown; timeout?: number }): Promise<T> {
   if (typeof navigator !== "undefined" && navigator.onLine === false) throw new ApiError("offline", "인터넷 연결이 끊겨 있어요.");
   const ctrl = new AbortController();
@@ -70,6 +75,7 @@ export const api = {
   luck: (id: string, card: number) => call<RunOut>(`/v1/runs/${id}/luck`, { method: "POST", body: { card } }),
   rules: (id: string, rules: Record<string, boolean>) => call<RunOut>(`/v1/runs/${id}/rules`, { method: "POST", body: { rules } }),
   meta: () => call<Meta>("/v1/meta"),
+  health: () => call<Health>("/v1/health"),
 };
 
 export type Async<T> =

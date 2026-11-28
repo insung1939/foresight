@@ -401,7 +401,7 @@ export function SoundToggle() {
   const [on, setOn] = useState(soundOn());
   useEffect(() => onSound(setOn), []);
   return (
-    <button className="icon-btn" onClick={() => setSound(!on)} aria-pressed={on} aria-label={on ? "소리·진동 끄기" : "소리·진동 켜기"} title="소리·진동">
+    <button className="icon-btn" onClick={() => setSound(!on)} aria-pressed={on} aria-label={on ? "소리·음악·진동 끄기" : "소리·음악·진동 켜기"} title="소리·음악·진동">
       {on ? "🔊" : "🔈"}
     </button>
   );

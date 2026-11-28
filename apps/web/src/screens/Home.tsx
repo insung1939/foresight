@@ -3,6 +3,7 @@ import { motion } from "motion/react";
 import { useEffect, useState } from "react";
 import { Ant, CHAR_META, type CharId } from "../components/Characters";
 import { Manual } from "../components/Manual";
+import { StoryIntro } from "../components/Story";
 import { RoomView } from "../components/Scene";
 import { Delta, Sheet, TopBar, toast } from "../components/ui";
 import { api, useAsync } from "../lib/api";
@@ -26,8 +27,10 @@ export default function Home() {
   const [pick, setPick] = useState<Mode | null>(null);
   // 자유 플레이 기간: 12주(약 5분) · 24주(약 10분). 고른 값은 기억한다
   const [weeks, setWeeks] = useState<number>(() => (read<number>("ant:weeks") === 24 ? 24 : 12));
-  // 처음 온 사람에게는 설명서를 한 번 저절로 보여 준다(후기: '게임을 이해하기 어렵다')
-  const [manual, setManual] = useState(() => !read("ant:manual") && !read<string>(KEYS.run));
+  // 처음 온 사람에게는 이야기(오프닝)를 한 번 저절로 보여 주고, 끝에서 게임 방법·첫 출근으로 잇는다
+  // (교수님 피드백 '이미지 → 스토리·시나리오', 현장 후기 '게임을 이해하기 어렵다')
+  const [story, setStory] = useState(() => !read("ant:story") && !read<string>(KEYS.run));
+  const [manual, setManual] = useState(false);
   const board = useAsync(() => api.board(), []);
   const first = !p.practiced && p.runs === 0;
   const playedToday = p.dailyDone === todayKst();
@@ -76,6 +79,9 @@ export default function Home() {
             <div className="cta">
               <button className="btn manual-btn block" onClick={() => setManual(true)} data-ux="Help · Onboarding">
                 📖 게임 방법 1분 만에 보기
+              </button>
+              <button className="link center" onClick={() => setStory(true)}>
+                🎬 이야기 다시 보기
               </button>
               {cont && (
                 <button className="btn primary block" onClick={() => go("/play")}>
@@ -203,6 +209,15 @@ export default function Home() {
         </p>
       </main>
 
+      <StoryIntro
+        open={story}
+        onClose={() => {
+          setStory(false);
+          write("ant:story", true);
+        }}
+        onManual={() => setManual(true)}
+        onStart={first && !cont ? () => start("practice") : undefined}
+      />
       <Manual
         open={manual}
         onClose={() => {

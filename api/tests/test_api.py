@@ -472,3 +472,10 @@ def test_free_season_length_choice():
     while not st["done"]:
         season.play_turn(st, [], 0 if st.get("pending") is not None else None)
     assert season.final(st)["len"] == 24
+
+
+def test_health_reports_db_and_data_freshness():
+    """비기능 요구(안정성·지속가능성): 상태 점검이 DB·시즌 팩·데이터 기준일을 알려 준다"""
+    h = client.get("/v1/health").json()
+    assert h["ok"] and h["db"] and h["pack"] and h["dbMs"] >= 0
+    assert h["data"]["weeks"] > 26 and h["data"]["lastWeek"] and h["data"]["builtAt"]

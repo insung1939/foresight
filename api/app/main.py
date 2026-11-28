@@ -1,6 +1,6 @@
 """「타임슬립 개미」 API.
 
-흐름: POST /v1/runs(새 판) → POST /v1/runs/{id}/turn × 12·26(한 주씩) → GET /v1/runs/{id}/final(결산·정체 공개)
+흐름: POST /v1/runs(새 판) → POST /v1/runs/{id}/turn × 8·12·24(한 주씩) → GET /v1/runs/{id}/final(결산·정체 공개)
 규칙은 season.py, 화면은 보여주기만 한다. 다음 주 가격·진짜 이름·날짜는 턴을 제출하거나 판이 끝나야 나간다.
 """
 from __future__ import annotations
@@ -43,7 +43,7 @@ app = FastAPI(
     lifespan=lifespan,
     title="타임슬립 개미 API",
     version="2.0.0",
-    description="실제 과거 시장 26주를 다시 사는 투자 시뮬레이션. 데이터: hindsight(YouTube 언급·주가). AI: 범고래 박사(시점 제한 RAG) · 결산 코치 — Gemini, Supabase pgvector.",
+    description="실제 과거 시장 12주(또는 24주)를 다시 사는 투자 시뮬레이션. 데이터: hindsight(YouTube 언급·주가). AI: 범고래 박사(시점 제한 RAG) · 결산 코치 — Gemini, Supabase pgvector.",
 )
 app.add_middleware(GZipMiddleware, minimum_size=800)
 app.add_middleware(OpsMiddleware)
@@ -106,9 +106,23 @@ class Nick(BaseModel):
     nickname: str
 
 
-@app.get("/v1/health", tags=["상태"])
+@app.get("/v1/health", tags=["상태"], summary="상태 점검: 서버·DB·시즌 팩·검색 색인·AI 가 살아 있는지와 데이터가 언제 것인지")
 def health():
-    return {"ok": True, "pack": game.pack.ok, "ai": ai_mod.provider() or "off", "uptime": int(time.time() - STARTED)}
+    t0 = time.perf_counter()
+    try:
+        with Session() as s:
+            s.execute(select(1))
+        db_ok = True
+    except Exception:  # noqa: BLE001 — 점검은 실패해도 응답한다
+        db_ok = False
+    db_ms = round((time.perf_counter() - t0) * 1000, 1)
+    p = game.pack.data if game.pack.ok else {}
+    weeks = p.get("weeks") or []
+    return {
+        "ok": bool(game.pack.ok and db_ok), "pack": game.pack.ok, "db": db_ok, "dbMs": db_ms,
+        "ai": ai_mod.provider() or "off", "rag": rag.index.backend, "uptime": int(time.time() - STARTED),
+        "data": {"builtAt": p.get("builtAt"), "lastWeek": weeks[-1] if weeks else None, "weeks": len(weeks)},
+    }
 
 
 @app.post("/v1/runs", tags=["게임"], summary="새 판 — 시장 구간·종목·코드네임·라이벌을 시드로 정한다")

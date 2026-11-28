@@ -883,3 +883,40 @@ span.code-chip { display: inline-flex; align-items: center; }
 .len-pick { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 0 0 12px; }
 .len-pick button { display: grid; gap: 2px; padding: 12px; border-radius: 14px; border: 1.5px solid var(--line); background: var(--surface); color: var(--text); cursor: pointer; text-align: left; transition: .15s; }
 .len-pick button.on { border-color: var(--brand); background: color-mix(in srgb, var(--brand) 10%, var(--surface)); box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand) 18%, transparent); }
+
+/* 이야기(오프닝)·엔딩: ChatGPT 이미지 생성으로 만든 장면 */
+.story { position: fixed; inset: 0; z-index: 90; background: #0d0a1c; overflow: hidden; display: grid; }
+.st-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.st-shade { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(10,6,24,.15) 0%, rgba(10,6,24,0) 35%, rgba(10,6,24,.55) 62%, rgba(10,6,24,.92) 100%); }
+.st-skip { position: absolute; top: max(14px, env(safe-area-inset-top)); right: 16px; z-index: 2; background: rgba(0,0,0,.35); color: #fff; border: 1px solid rgba(255,255,255,.3); border-radius: 999px; padding: 8px 14px; font-size: 14px; cursor: pointer; backdrop-filter: blur(6px); }
+.st-text { position: absolute; left: 0; right: 0; bottom: 96px; padding: 0 max(16px, 6vw); color: #fff; max-width: 860px; margin: 0 auto; text-shadow: 0 2px 12px rgba(0,0,0,.6); }
+.st-when { margin: 0 0 8px; font-size: 13px; letter-spacing: .08em; color: #ffb36b; font-weight: 700; }
+.st-l1 { margin: 0 0 6px; font-size: clamp(20px, 3.2vw, 30px); font-weight: 800; line-height: 1.35; }
+.st-l2 { margin: 0; font-size: clamp(15px, 2vw, 19px); line-height: 1.55; color: rgba(255,255,255,.88); }
+.st-nav { position: absolute; left: 0; right: 0; bottom: max(20px, env(safe-area-inset-bottom)); padding: 0 max(16px, 6vw); display: flex; align-items: center; justify-content: space-between; gap: 12px; max-width: 860px; margin: 0 auto; }
+.st-dots { display: flex; gap: 6px; }
+.st-dots i { width: 8px; height: 8px; border-radius: 99px; background: rgba(255,255,255,.35); transition: .3s; }
+.st-dots i.on { width: 22px; background: #ffb36b; }
+.st-end { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+.story .btn.ghost { background: rgba(255,255,255,.12); color: #fff; border-color: rgba(255,255,255,.35); }
+.epilogue { margin: 18px auto 0; max-width: 560px; border-radius: 20px; overflow: hidden; background: var(--surface); border: 1px solid var(--line); box-shadow: 0 10px 30px rgba(40,20,90,.12); }
+.epilogue img { display: block; width: 100%; aspect-ratio: 3 / 2; object-fit: cover; }
+.epilogue figcaption { display: grid; gap: 4px; padding: 12px 16px 14px; font-size: 14.5px; line-height: 1.55; color: var(--text-2); }
+.epilogue figcaption b { color: var(--text); font-size: 15.5px; }
+
+/* 요구사항 점검표(데이터 페이지 맨 위) */
+.req .sec-title { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.req-live { font-size: 13px; font-weight: 700; padding: 3px 10px; border-radius: 99px; background: var(--surface-2); color: var(--muted); }
+.req-live.ok { background: var(--ok-bg); color: var(--ok); }
+.req-live.bad { background: var(--warn-bg); color: var(--warn); }
+.req-wrap { overflow-x: auto; margin: 0 -4px; }
+.req-t { width: 100%; border-collapse: collapse; font-size: 14px; line-height: 1.5; }
+.req-t th { text-align: left; font-size: 12.5px; color: var(--muted); font-weight: 700; padding: 6px 8px; border-bottom: 1.5px solid var(--line); white-space: nowrap; }
+.req-t td { padding: 9px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+.req-t td:first-child { white-space: nowrap; }
+.req-v { color: var(--ok); font-weight: 600; min-width: 140px; }
+@media (max-width: 640px) {
+  .req-t thead { display: none; }
+  .req-t tr { display: grid; grid-template-columns: 1fr; padding: 8px 0; border-bottom: 1px solid var(--line); }
+  .req-t td { border: 0; padding: 2px 4px; }
+}
