@@ -44,7 +44,7 @@
 ## 2026-11-28 자동화(GitHub Actions) — 안정성·지속가능성
 | 워크플로 | 언제 | 하는 일 |
 |---|---|---|
-| `data-weekly.yml` | 매주 일 07:00 KST · 손으로도 | pack.enc 풀기 → `build_season.py` → `build_rag.py --budget 900` → `check_pack.py`(나빠지면 중단) → 테스트 → pack.enc 커밋 → Render·Vercel 자동 재배포 |
+| `data-weekly.yml` | 매주 월 09:00 KST · 손으로도 | pack.enc 풀기 → `build_season.py` → `build_rag.py --budget 900` → `check_pack.py`(나빠지면 중단) → 테스트 → pack.enc 커밋 → Render·Vercel 자동 재배포 |
 | `ci.yml` | push·PR | 서버 테스트 + 화면 타입 검사·빌드 |
 | `uptime.yml` | 10분마다 | `/v1/health`(ok·stale) + 화면 200 확인 → 실패하면 메일. 무료 서버 깨워 두기 |
 

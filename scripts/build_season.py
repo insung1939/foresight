@@ -72,8 +72,10 @@ weekly: dict[str, dict[date, float]] = defaultdict(dict)
 for a, d, c in prices:
     weekly[a][monday(d)] = float(c)  # 정렬돼 있으므로 마지막 값 = 그 주 마지막 종가
 last = max(monday(d) for _, d, _ in prices[-2000:])
-# 아직 금요일 장이 안 끝난 주(주 중간에 돌린 경우)는 빼야 '그 주 종가'가 틀리지 않는다 → 주간 자동 갱신은 일요일에 돈다
-if max(d for _, d, _ in prices[-2000:]) < last + timedelta(days=4):
+# 일요일까지 다 모인 주만 넣는다: 주식은 금요일 종가지만 코인·유튜브 언급은 주말에도 쌓인다.
+# hindsight 는 매일 07:10 에 전날 것을 모으므로, 주간 갱신은 월요일 09:00 KST 에 돌아 일요일 것까지 들어온다.
+_through = max(d for _, d, _ in prices)
+if _through < last + timedelta(days=6):
     last -= timedelta(days=7)
 WEEKS = []
 w = monday(min(d for _, d, _ in prices)) + timedelta(days=7)

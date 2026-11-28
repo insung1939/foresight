@@ -26,7 +26,7 @@ export function ReqCheck({ p95, ux }: { p95?: number; ux?: Meta["ux"] }) {
   const usab = [fmtMode("practice", "연습"), fmtMode("daily", "시드"), fmtMode("free", "자유")].filter(Boolean).join(" · ");
   const rows: Row[] = [
     ["기능 · 데이터", "신뢰성 · 정확성", "hindsight 원천(유튜브 51채널 · 국내·미국 주가 · 업비트) 읽기만. 끊긴 종목 제외 · 빈 주는 직전 종가 · 시점 단서 지우기(아래 ③)", h ? `시즌 팩 ${h.data.weeks}주 ✅` : undefined],
-    ["기능 · 데이터", "주기(매일·실시간)", "원천은 hindsight 가 매일 수집 → 매주 일요일 자동 갱신(GitHub Actions: 시즌 팩·검색 색인 재생성 → 품질 관문·테스트 통과 시에만 배포). 오늘의 시드는 매일 새 시장. 과거를 다시 사는 게임이라 실시간 시세는 쓰지 않음", h ? `데이터 마지막 주 ${h.data.lastWeek ?? "-"} ${h.stale ? "⚠️ 오래됨" : "✅"}` : undefined],
+    ["기능 · 데이터", "주기(매일·실시간)", "원천은 hindsight 가 매일 수집 → 매주 월요일 자동 갱신(GitHub Actions: 시즌 팩·검색 색인 재생성 → 품질 관문·테스트 통과 시에만 배포). 오늘의 시드는 매일 새 시장. 과거를 다시 사는 게임이라 실시간 시세는 쓰지 않음", h ? `데이터 마지막 주 ${h.data.lastWeek ?? "-"} ${h.stale ? "⚠️ 오래됨" : "✅"}` : undefined],
     ["기능 · 데이터", "시각화", "화제 광장(언급 수만큼 개미), 주봉 차트, 결산 곡선, 이 페이지 분석 5개"],
     ["기능 · 아키텍처", "UI · 백엔드 · DB", "React(Vercel) → FastAPI(Render) → Supabase Postgres + pgvector → Gemini", h ? `서버 ${h.ok ? "✅" : "⚠️"} · DB ${h.db ? `✅ ${h.dbMs}ms` : "⚠️"} · 검색 ${h.rag} · AI ${h.ai}` : undefined],
     ["기능 · 아키텍처", "견고함", "규칙·가격은 서버만(미래 정보 차단) · 랭킹 서버 재계산 · AI 실패 시 규칙 답 · DB 순간 끊김은 503 + 화면 자동 재시도 · 데이터가 갱신돼도 진행 중인 판은 종목 id 로 그대로", h ? `가동 ${up}` : undefined],
