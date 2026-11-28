@@ -479,3 +479,16 @@ def test_health_reports_db_and_data_freshness():
     h = client.get("/v1/health").json()
     assert h["ok"] and h["db"] and h["pack"] and h["dbMs"] >= 0
     assert h["data"]["weeks"] > 26 and h["data"]["lastWeek"] and h["data"]["builtAt"]
+
+
+def test_runs_survive_weekly_data_refresh():
+    """주간 자동 갱신으로 팩의 종목 번호가 바뀌어도 저장된 판은 id 로 같은 종목을 다시 찾는다"""
+    st = season.new_run("relink", mode="free")
+    assert all("id" in a for a in st["assets"])
+    want = [a["i"] for a in st["assets"]]
+    for a in st["assets"]:
+        a["i"] = 0  # 번호가 엉킨 상황
+    season.pack.relink(st)
+    assert [a["i"] for a in st["assets"]] == want
+    v = season.view(st)
+    assert v["assets"] and v["t"] == 0

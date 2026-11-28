@@ -920,3 +920,16 @@ span.code-chip { display: inline-flex; align-items: center; }
   .req-t tr { display: grid; grid-template-columns: 1fr; padding: 8px 0; border-bottom: 1px solid var(--line); }
   .req-t td { border: 0; padding: 2px 4px; }
 }
+
+/* 게임 그림(사건·행운 카드·개미 초상) */
+.ev-art { position: relative; margin: 0 auto; width: 100%; max-width: 420px; }
+.ev-art .art { display: block; width: 100%; aspect-ratio: 3 / 2; object-fit: cover; border-radius: 16px; box-shadow: 0 10px 28px rgba(40, 20, 90, .18); }
+.ev-art .ev-icon { display: block; }
+.ev-badge { position: absolute; left: 10px; bottom: -14px; width: 42px; height: 42px; border-radius: 50%; display: grid; place-items: center; font-size: 22px; background: var(--surface); box-shadow: 0 4px 12px rgba(0,0,0,.15); }
+.ev-art:has(.ev-icon) .ev-badge { display: none; }
+.event h2 { margin-top: 8px; }
+.lc-art { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 10px; }
+.lc-front:has(.lc-art) { align-content: start; padding: 6px; }
+.cc-art { width: 92px; height: 92px; border-radius: 22px; object-fit: cover; box-shadow: 0 4px 14px rgba(40, 20, 90, .15); }
+.char-card:disabled .cc-art { filter: grayscale(1) brightness(1.1); opacity: .55; }
+.lc-front:has(.lc-art) small { display: none; }

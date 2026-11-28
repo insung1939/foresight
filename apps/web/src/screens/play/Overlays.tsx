@@ -1,4 +1,5 @@
 // 플레이 화면 위에 뜨는 것들: 종목 바텀시트(매매·개미 비서) · 인생 사건 · 리캡 카드 · 큰 주 결과 · 미션 · 첫 판 안내
+import { Art } from "../../components/Art";
 import { motion } from "motion/react";
 import { useEffect, useLayoutEffect, useState } from "react";
 import { Ant, Orca, Tuber, rivalLine, type CharId } from "../../components/Characters";
@@ -195,8 +196,9 @@ export function EventModal({ ev, busy, onChoose }: { ev: EventCard | null; busy:
       {ev && (
         <div className="event">
           <p className="eyebrow">이번 달의 사건</p>
-          <motion.div className="ev-icon" initial={{ rotate: -12, scale: 0.6 }} animate={{ rotate: 0, scale: 1 }} transition={{ type: "spring", stiffness: 260, damping: 12 }} aria-hidden>
-            {ev.icon}
+          <motion.div className="ev-art" initial={{ scale: 0.92, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: "spring", stiffness: 220, damping: 18 }} aria-hidden>
+            <Art name={`ev_${ev.id}`} fallback={<span className="ev-icon">{ev.icon}</span>} />
+            <span className="ev-badge">{ev.icon}</span>
           </motion.div>
           <h2>{ev.title}</h2>
           <p className="ev-body">{ev.body}</p>
@@ -606,7 +608,7 @@ export function LuckPick({ open, onPick, onClose }: { open: boolean; onClose: ()
                   <span className="lc-front">
                     {f && (
                       <>
-                        <span className="lc-ic">{f.icon}</span>
+                        <Art name={`luck_${f.id}`} className="lc-art" fallback={<span className="lc-ic">{f.icon}</span>} />
                         <b>{f.name}</b>
                         <small>{f.desc}</small>
                       </>

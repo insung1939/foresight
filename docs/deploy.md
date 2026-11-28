@@ -40,3 +40,17 @@
 - Supabase 는 pgvector 확장을 지원한다. 확장을 만들 권한이 없거나 실패하면 서버는 메모리 검색으로 자동 전환한다(`/v1/meta` 의 `rag.backend` 로 확인: `pgvector` · `memory`).
 - 색인 늘리기(하루 무료 한도 ~1,000건): `build_season.py` → `build_rag.py` → `pack_data.py` → 커밋·푸시.
 - 새 의존성: `numpy`. 환경 변수 추가 없음(질문 임베딩은 기존 `GEMINI_API_KEY`).
+
+## 2026-11-28 자동화(GitHub Actions) — 안정성·지속가능성
+| 워크플로 | 언제 | 하는 일 |
+|---|---|---|
+| `data-weekly.yml` | 매주 일 07:00 KST · 손으로도 | pack.enc 풀기 → `build_season.py` → `build_rag.py --budget 900` → `check_pack.py`(나빠지면 중단) → 테스트 → pack.enc 커밋 → Render·Vercel 자동 재배포 |
+| `ci.yml` | push·PR | 서버 테스트 + 화면 타입 검사·빌드 |
+| `uptime.yml` | 10분마다 | `/v1/health`(ok·stale) + 화면 200 확인 → 실패하면 메일. 무료 서버 깨워 두기 |
+
+필요한 저장소 Secrets(Settings → Secrets and variables → Actions): `HINDSIGHT_DATABASE_URL`(읽기 전용이면 더 좋음), `DART_KEY`, `GEMINI_API_KEY`, `DATA_KEY`.
+.env 에서 바로 넣기(값이 화면에 안 찍힘):
+```bash
+for k in HINDSIGHT_DATABASE_URL DART_KEY GEMINI_API_KEY DATA_KEY; do grep "^$k=" .env | cut -d= -f2- | gh secret set $k; done
+```
+데이터 갱신 원칙: 지난 팩의 종목·순서를 지키고(새 종목은 뒤에), 새 판은 종목 id 를 같이 저장해 `Pack.relink` 로 다시 연결한다. 금요일 종가 전의 주는 넣지 않는다.

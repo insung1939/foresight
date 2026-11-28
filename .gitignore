@@ -21,3 +21,4 @@ apps/web/.env*
 data/ai_local_qwen.json
 data/ai_*.json
 !data/ai_eval_public.json
+data/sector.json

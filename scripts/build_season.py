@@ -72,6 +72,9 @@ weekly: dict[str, dict[date, float]] = defaultdict(dict)
 for a, d, c in prices:
     weekly[a][monday(d)] = float(c)  # 정렬돼 있으므로 마지막 값 = 그 주 마지막 종가
 last = max(monday(d) for _, d, _ in prices[-2000:])
+# 아직 금요일 장이 안 끝난 주(주 중간에 돌린 경우)는 빼야 '그 주 종가'가 틀리지 않는다 → 주간 자동 갱신은 일요일에 돈다
+if max(d for _, d, _ in prices[-2000:]) < last + timedelta(days=4):
+    last -= timedelta(days=7)
 WEEKS = []
 w = monday(min(d for _, d, _ in prices)) + timedelta(days=7)
 while w <= last:
@@ -113,10 +116,31 @@ def pick(market: str, types: tuple, n: int) -> list[str]:
 
 
 pool = pick("KRX", ("stock",), POOL_KRX) + pick("US", ("stock",), POOL_US) + pick("CRYPTO", ("crypto",), POOL_CRYPTO)
+# 주간 자동 갱신: 진행 중·끝난 판이 종목을 번호로 가리키므로 지난 팩의 종목·순서를 그대로 지킨다.
+# 지난 종목은 (거래가 멈춰도 마지막 종가로 채워) 남기고, 빠진 자리만 새 종목으로 채워 뒤에 붙인다.
+_prev = ROOT / "data" / "season.json"
+if _prev.exists() and "--fresh" not in sys.argv:
+    old_ids = [x["id"] for x in json.loads(_prev.read_text())["assets"]]
+    kept = [a for a in old_ids if a in assets and ser.get(a) and ser[a][-1] is not None]
+    lost = [a for a in old_ids if a not in kept]
+    want = {"KRX": POOL_KRX, "US": POOL_US, "CRYPTO": POOL_CRYPTO}
+    have = Counter(assets[a]["market"] for a in kept)
+    extra = []
+    for mk, n in want.items():
+        extra += [a for a in pool if assets[a]["market"] == mk and a not in kept][: max(0, n - have[mk])]
+    if lost:
+        print(f"  지난 팩에서 데이터가 사라진 종목 {len(lost)}개: {lost}  → 새 종목 {len(extra)}개로 채움(뒤에 붙임)")
+    pool = kept + extra
+    for a in pool:  # 거래가 멈춘 종목: 앞쪽 빈 값은 첫 종가로
+        s0 = ser[a]
+        first = next((v for v in s0 if v is not None), None)
+        ser[a] = [v if v is not None else first for v in s0]
 print(f"풀 {len(pool)}종목")
 
 # ---------------------------------------------------------------- 4. 업종(코드네임: '반도체 A')
-sector_cache = json.loads(CACHE.read_text()) if CACHE.exists() else {}
+# 업종 캐시: 로컬은 data/cache, 자동 갱신(GitHub Actions)은 pack.enc 에 같이 묶인 data/sector.json 에서 이어받는다
+_sc = CACHE if CACHE.exists() else ROOT / "data" / "sector.json"
+sector_cache = json.loads(_sc.read_text()) if _sc.exists() else {}
 DART_KEY = os.environ.get("DART_KEY", "")
 KSIC = [  # (접두사, 업종) — 긴 접두사부터 본다
     ("2927", "반도체장비"), ("2922", "반도체장비"), ("2928", "로봇"), ("2929", "로봇"), ("283", "전선"), ("281", "전력기기"),
@@ -183,6 +207,7 @@ for a in pool:
         v["sector"] = "대형 코인" if s in BIG_COIN else "밈코인" if s in MEME_COIN else "알트코인"
 CACHE.parent.mkdir(parents=True, exist_ok=True)
 CACHE.write_text(json.dumps(sector_cache, ensure_ascii=False, indent=0))
+(ROOT / "data" / "sector.json").write_text(json.dumps(sector_cache, ensure_ascii=False, indent=0))
 print("업종", Counter(assets[a]["sector"] for a in pool).most_common())
 
 # ---------------------------------------------------------------- 5. 제목 가리기: 풀 종목 → ⟦i⟧, 나머지 종목 → ○○

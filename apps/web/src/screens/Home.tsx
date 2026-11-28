@@ -2,6 +2,7 @@
 import { motion } from "motion/react";
 import { useEffect, useState } from "react";
 import { Ant, CHAR_META, type CharId } from "../components/Characters";
+import { Art } from "../components/Art";
 import { Manual } from "../components/Manual";
 import { StoryIntro } from "../components/Story";
 import { RoomView } from "../components/Scene";
@@ -269,7 +270,7 @@ export default function Home() {
                     sfx("tick");
                   }}
                 >
-                  <Ant char={c} mood={char === c ? "happy" : "calm"} size={64} />
+                  <Art name={`char_${c}`} className="cc-art" alt="" fallback={<Ant char={c} mood={char === c ? "happy" : "calm"} size={64} />} />
                   <b>
                     {m.icon} {m.name}
                   </b>

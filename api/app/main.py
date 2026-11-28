@@ -55,6 +55,17 @@ def db():
         yield s
 
 
+# 견고함: DB 가 잠깐 끊겨도 500 대신 '잠시 뒤 다시'(503 + Retry-After). 화면은 이 응답을 받으면 자동으로 다시 시도한다
+from sqlalchemy.exc import OperationalError, DBAPIError  # noqa: E402
+from fastapi.responses import JSONResponse  # noqa: E402
+
+
+@app.exception_handler(OperationalError)
+@app.exception_handler(DBAPIError)
+async def db_down(_req: Request, _e: Exception):
+    return JSONResponse({"detail": "저장소에 잠깐 연결이 안 돼요. 잠시 뒤 다시 해 주세요(진행은 저장돼 있어요)."}, status_code=503, headers={"Retry-After": "5"})
+
+
 def today_kst() -> str:
     return datetime.now(KST).date().isoformat()
 
@@ -63,6 +74,7 @@ def get_run(s: S, rid: str) -> Run:
     r = s.get(Run, rid)
     if not r:
         raise HTTPException(404, "게임을 찾을 수 없어요")
+    game.pack.relink(r.state)  # 데이터가 주간 갱신돼도 같은 종목을 가리키게
     return r
 
 
@@ -118,7 +130,10 @@ def health():
     db_ms = round((time.perf_counter() - t0) * 1000, 1)
     p = game.pack.data if game.pack.ok else {}
     weeks = p.get("weeks") or []
+    # 데이터가 3주 넘게 안 바뀌면 '오래됨'(주간 자동 갱신이 멈춘 신호 → uptime 점검이 알림). 게임은 계속 된다
+    stale = bool(weeks) and (datetime.now(KST).date() - datetime.fromisoformat(weeks[-1]).date()).days > 21
     return {
+        "stale": stale,
         "ok": bool(game.pack.ok and db_ok), "pack": game.pack.ok, "db": db_ok, "dbMs": db_ms,
         "ai": ai_mod.provider() or "off", "rag": rag.index.backend, "uptime": int(time.time() - STARTED),
         "data": {"builtAt": p.get("builtAt"), "lastWeek": weeks[-1] if weeks else None, "weeks": len(weeks)},

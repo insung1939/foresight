@@ -83,6 +83,19 @@ def main():
         for line in CACHE.read_text().splitlines():
             h, v = json.loads(line)
             have[h] = v
+    # 자동 갱신(GitHub Actions)처럼 캐시가 없는 곳에서도 색인이 줄지 않게: 지난 색인(rag.json)의 벡터를 그대로 이어받는다
+    prev = ROOT / "data" / "rag.json"
+    if prev.exists():
+        try:
+            old = json.loads(prev.read_text())
+            if old.get("model") == MODEL and old.get("dim") == DIM:
+                q = np.frombuffer(base64.b64decode(old["emb"]), dtype=np.int8).reshape(-1, DIM).astype(np.float32) / 127
+                n0 = len(have)
+                for d, v in zip(old["docs"], q):
+                    have.setdefault(hashlib.sha1(doc_text(d).encode()).hexdigest()[:16], v.tolist())
+                print(f"지난 색인에서 이어받음 {len(have) - n0:,}개", flush=True)
+        except (ValueError, KeyError) as e:
+            print(f"지난 색인을 못 읽음({e}) → 캐시만 사용", flush=True)
     todo, seen = [], set()
     for i in priority(docs):
         h = hashes[i]

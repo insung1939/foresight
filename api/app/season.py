@@ -123,6 +123,15 @@ class Pack:
     def __init__(self):
         self.data: dict | None = None
 
+    def relink(self, st: dict) -> dict:
+        """저장된 판의 종목 번호(i)를 지금 팩의 번호로 다시 맞춘다(id 기준). id 가 없는 옛 판은 그대로(팩은 순서를 지키며 갱신)"""
+        p = self.load()
+        ix = p.setdefault("_byid", {a["id"]: i for i, a in enumerate(p["assets"])})
+        for a in st.get("assets", []):
+            if "id" in a and a["id"] in ix:
+                a["i"] = ix[a["id"]]
+        return st
+
     def load(self) -> dict:
         if self.data is None:
             p = Path(DATA_DIR) / "season.json"
@@ -256,6 +265,8 @@ def new_run(seed: str, markets: list[str] | None = None, mode: str = "free", cha
         base = a["close"][s - 1]
         target = _nice(math.exp(rng.uniform(math.log(4_000), math.log(180_000))))
         assets.append({"i": i, "code": f"{a['sector']} {LETTERS[c]}", "scale": target / base})
+    for a in assets:  # 종목 id 도 적어 둔다 → 주간 자동 갱신으로 팩의 순서가 바뀌어도 판이 같은 종목을 가리킨다(relink)
+        a["id"] = p["assets"][a["i"]]["id"]
     # 라이벌 유튜버 3명: 시즌 동안 '오른다' 언급이 꾸준했던 채널 중에서
     active = [c for c in range(len(p["channels"])) if sum(1 for x in p["channels"][c]["n"][s:s + L] if x) >= max(3, L // 3)]
     rivals = rng.sample(active, k=min(3, len(active)))

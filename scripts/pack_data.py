@@ -20,7 +20,7 @@ from dotenv import load_dotenv
 
 ROOT = Path(__file__).resolve().parents[1]
 DATA = ROOT / "data"
-FILES = ["season.json", "rag.json"]  # 시즌 팩(미래 가격 포함) + 개미 비서 색인 — 서버만 갖는다
+FILES = ["season.json", "rag.json", "sector.json"]  # 시즌 팩(미래 가격 포함) + 개미 비서 색인 + 업종 캐시(주간 자동 갱신용) — 서버만 갖는다
 
 
 def pack() -> None:

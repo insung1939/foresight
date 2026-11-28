@@ -18,11 +18,30 @@ export class ApiError extends Error {
 }
 
 export interface Health {
-  ok: boolean; pack: boolean; db: boolean; dbMs: number; ai: string; rag: string; uptime: number;
+  ok: boolean; stale?: boolean; pack: boolean; db: boolean; dbMs: number; ai: string; rag: string; uptime: number;
   data: { builtAt: string | null; lastWeek: string | null; weeks: number };
 }
 
+// 견고함: 서버가 잠에서 깨는 중(502)·잠깐 과부하(503·504)·DB 순간 끊김(503)이면 1.5 → 3 → 6초 뒤 자동으로 다시 시도한다.
+// GET 은 네트워크 오류도 다시 시도. POST(턴 진행 등)는 서버가 처리하지 않았다고 확실한 502·503·504 에서만(두 번 처리 방지).
+const RETRY_STATUS = new Set([502, 503, 504]);
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
 async function call<T>(path: string, init?: { method?: string; body?: unknown; timeout?: number }): Promise<T> {
+  const get = (init?.method ?? "GET") === "GET";
+  for (let i = 0; ; i++) {
+    try {
+      return await once<T>(path, init);
+    } catch (e) {
+      const err = e as ApiError;
+      const retry = i < 3 && (RETRY_STATUS.has(err.status) || (get && err.kind === "server" && err.status === 0));
+      if (!retry) throw e;
+      await sleep(1500 * 2 ** i);
+    }
+  }
+}
+
+async function once<T>(path: string, init?: { method?: string; body?: unknown; timeout?: number }): Promise<T> {
   if (typeof navigator !== "undefined" && navigator.onLine === false) throw new ApiError("offline", "인터넷 연결이 끊겨 있어요.");
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), init?.timeout ?? TIMEOUT_MS);
