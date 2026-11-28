@@ -2,6 +2,7 @@ import { MotionConfig } from "motion/react";
 import { Suspense, lazy, useEffect } from "react";
 import { ErrorBoundary, ErrorState, Loading, Toasts, TopBar, lensIsOn, setLens } from "./components/ui";
 import { useRoute } from "./lib/router";
+import { setScene } from "./lib/sfx";
 import Home from "./screens/Home";
 import Play from "./screens/Play";
 
@@ -24,6 +25,8 @@ export default function App() {
     window.addEventListener("keydown", on);
     return () => window.removeEventListener("keydown", on);
   }, []);
+  // 화면별 배경음악: 플레이(살짝 긴장) · 결산(신나게) · 나머지(잔잔하게)
+  useEffect(() => setScene(route === "/play" || route === "/demo" ? "play" : route === "/result" ? "result" : "home"), [route]);
   let screen;
   if (route === "/") screen = <Home />;
   else if (route === "/play") screen = <Play />;

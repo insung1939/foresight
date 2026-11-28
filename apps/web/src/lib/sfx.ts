@@ -1,5 +1,7 @@
-// 효과음 + 배경음악: 파일 없이 Web Audio 로 합성한다. 기본은 꺼짐(강의실), 상단 🔈 버튼으로 켠다.
-// 교수님 피드백 '게임은 사운드가 중요하다' → 소리를 켜면 잔잔한 로파이 배경음악(4마디 반복)도 같이 흐른다.
+// 효과음 + 배경음악. 기본은 꺼짐(강의실), 상단 🔈 버튼으로 켠다.
+// 교수님 피드백 '게임은 사운드가 중요하다' → 소리를 켜면 배경음악도 같이 흐른다.
+// 파일이 있으면 파일을 쓴다(public/audio/manifest.json 목록): 배경음악은 Suno(화면별 home·play·result),
+// 효과음은 ElevenLabs(scripts/gen_sfx.py). 파일이 없거나 못 받으면 Web Audio 합성음으로 돌아간다.
 import { read, write } from "./storage";
 
 const KEY = "fs:sound:v1";
@@ -9,6 +11,47 @@ let ctx: AudioContext | null = null;
 let on = read<boolean>(KEY) ?? false;
 const subs = new Set<(v: boolean) => void>();
 
+// ── 파일 소리 ──
+type Scene = "home" | "play" | "result";
+type Manifest = { bgm: string[]; sfx: string[]; vol?: { bgm?: number; sfx?: number } };
+let manifest: Manifest | null = null;
+let loading: Promise<void> | null = null;
+const buffers = new Map<string, AudioBuffer>();
+function loadAudio(): Promise<void> {
+  if (loading) return loading;
+  loading = fetch("/audio/manifest.json", { cache: "no-cache" })
+    .then((r) => (r.ok ? r.json() : { bgm: [], sfx: [] }))
+    .then(async (m: Manifest) => {
+      manifest = { bgm: m.bgm ?? [], sfx: m.sfx ?? [], vol: m.vol };
+      ctx ??= new AudioContext();
+      await Promise.all(
+        manifest.sfx.map(async (n) => {
+          try {
+            const b = await fetch(`/audio/sfx/${n}.mp3`).then((r) => (r.ok ? r.arrayBuffer() : Promise.reject()));
+            buffers.set(n, await ctx!.decodeAudioData(b));
+          } catch {
+            /* 이 소리는 합성음으로 */
+          }
+        }),
+      );
+    })
+    .catch(() => {
+      manifest = { bgm: [], sfx: [] };
+    });
+  return loading;
+}
+function playFile(name: string): boolean {
+  const b = buffers.get(name);
+  if (!b || !ctx) return false;
+  const src = ctx.createBufferSource();
+  const g = ctx.createGain();
+  g.gain.value = manifest?.vol?.sfx ?? 0.6;
+  src.buffer = b;
+  src.connect(g).connect(ctx.destination);
+  src.start();
+  return true;
+}
+
 export const soundOn = () => on;
 export function setSound(v: boolean) {
   on = v;
@@ -16,7 +59,7 @@ export function setSound(v: boolean) {
   subs.forEach((f) => f(v));
   if (v) {
     sfx("badge");
-    music(true);
+    void loadAudio().then(() => on && music(true));
   } else music(false);
 }
 export function onSound(f: (v: boolean) => void) {
@@ -49,6 +92,7 @@ export function sfx(name: Name) {
   try {
     ctx ??= new AudioContext();
     if (ctx.state === "suspended") void ctx.resume();
+    if (playFile(name)) return;
     switch (name) {
       case "flip":
         tone(520, 0, 0.08, "triangle", 0.1, 980);
@@ -163,8 +207,8 @@ function schedule() {
   }
 }
 
-/** 배경음악 켜고 끄기(소리 버튼과 함께) */
-export function music(v: boolean) {
+/** 합성 배경음악 켜고 끄기 */
+function synth(v: boolean) {
   try {
     if (v) {
       if (timer !== null) return;
@@ -194,10 +238,69 @@ export function music(v: boolean) {
   }
 }
 
+// ── 화면별 배경음악(파일이 있으면 파일, 없으면 합성) · 화면이 바뀌면 1.2초 크로스페이드 ──
+let scene: Scene = "home";
+let track: HTMLAudioElement | null = null;
+let trackName = "";
+function fade(el: HTMLAudioElement, to: number, ms: number, done?: () => void) {
+  const from = el.volume, t0 = performance.now();
+  const step = () => {
+    const k = Math.min(1, (performance.now() - t0) / ms);
+    el.volume = Math.max(0, Math.min(1, from + (to - from) * k));
+    if (k < 1) requestAnimationFrame(step);
+    else done?.();
+  };
+  requestAnimationFrame(step);
+}
+function stopTrack() {
+  const old = track;
+  track = null;
+  trackName = "";
+  if (old) fade(old, 0, 800, () => old.pause());
+}
+/** 배경음악 켜고 끄기(소리 버튼과 함께) */
+export function music(v: boolean) {
+  if (!v) {
+    synth(false);
+    stopTrack();
+    return;
+  }
+  const name = manifest?.bgm.includes(scene) ? scene : manifest?.bgm[0];
+  if (!name) {
+    stopTrack();
+    synth(true);
+    return;
+  }
+  synth(false);
+  if (trackName === name && track) return;
+  stopTrack();
+  const el = new Audio(`/audio/bgm/${name}.mp3`);
+  el.loop = true;
+  el.volume = 0;
+  track = el;
+  trackName = name;
+  el.play()
+    .then(() => fade(el, manifest?.vol?.bgm ?? 0.35, 1200))
+    .catch(() => {
+      // 자동재생이 막혔거나 파일이 없으면 합성음으로
+      if (track === el) {
+        track = null;
+        trackName = "";
+        synth(true);
+      }
+    });
+}
+/** 화면이 바뀔 때 부른다: 홈 · 플레이 · 결산 */
+export function setScene(s: Scene) {
+  if (s === scene) return;
+  scene = s;
+  if (on && manifest) music(true);
+}
+
 // 소리를 켜 둔 채 다시 들어오면 첫 터치 때 음악을 다시 튼다(브라우저 자동재생 정책)
 if (typeof window !== "undefined" && on) {
   const kick = () => {
-    if (on) music(true);
+    if (on) void loadAudio().then(() => on && music(true));
     window.removeEventListener("pointerdown", kick);
     window.removeEventListener("keydown", kick);
   };
