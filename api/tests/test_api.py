@@ -124,7 +124,9 @@ def test_rules_reject_bad_orders():
     ok = client.post(f"/v1/runs/{rid}/turn", json={"orders": [{"k": a["k"], "q": 10}]}).json()
     assert ok["view"]["pos"][0]["qty"] == 10
     fee = 10 * a["price"] * season.FEES["KRX"][0]
-    assert abs((v["cash"] - ok["view"]["cash"]) - (10 * a["price"] + fee)) < 2
+    # 그 주에 월급·사건 돈이 들어올 수 있다(판마다 무작위) → 넣은 돈 변화만큼 빼고 비교
+    got = ok["view"]["deposits"] - v["deposits"]
+    assert abs((v["cash"] + got - ok["view"]["cash"]) - (10 * a["price"] + fee)) < 2
 
 
 def test_max_hold_limit():
