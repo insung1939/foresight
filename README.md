@@ -14,6 +14,7 @@ hindsight(유튜버 언급 뒤 실제 주가를 모은 서비스)의 데이터�
 | 5주차 발표(아이디어 공유) | https://foresight-rho-teal.vercel.app/deck/index.html (F 전체화면 · P 발표자 화면 · 대본 `docs/script.md`) |
 | 프로토타입 | https://foresight-rho-teal.vercel.app (시연용 바로가기 `/#/demo`) |
 | 팀 페이지 | https://foresight-rho-teal.vercel.app/#/team |
+| 기말 최종 발표 자료 | https://foresight-rho-teal.vercel.app/final/ (P 발표자 화면 · 대본 `docs/final-script.md`) |
 | API 문서(Swagger) | https://foresight-api-yda3.onrender.com/docs |
 | 코드 | https://github.com/insung1939/foresight |
 

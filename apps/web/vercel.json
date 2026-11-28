@@ -17,7 +17,7 @@
       ]
     },
     {
-      "source": "/((?!deck/).*)",
+      "source": "/((?!deck/|final/).*)",
       "headers": [
         {
           "key": "Content-Security-Policy",
@@ -26,7 +26,7 @@
       ]
     },
     {
-      "source": "/deck/(.*)",
+      "source": "/(deck|final)/(.*)",
       "headers": [
         {
           "key": "Content-Security-Policy",

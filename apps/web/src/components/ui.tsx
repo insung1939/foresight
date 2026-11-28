@@ -504,15 +504,16 @@ export function WeekBars({ data, h = 120 }: { data: number[]; h?: number }) {
   const W = 600;
   const max = Math.max(0.01, ...data.map((x) => Math.abs(x)));
   const bw = W / data.length;
-  const mid = h / 2;
+  const top = 18; // 제일 좋은 주 라벨이 잘리지 않게 위·아래 여백
+  const mid = top + h / 2;
   const best = data.indexOf(Math.max(...data));
   const worst = data.indexOf(Math.min(...data));
   return (
     <figure className="weekbars">
-      <svg viewBox={`0 0 ${W} ${h + 18}`} role="img" aria-label={`주별 수익: 가장 좋은 주 ${best + 1}주차 ${pct(data[best])}, 가장 나쁜 주 ${worst + 1}주차 ${pct(data[worst])}`}>
+      <svg viewBox={`0 0 ${W} ${h + top * 2 + 18}`} role="img" aria-label={`주별 수익: 가장 좋은 주 ${best + 1}주차 ${pct(data[best])}, 가장 나쁜 주 ${worst + 1}주차 ${pct(data[worst])}`}>
         <line x1="0" x2={W} y1={mid} y2={mid} className="wb-axis" />
         {data.map((x, i) => {
-          const bh = (Math.abs(x) / max) * (mid - 6);
+          const bh = (Math.abs(x) / max) * (h / 2 - 6);
           return (
             <g key={i}>
               <rect x={i * bw + bw * 0.18} width={bw * 0.64} y={x >= 0 ? mid - bh : mid} height={Math.max(1, bh)} rx="2" className={x >= 0 ? "wb-up" : "wb-down"} opacity={i === best || i === worst ? 1 : 0.75}>
@@ -524,7 +525,7 @@ export function WeekBars({ data, h = 120 }: { data: number[]; h?: number }) {
                 </text>
               )}
               {(i === 0 || i === data.length - 1 || (i + 1) % 4 === 0) && (
-                <text x={i * bw + bw / 2} y={h + 14} textAnchor="middle" className="wb-x">
+                <text x={i * bw + bw / 2} y={h + top * 2 + 14} textAnchor="middle" className="wb-x">
                   {i + 1}주
                 </text>
               )}
