@@ -1,7 +1,7 @@
 // 결산(#/result?id=): 등급 → 순위 → 칭호 → 곡선 → 코드네임 정체 공개 → 공유·코치·이름
 import { motion } from "motion/react";
 import { useEffect, useRef, useState, type RefObject } from "react";
-import { CountUp, Delta, ErrorState, LineChart, Loading, Sheet, TopBar, toast } from "../components/ui";
+import { CountUp, Delta, ErrorState, LineChart, Loading, Sheet, TopBar, WeekBars, toast } from "../components/ui";
 import { api, useAsync } from "../lib/api";
 import { dateDot, pct, won } from "../lib/format";
 import { Ant, Orca, Tuber, type CharId } from "../components/Characters";
@@ -326,6 +326,8 @@ function Body({ f, id }: { f: Final; id: string }) {
           ]}
           xLabel={(i) => (i === 0 ? "시작" : `${f.len}주`)}
         />
+        <h3 className="sub-h">주별 수익</h3>
+        <WeekBars data={f.weeks} />
         <p className="muted small">멘탈 최저 {Math.min(...f.mental)} · 거래 {f.title.stats.trades}번 · 추격 매수 {f.title.stats.fomo}번</p>
       </section>
 

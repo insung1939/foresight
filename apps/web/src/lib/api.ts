@@ -17,6 +17,20 @@ export class ApiError extends Error {
   }
 }
 
+/** 신뢰성 지표: 화면에서 난 오류를 서버에 알린다(메시지·경로만, 한 번 연 화면에서 최대 5번·같은 메시지 한 번) */
+const sent = new Set<string>();
+export function reportError(kind: "error" | "rejection" | "render", msg: string) {
+  try {
+    if (sent.size >= 5 || sent.has(msg)) return;
+    sent.add(msg);
+    const body = JSON.stringify({ kind, msg: msg.slice(0, 300), path: location.hash.slice(0, 80) || "/" });
+    const url = `${BASE}/v1/client-error`;
+    if (!navigator.sendBeacon?.(url, new Blob([body], { type: "text/plain" }))) void fetch(url, { method: "POST", body, keepalive: true });
+  } catch {
+    /* 보고 실패는 무시 */
+  }
+}
+
 export interface Health {
   ok: boolean; stale?: boolean; pack: boolean; db: boolean; dbMs: number; ai: string; rag: string; uptime: number;
   data: { builtAt: string | null; lastWeek: string | null; weeks: number };

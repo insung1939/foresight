@@ -24,7 +24,7 @@ from sqlalchemy.orm import Session as S
 from . import ai as ai_mod
 from . import rag
 from . import season as game
-from .db import AiLog, Run, Session, init_db, now
+from .db import AiLog, ClientErr, Run, Session, init_db, now
 from .ops import STARTED, OpsMiddleware, perf_summary
 from .settings import ALLOWED_ORIGINS
 
@@ -116,6 +116,21 @@ class Turn(BaseModel):
 
 class Nick(BaseModel):
     nickname: str
+
+
+@app.post("/v1/client-error", tags=["상태"], summary="화면 오류 보고(신뢰성 지표). 메시지·경로만, 개인정보 없음", status_code=204)
+async def client_error(request: Request, s: S = Depends(db)):
+    raw = (await request.body())[:2000]
+    try:
+        import json as _json
+        j = _json.loads(raw or b"{}")
+    except ValueError:
+        j = {}
+    kind = str(j.get("kind") or "error")[:16]
+    msg = re.sub(r"[\w.+-]+@[\w-]+\.[\w.]+", "<email>", str(j.get("msg") or ""))[:300]  # 혹시 모를 개인정보 지우기
+    path = str(j.get("path") or "")[:80]
+    s.add(ClientErr(kind=kind, msg=msg, path=path))
+    s.commit()
 
 
 @app.get("/v1/health", tags=["상태"], summary="상태 점검: 서버·DB·시즌 팩·검색 색인·AI 가 살아 있는지와 데이터가 언제 것인지")
@@ -628,4 +643,30 @@ def meta(s: S = Depends(db)):
         "rag": {"docs": len(rag.index.docs), "backend": rag.index.backend, "model": rag.index.model, "dim": rag.index.dim, "window": rag.WINDOW},
         "players": players,
         "perf": perf_summary(),
+        "ux": _ux(s),
     }
+
+
+def _ux(s: S) -> dict:
+    """사용성·신뢰성 지표: 모드별 완주율·한 판 걸린 시간(중앙값)·지난 7일 화면 오류.
+    진행 중일 수 있는 최근 1시간 판은 완주율 분모에서 뺀다."""
+    cutoff = now() - timedelta(hours=1)
+    rows = s.execute(select(Run.mode, Run.done, Run.created_at, Run.finished_at).where(Run.created_at < cutoff)).all()
+    by: dict[str, dict] = {}
+    for mode, done_, c, f in rows:
+        b = by.setdefault(mode or "free", {"n": 0, "done": 0, "mins": []})
+        b["n"] += 1
+        if done_:
+            b["done"] += 1
+            if c and f:
+                c2 = c if c.tzinfo else c.replace(tzinfo=timezone.utc)
+                f2 = f if f.tzinfo else f.replace(tzinfo=timezone.utc)
+                m = (f2 - c2).total_seconds() / 60
+                if 0 < m < 180:  # 며칠 뒤 이어 한 판은 '걸린 시간'에서 뺀다
+                    b["mins"].append(m)
+    modes = {k: {"n": b["n"], "done": b["done"], "rate": round(b["done"] / b["n"], 3) if b["n"] else None,
+                 "minutes": round(statistics.median(b["mins"]), 1) if b["mins"] else None} for k, b in by.items()}
+    week = now() - timedelta(days=7)
+    errs = s.scalar(select(func.count()).select_from(ClientErr).where(ClientErr.at >= week)) or 0
+    turns = s.scalar(select(func.coalesce(func.sum(Run.turn), 0)).where(Run.updated_at >= week)) or 0
+    return {"modes": modes, "errors7d": errs, "turns7d": int(turns)}

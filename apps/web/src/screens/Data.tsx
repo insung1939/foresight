@@ -21,7 +21,7 @@ export default function Data() {
         {res.status === "error" && <ErrorState title="데이터를 불러오지 못했어요" detail={res.error.message} onRetry={res.retry} />}
         {res.status === "ready" && (
           <>
-            <ReqCheck p95={res.data.perf.find((x) => x.path.endsWith("/turn"))?.p95} />
+            <ReqCheck p95={res.data.perf.find((x) => x.path.endsWith("/turn"))?.p95} ux={res.data.ux} />
             <UpdateLog m={res.data} />
             <ArchMap />
             <Body m={res.data} />

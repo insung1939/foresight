@@ -970,3 +970,22 @@ span.code-chip { display: inline-flex; align-items: center; }
 .arch-side { padding: 8px 12px; border-radius: 12px; background: var(--surface-2); font-size: 13.5px; margin-bottom: 10px; }
 .arch-side span { font-weight: 700; margin-right: 6px; }
 @media (max-width: 640px) { .arch-cell { flex-basis: 100%; } .arch-arrow { transform: rotate(90deg); margin: 0 auto; } .arch-cell { flex-direction: column; } }
+
+/* 시각화: 비중 도넛 · 주별 막대 · 순위 경주 */
+.donut-wrap { display: flex; align-items: center; gap: 14px; margin: 10px 0; flex-wrap: wrap; }
+.donut-c { font-size: 17px; font-weight: 800; fill: var(--text); }
+.donut-s { font-size: 8.5px; fill: var(--muted); }
+.donut-legend { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; font-size: 13px; flex: 1; min-width: 140px; }
+.donut-legend li { display: grid; grid-template-columns: 10px 1fr auto; gap: 8px; align-items: center; }
+.donut-legend i { width: 10px; height: 10px; border-radius: 3px; }
+.weekbars { margin: 4px 0 8px; }
+.weekbars svg { width: 100%; height: auto; display: block; }
+.wb-axis { stroke: var(--line); stroke-width: 1; }
+.wb-up { fill: var(--up); }
+.wb-down { fill: var(--down); }
+.wb-lbl { font-size: 13px; font-weight: 700; fill: var(--text); }
+.wb-x { font-size: 12px; fill: var(--muted); }
+.race { margin: 8px 0 12px; }
+.block-link { display: block; margin: 8px auto 0; }
+.hud-note.todo { font-size: 13.5px; line-height: 1.45; padding: 7px 12px; }
+.qt-pro { margin-top: -2px; font-size: 12px; }

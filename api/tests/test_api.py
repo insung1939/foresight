@@ -492,3 +492,25 @@ def test_runs_survive_weekly_data_refresh():
     assert [a["i"] for a in st["assets"]] == want
     v = season.view(st)
     assert v["assets"] and v["t"] == 0
+
+
+def test_race_has_no_future_and_matches_standings():
+    """시각화(순위 경주): 지난 주까지만 담고, 마지막 값이 지금 순위표 숫자와 같다"""
+    st = season.new_run("race-test", mode="free")
+    for _ in range(3):
+        season.play_turn(st, [], 0 if st.get("pending") is not None else None)
+    v = season.view(st)
+    r = v["race"]
+    assert len(r["me"]) == len(r["kospi"]) == v["t"] + 1 and all(len(x) == v["t"] + 1 for x in r["rivals"])
+    assert abs(r["kospi"][-1] - v["kospi"]) < 1e-4 and [x[-1] for x in r["rivals"]] == [x["twr"] for x in v["rivals"]]
+
+
+def test_client_error_report_strips_email():
+    """신뢰성: 화면 오류 보고는 받되 이메일 같은 개인정보는 지운다"""
+    assert client.post("/v1/client-error", content=b'{"kind":"error","msg":"boom me@x.com","path":"/play"}').status_code == 204
+    assert client.post("/v1/client-error", content=b"not json").status_code == 204
+    from app.db import ClientErr, Session
+    with Session() as s:
+        last = s.query(ClientErr).order_by(ClientErr.id.desc()).offset(1).first()
+        assert "me@x.com" not in last.msg and "<email>" in last.msg
+    assert "ux" in client.get("/v1/meta").json()

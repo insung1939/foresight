@@ -2,7 +2,7 @@
 import { Manual } from "../components/Manual";
 import { isPro, usePro } from "../lib/mode";
 import { AnimatePresence, motion } from "motion/react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Ant, moodOf, type CharId } from "../components/Characters";
 import { Delta, ErrorState, Loading, Mental, SoundToggle, toast } from "../components/ui";
 import { ApiError, api } from "../lib/api";
@@ -237,6 +237,23 @@ export default function Play() {
         />
       </main>
     );
+  // 사용성: 키보드 N = 다음 주(창·시트가 열려 있거나 글을 쓰는 중이면 무시)
+  const nextRef = useRef(next);
+  nextRef.current = next;
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "n" && e.key !== "N") return;
+      const t = e.target as HTMLElement | null;
+      if (e.metaKey || e.ctrlKey || e.altKey || t?.closest("input, textarea, [contenteditable]")) return;
+      if (sheet || recap || big || tour || manual || document.querySelector('[aria-modal="true"]')) return;
+      if (v?.pending || v?.luckPick) return;
+      e.preventDefault();
+      void nextRef.current();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [sheet, recap, big, tour, manual, v?.pending, v?.luckPick]);
+
   if (!run || !v || !p) return <Loading slow={slow} label="시장을 여는 중…" />;
 
   const left = v.season - v.t;
@@ -301,14 +318,16 @@ export default function Play() {
           </button>
           {v.goal && v.rivals[v.goal.i] && <GoalBar v={v} />}
         </div>
-        {v.mode === "practice" && v.t === 0 && <p className="hud-note info">🐜 연습 시즌: 8주 · 국내 6종목. 마음 편히 사고팔아 보세요!</p>}
+        {pro && v.mode === "practice" && v.t === 0 && <p className="hud-note info">🐜 연습 시즌: 8주 · 국내 6종목. 마음 편히 사고팔아 보세요!</p>}
         {!pro && !v.skip && (
           <p className="hud-note todo" aria-live="polite" data-ux="Coach Mark · Next Step">
             {nOrders > 0
               ? `👉 주문 ${nOrders}건 담았어요. 이제 아래 ▶ 다음 주를 누르면 결과가 나와요`
               : v.pos.length
                 ? "👉 그대로 들고 가려면 ▶ 다음 주. 팔고 싶으면 💼 계좌에서 종목을 눌러요"
-                : "👉 ① 📈 시장에서 종목을 눌러 보고 ② 금액 버튼으로 사고 ③ ▶ 다음 주!"}
+                : v.t === 0
+                  ? `⏪ 1년 전 월요일로 왔어요. ${v.mode === "practice" ? "연습 8주! " : ""}① 종목을 눌러 ② 금액 버튼으로 사고 ③ ▶ 다음 주`
+                  : "👉 ① 종목을 눌러 보고 ② 금액 버튼으로 사고 ③ ▶ 다음 주 (쉬어도 괜찮아요)"}
           </p>
         )}
         {v.skip && <p className="hud-note">✈️ 이번 주는 거래할 수 없어요. 그대로 다음 주로 넘어가요.</p>}
@@ -348,7 +367,7 @@ export default function Play() {
 
       <div className="dock">
         <div className="dock-row">
-          <button className="next-btn" onClick={next} disabled={!!busy || !!v.pending} data-tour="next" data-ux="Primary Action · Thumb Zone">
+          <button className="next-btn" onClick={next} disabled={!!busy || !!v.pending} title="다음 주 (키보드 N)" data-tour="next" data-ux="Primary Action · Thumb Zone">
             <span className="nb-main">{busy === "next" ? "시장이 움직이는 중…" : left === 1 ? "마지막 주 마감 🏁" : "다음 주 ▶"}</span>
             <span className="nb-sub">{nOrders ? `주문 ${nOrders}건 체결` : v.pos.length ? "그대로 들고 가기" : noCash ? "현금으로 버티기" : "아무것도 안 사고 넘기기"}</span>
           </button>
@@ -401,7 +420,7 @@ export default function Play() {
       />
       <WeekModal week={big?.week ?? null} before={big?.before ?? null} after={big?.after.view ?? null} onNext={afterBig} />
       <GoalIntro
-        open={!goalSeen && v.t === 0 && !v.luckPick && !luckRun && !tour && !isDemo()}
+        open={!goalSeen && v.t === 0 && v.mode !== "practice" && !v.luckPick && !luckRun && !tour && !isDemo()}
         v={v}
         stars={progress().stars}
         onClose={() => {

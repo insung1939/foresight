@@ -243,6 +243,7 @@ function QuickTrade({ v, a, orders, onOrder }: { v: View; a: Asset; orders: Orde
         </>
       )}
       <p className="muted small center">누르면 주문이 담겨요 · <b>▶ 다음 주</b>를 누르면 그 주 가격으로 사고팔아요</p>
+      <p className="muted small center qt-pro">🐻 떨어질 때 버는 공매도·수량 직접 입력은 홈의 <b>🎓 고수 모드</b>에서</p>
     </div>
   );
 }

@@ -831,6 +831,16 @@ def _index_twr(st: dict, upto: int) -> float:
     return p["index"][upto - 1] / p["index"][st["s"] - 1]
 
 
+def _race(st: dict) -> dict:
+    s, t = st["s"], st["t"]
+    me, v = [1.0], 1.0
+    for h in st["hist"][:t]:
+        v *= 1 + h["r"]
+        me.append(round(v, 5))
+    return {"me": me, "kospi": [1.0] + [round(_index_twr(st, s + k), 5) for k in range(1, t + 1)],
+            "rivals": [[1.0] + [round(_rival_twr(st, c, s + k), 5) for k in range(1, t + 1)] for c in st["rivals"]]}
+
+
 def view(st: dict) -> dict:
     p = pack.load()
     s, t = st["s"], min(st["t"], slen(st))
@@ -876,6 +886,8 @@ def view(st: dict) -> dict:
         "goal": {"i": st.get("goal", 0), "stars": GOAL_STARS} if rivals else None,
         "miles": [{"at": at, "stars": n, "hit": at in st.get("miles", [])} for at, n in miles_of(st)],
         "pending": pending, "hist": st["hist"], "markets": st["markets"], "maxHold": MAX_HOLD,
+        # 순위 경주 그래프(지난 주까지만 — 미래 없음): 나 · 라이벌 · 코스피의 주별 누적
+        "race": _race(st),
         "short": {"cap": SHORT_CAP, "used": round(short_used(st, w)), "stop": SHORT_STOP},
         # 실제로 매길 수수료(캐릭터·멘탈 구간·행운 카드·큰손 슬리피지 반영) — 화면의 '최대' 계산이 서버와 같도록
         "fees": {m: {"buy": round(_fee(st, m, 0), 6), "sell": round(_fee(st, m, 1), 6)} for m in FEES},

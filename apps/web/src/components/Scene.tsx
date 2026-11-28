@@ -1,6 +1,6 @@
 // 3D 를 쓸 수 있으면 3D, 아니면 2D 로(WebGL 미지원 · 움직임 줄이기 설정 · 사용자가 3D 끔).
 // three.js(약 200KB gzip)는 3D 를 실제로 그릴 때만 받는다(코드 분할).
-import { Suspense, lazy, useState } from "react";
+import { Suspense, lazy, useEffect, useState } from "react";
 import { read, write } from "../lib/storage";
 import { FURNITURE } from "../lib/room";
 import { Ant, type CharId, type Mood } from "./Characters";
@@ -37,11 +37,29 @@ function Toggle({ on, set }: { on: boolean; set: (v: boolean) => void }) {
   );
 }
 
+/** 속도: 3D(약 270KB)는 화면 글자·버튼이 먼저 뜨고 브라우저가 한가할 때 불러온다(첫 화면이 3D 를 기다리지 않게) */
+function useIdle(ms = 1200) {
+  const [ready, set] = useState(false);
+  useEffect(() => {
+    const w = window as Window & { requestIdleCallback?: (f: () => void, o?: { timeout: number }) => number; cancelIdleCallback?: (id: number) => void };
+    if (w.requestIdleCallback) {
+      const id = w.requestIdleCallback(() => set(true), { timeout: ms });
+      return () => w.cancelIdleCallback?.(id);
+    }
+    const t = setTimeout(() => set(true), 300);
+    return () => clearTimeout(t);
+  }, [ms]);
+  return ready;
+}
+
 export function RoomView({ char, items, mood = "happy", height = 300, outfit, keys = false }: { char: CharId; items: string[]; mood?: Mood; height?: number; outfit?: string | null; keys?: boolean }) {
   const [on, set] = use3D();
+  const idle = useIdle();
   return (
     <div className="scene-wrap" data-ux="3D Scene (three.js)">
-      {on ? (
+      {on && !idle ? (
+        <div className="stage3d skeleton" style={{ height }} />
+      ) : on ? (
         <Suspense fallback={<div className="stage3d skeleton" style={{ height }} />}>
           <Room3D char={char} items={items} mood={mood} height={height} outfit={outfit} keys={keys} />
         </Suspense>

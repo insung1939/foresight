@@ -54,6 +54,16 @@ class Run(Base):
     finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
 
+class ClientErr(Base):
+    """화면(브라우저)에서 난 오류 — 신뢰성 지표('지난 7일 화면 오류 n건'). 개인정보 없이 메시지·경로만"""
+    __tablename__ = "client_errors"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now, index=True)
+    kind: Mapped[str] = mapped_column(String(16), default="error")  # error · rejection · render
+    msg: Mapped[str] = mapped_column(String(300), default="")
+    path: Mapped[str] = mapped_column(String(80), default="")
+
+
 class AiLog(Base):
     """AI 호출마다 한 줄(코치·개미 비서): 검증 통과 여부·지연·토큰·검색 문서 수(발표 '응답 검증·오류 대응' 근거)"""
 

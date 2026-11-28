@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { Tuber, rivalLine } from "../../components/Characters";
 import { useRunCtx } from "./ctx";
 import { PlazaView } from "../../components/Scene";
-import { Delta, Spark } from "../../components/ui";
+import { Delta, Donut, LineChart, Spark } from "../../components/ui";
 import { pct, views, won } from "../../lib/format";
 import type { Asset, Market, View } from "../../lib/types";
 import { sectorOf } from "../../lib/sectors";
@@ -28,6 +28,10 @@ export function CodeChip({ a, onOpen }: { a: Asset; onOpen: (k: string) => void 
 // ---------------------------------------------------------------- 피드
 export function Feed({ v, onOpen }: { v: View; onOpen: (k: string) => void }) {
   const byK = useMemo(() => Object.fromEntries(v.assets.map((a) => [a.k, a])), [v.assets]);
+  const [pro] = usePro();
+  const [more, setMore] = useState(false);
+  // 산만하지 않게(교수님 '게임은 산만하면 안 된다'): 쉬운 모드는 영상 3개만 먼저, 가림 설명은 한 줄
+  const heads = pro || more ? v.headlines : v.headlines.slice(0, 3);
   const ixChg = v.index.length > 1 ? v.index[v.index.length - 1] / v.index[v.index.length - 2] - 1 : 0;
   return (
     <div className="feed">
@@ -48,10 +52,14 @@ export function Feed({ v, onOpen }: { v: View; onOpen: (k: string) => void }) {
         <h3 id="hl" className="sec-title">
           📺 지난주 인기 영상 <span className="muted small">누르면 그 종목으로 가요</span>
         </h3>
-        <p className="mask-note">🕶️ 회사 이름·주가 수준·날짜는 가렸어요. 회사를 짐작해도 &lsquo;언제&rsquo;인지는 끝날 때까지 비밀이라 다음 주 가격은 아무도 몰라요.</p>
+        {pro ? (
+          <p className="mask-note">🕶️ 회사 이름·주가 수준·날짜는 가렸어요. 회사를 짐작해도 &lsquo;언제&rsquo;인지는 끝날 때까지 비밀이라 다음 주 가격은 아무도 몰라요.</p>
+        ) : (
+          <p className="mask-note" title="회사를 짐작해도 '언제'인지는 끝날 때까지 비밀이라 다음 주 가격은 아무도 몰라요">🕶️ 회사 이름·날짜는 끝날 때 공개돼요</p>
+        )}
         {v.headlines.length === 0 && <p className="empty">지난주엔 우리 종목을 다룬 영상이 없었어요. 조용한 주예요.</p>}
         <ul className="yt-list">
-          {v.headlines.map((h, i) => (
+          {heads.map((h, i) => (
             <li key={i}>
               <button className="yt" onClick={() => byK[h.k] && onOpen(h.k)} aria-label={`${byK[h.k]?.code ?? ""} 자세히: ${h.t}`}>
                 <Tuber name={h.ch} size={40} />
@@ -66,6 +74,11 @@ export function Feed({ v, onOpen }: { v: View; onOpen: (k: string) => void }) {
             </li>
           ))}
         </ul>
+        {heads.length < v.headlines.length && (
+          <button className="link center block-link" onClick={() => setMore(true)}>
+            영상 {v.headlines.length - heads.length}개 더 보기 ↓
+          </button>
+        )}
       </section>
 
     </div>
@@ -185,9 +198,11 @@ export function Account({ v, orders, onOpen, onCancel, onOrder }: { v: View; ord
         <p>
           누적 수익률 <Delta x={v.twr - 1} /> <span className="muted small">· 넣은 돈 {won(v.deposits)}</span>
         </p>
-        <div className="alloc" aria-label={`주식·코인 ${pct(longV / (gross || 1), 0)}, 현금 ${pct(Math.max(0, v.cash) / (gross || 1), 0)}`}>
-          <i style={{ width: `${(longV / (gross || 1)) * 100}%` }} />
-        </div>
+        <Donut
+          parts={[...v.pos.filter((x) => x.qty > 0).map((x) => ({ label: byK[x.k]?.code ?? x.k, value: x.value })), { label: "현금", value: Math.max(0, v.cash), cash: true }]}
+          center={`${Math.round((longV / (gross || 1)) * 100)}%`}
+          sub="투자 중"
+        />
         <dl className="acct-grid">
           <div>
             <dt>💵 현금</dt>
@@ -299,6 +314,7 @@ export function Account({ v, orders, onOpen, onCancel, onOrder }: { v: View; ord
 
 // ---------------------------------------------------------------- 라이벌
 export function Rivals({ v }: { v: View }) {
+  const [pro] = usePro();
   const rows = [
     { name: "나", twr: v.twr, me: true, note: "" },
     ...v.rivals.map((r) => ({ name: r.name, twr: r.twr, me: false, yt: true, note: r.picks ? `지난주 '오른다' ${r.picks}종목` : "지난주 '오른다' 영상 없음 → 현금" })),
@@ -308,6 +324,19 @@ export function Rivals({ v }: { v: View }) {
   return (
     <div className="rivals">
       <p className="muted small">라이벌은 실제 유튜브 채널이에요. 지난주 영상에서 &lsquo;오른다&rsquo;고 한 종목을 그대로 따라 샀다면 어땠을지 계산했어요.</p>
+      {v.race && v.race.me.length > 1 && (
+        <div className="race" data-ux="Line Chart · Race">
+          <LineChart
+            h={190}
+            series={[
+              ...v.race.rivals.map((d, i) => ({ data: d, label: v.rivals[i]?.name ?? `유튜버 ${i + 1}`, cls: `line-yt${i + 1}` })),
+              { data: v.race.kospi, label: "코스피", cls: "line-ix", dash: true },
+              { data: v.race.me, label: "나", cls: "line-me", bold: true },
+            ]}
+            xLabel={(i) => (i === 0 ? "시작" : `${i}주`)}
+          />
+        </div>
+      )}
       <ol className="rival-list" data-ux="Leaderboard">
         {rows.map((r, i) => (
           <li key={r.name} className={r.me ? "me" : ""}>
@@ -316,7 +345,7 @@ export function Rivals({ v }: { v: View }) {
             <span className="rv-name">
               <b>{r.me ? "나" : r.name}</b>
               {r.note && <span className="muted small">{r.note}</span>}
-              {"yt" in r && v.t > 0 && <span className="rv-line">“{rivalLine(r.name, (r.twr - 1) / 3, v.t)}”</span>}
+              {pro && "yt" in r && v.t > 0 && <span className="rv-line">“{rivalLine(r.name, (r.twr - 1) / 3, v.t)}”</span>}
             </span>
             <span className="rv-bar" aria-hidden>
               <i className={r.twr >= 1 ? "up" : "down"} style={{ width: `${(Math.abs(r.twr - 1) / max) * 100}%` }} />

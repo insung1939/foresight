@@ -118,6 +118,7 @@ export interface View {
   kospi: number;
   pending: EventCard | null;
   hist: { r: number; v: number; m: number; n: number }[];
+  race?: { me: number[]; kospi: number[]; rivals: number[][] };
   markets: Market[];
   maxHold: number;
   short?: { cap: number; used: number; stop: number }; // 공매도 한도(총자산 대비)·지금 공매도 총액·강제 청산 선
@@ -255,6 +256,7 @@ export interface Meta {
     chars: Record<string, { n: number; median: number }>;
   };
   perf: { path: string; n: number; p50: number; p95: number; max: number }[];
+  ux?: { modes: Record<string, { n: number; done: number; rate: number | null; minutes: number | null }>; errors7d: number; turns7d: number };
   updates?: {
     history: { builtAt: string; lastWeek: string; weeks: number; added: string[]; sourceThrough?: string; verify?: string; assets?: number }[];
     verify: { n?: number; ok?: number; rule?: string };
