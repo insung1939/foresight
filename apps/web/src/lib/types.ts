@@ -255,4 +255,8 @@ export interface Meta {
     chars: Record<string, { n: number; median: number }>;
   };
   perf: { path: string; n: number; p50: number; p95: number; max: number }[];
+  updates?: {
+    history: { builtAt: string; lastWeek: string; weeks: number; added: string[]; sourceThrough?: string; verify?: string; assets?: number }[];
+    verify: { n?: number; ok?: number; rule?: string };
+  };
 }

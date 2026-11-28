@@ -572,6 +572,8 @@ def analysis() -> dict:
         "momentum": {"afterJump": summ(after_jump), "afterDrop": summ(after_drop)},
         "ghosts": {"kospi": kospi, "n": len(ghosts), "beat": sum(1 for g in ghosts if g["ret"] > kospi),
                    "top": ghosts[:5], "bottom": ghosts[-5:], "hist": sorted(hist.items())},
+        # 데이터 갱신 기록·원천 대조(종목 id 는 빼고 숫자만 — 코드네임 보호)
+        "updates": {"history": p.get("history", [])[-12:], "verify": {k: (p.get("verify") or {}).get(k) for k in ("n", "ok", "rule")}},
         "pack": {"weeks": n, "playable": n - game.SEASON - f0 - 1, "from": p["weeks"][f0], "to": p["weeks"][-1],
                  "assets": dict(Counter(a["market"] for a in p["assets"][:p["etf"]])), "channels": len(p["channels"]), "builtAt": p["builtAt"]},
         "quality": {

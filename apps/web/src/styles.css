@@ -933,3 +933,40 @@ span.code-chip { display: inline-flex; align-items: center; }
 .cc-art { width: 92px; height: 92px; border-radius: 22px; object-fit: cover; box-shadow: 0 4px 14px rgba(40, 20, 90, .15); }
 .char-card:disabled .cc-art { filter: grayscale(1) brightness(1.1); opacity: .55; }
 .lc-front:has(.lc-art) small { display: none; }
+
+/* 쉬운 모드: 금액 버튼 한 번으로 사고팔기 · 이번 주 할 일 */
+.qt { display: grid; gap: 8px; margin: 10px 0 14px; padding: 12px; border-radius: 16px; background: var(--surface-2); border: 1px solid var(--line); }
+.qt-h { margin: 2px 0 0; display: flex; justify-content: space-between; align-items: baseline; }
+.qt-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(96px, 1fr)); gap: 6px; }
+.qt-row.two { grid-template-columns: 1fr 1fr; }
+.qt-btn { min-height: 48px; border-radius: 12px; border: 1.5px solid var(--line); background: var(--surface); color: var(--text); font-weight: 700; font-size: 14.5px; cursor: pointer; transition: transform .1s; }
+.qt-btn:active { transform: scale(.97); }
+.qt-btn:disabled { opacity: .4; cursor: not-allowed; }
+.qt-btn.buy { border-color: color-mix(in srgb, var(--up) 40%, var(--line)); color: var(--up); }
+.qt-btn.buy.strong { background: var(--up); color: #fff; border-color: var(--up); }
+.qt-btn.sell { border-color: color-mix(in srgb, var(--down) 40%, var(--line)); color: var(--down); }
+.qt-btn.sell.strong { background: var(--down); color: #fff; border-color: var(--down); }
+.hud-note.todo { background: color-mix(in srgb, var(--brand) 10%, var(--surface)); color: var(--text); font-weight: 600; border: 1px solid color-mix(in srgb, var(--brand) 25%, transparent); }
+.mode-sw { display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 13.5px; color: var(--muted); }
+.mode-sw button { border: 1px solid var(--line); background: var(--surface); border-radius: 99px; padding: 5px 12px; font-size: 13px; cursor: pointer; color: var(--text-2); }
+.mode-sw button.on { background: var(--brand); color: #fff; border-color: var(--brand); }
+.ev-lesson { margin: 0; padding: 8px 12px; border-radius: 12px; background: var(--ok-bg); color: var(--text-2); font-size: 13.5px; line-height: 1.5; text-align: left; }
+.sub-h { margin: 18px 0 8px; font-size: 16px; }
+.persona { padding: 12px 14px; border-radius: 14px; background: var(--surface-2); line-height: 1.6; }
+.journey { margin: 10px 0 14px; padding-left: 20px; display: grid; gap: 6px; line-height: 1.55; }
+
+/* 구조 그림(데이터 페이지) */
+.arch { display: flex; flex-wrap: wrap; gap: 6px; align-items: stretch; margin: 4px 0 10px; }
+.arch-cell { display: flex; align-items: center; gap: 6px; flex: 1 1 180px; }
+.arch-node { position: relative; flex: 1; display: grid; gap: 2px; padding: 12px 12px 10px; border-radius: 14px; border: 1.5px solid var(--line); background: var(--surface); }
+.arch-node small { color: var(--muted); font-size: 12.5px; line-height: 1.4; }
+.arch-node em { font-style: normal; font-size: 12px; font-weight: 700; color: var(--brand); }
+.arch-live { font-size: 12px; color: var(--ok); font-weight: 600; min-height: 1em; }
+.arch-dot { position: absolute; top: 12px; right: 12px; width: 10px; height: 10px; border-radius: 50%; background: var(--muted); }
+.s-ok .arch-dot { background: #2fb344; box-shadow: 0 0 0 4px color-mix(in srgb, #2fb344 22%, transparent); }
+.s-bad .arch-dot { background: var(--warn); }
+.s-warn .arch-dot { background: #f59f00; }
+.arch-arrow { color: var(--muted); font-size: 18px; }
+.arch-side { padding: 8px 12px; border-radius: 12px; background: var(--surface-2); font-size: 13.5px; margin-bottom: 10px; }
+.arch-side span { font-weight: 700; margin-right: 6px; }
+@media (max-width: 640px) { .arch-cell { flex-basis: 100%; } .arch-arrow { transform: rotate(90deg); margin: 0 auto; } .arch-cell { flex-direction: column; } }

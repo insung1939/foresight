@@ -1,5 +1,6 @@
 // 플레이(#/play): 한 턴 = 실제 1주. 피드(화제 광장) → (사건) → 매매(개미 비서) → [다음 주 ▶] / [▶▶ 4주] → 리캡
 import { Manual } from "../components/Manual";
+import { isPro, usePro } from "../lib/mode";
 import { AnimatePresence, motion } from "motion/react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Ant, moodOf, type CharId } from "../components/Characters";
@@ -52,6 +53,7 @@ export default function Play() {
   const [missions, setMissions] = useState(false);
   const [tour, setTour] = useState(false);
   const [manual, setManual] = useState(false);
+  const [pro] = usePro();
   const [tourStep, setTourStep] = useState(0);
   const [shaky, setShaky] = useState<Order | null>(null);
   const [temptSeen, setTemptSeen] = useState(-1);
@@ -125,7 +127,7 @@ export default function Play() {
   const addOrder = useCallback(
     (o: Order, sure = false) => {
       if (!v) return;
-      if (v.tier.id === "shaky" && !sure) {
+      if (v.tier.id === "shaky" && !sure && isPro()) {
         setShaky(o);
         return;
       }
@@ -244,7 +246,7 @@ export default function Play() {
   const mDone = v.missions.filter((m) => m.state === "done").length;
   const canSkip = !nOrders && !v.pending && left > 1;
   const hot = [...v.assets].filter((a) => !a.locked && a.k !== v.etf).sort((a, b) => b.hype - a.hype)[0];
-  const showTempt = v.tier.id === "anxious" && temptSeen !== v.t && !v.pending && !big && !tour && !v.luckPick && !!hot;
+  const showTempt = pro && v.tier.id === "anxious" && temptSeen !== v.t && !v.pending && !big && !tour && !v.luckPick && !!hot;
 
   return (
     <RunContext.Provider value={{ setRules }}>
@@ -274,7 +276,7 @@ export default function Play() {
             <Delta x={v.twr - 1} />
           </div>
           <Mental value={v.mental} compact />
-          {v.tier.id !== "ok" && (
+          {pro && v.tier.id !== "ok" && (
             <button className={`tier-chip t-${v.tier.id}`} onClick={() => toast(`${v.tier.icon} 멘탈 ${v.tier.name}: ${v.tier.desc}`)} aria-label={`멘탈 ${v.tier.name}: ${v.tier.desc}`}>
               {v.tier.name}
             </button>
@@ -300,9 +302,18 @@ export default function Play() {
           {v.goal && v.rivals[v.goal.i] && <GoalBar v={v} />}
         </div>
         {v.mode === "practice" && v.t === 0 && <p className="hud-note info">🐜 연습 시즌: 8주 · 국내 6종목. 마음 편히 사고팔아 보세요!</p>}
+        {!pro && !v.skip && (
+          <p className="hud-note todo" aria-live="polite" data-ux="Coach Mark · Next Step">
+            {nOrders > 0
+              ? `👉 주문 ${nOrders}건 담았어요. 이제 아래 ▶ 다음 주를 누르면 결과가 나와요`
+              : v.pos.length
+                ? "👉 그대로 들고 가려면 ▶ 다음 주. 팔고 싶으면 💼 계좌에서 종목을 눌러요"
+                : "👉 ① 📈 시장에서 종목을 눌러 보고 ② 금액 버튼으로 사고 ③ ▶ 다음 주!"}
+          </p>
+        )}
         {v.skip && <p className="hud-note">✈️ 이번 주는 거래할 수 없어요. 그대로 다음 주로 넘어가요.</p>}
-        {v.tier.id === "calm" && !v.skip && <p className="hud-note info">😎 침착 보너스: 이번 주 수수료 0원</p>}
-        {v.tier.id === "shaky" && <p className="hud-note">😰 멘탈 흔들림: 수수료 1.5배 · 한 주 쉬면 회복돼요</p>}
+        {pro && v.tier.id === "calm" && !v.skip && <p className="hud-note info">😎 침착 보너스: 이번 주 수수료 0원</p>}
+        {pro && v.tier.id === "shaky" && <p className="hud-note">😰 멘탈 흔들림: 수수료 1.5배 · 한 주 쉬면 회복돼요</p>}
       </header>
 
       <main className={`panels tab-${tab}`}>

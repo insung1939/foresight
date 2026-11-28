@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Ant, CHAR_META, type CharId } from "../components/Characters";
 import { Art } from "../components/Art";
 import { Manual } from "../components/Manual";
+import { usePro } from "../lib/mode";
 import { StoryIntro } from "../components/Story";
 import { RoomView } from "../components/Scene";
 import { Delta, Sheet, TopBar, toast } from "../components/ui";
@@ -32,6 +33,7 @@ export default function Home() {
   // (교수님 피드백 '이미지 → 스토리·시나리오', 현장 후기 '게임을 이해하기 어렵다')
   const [story, setStory] = useState(() => !read("ant:story") && !read<string>(KEYS.run));
   const [manual, setManual] = useState(false);
+  const [pro, setPro] = usePro();
   const board = useAsync(() => api.board(), []);
   const first = !p.practiced && p.runs === 0;
   const playedToday = p.dailyDone === todayKst();
@@ -84,6 +86,14 @@ export default function Home() {
               <button className="link center" onClick={() => setStory(true)}>
                 🎬 이야기 다시 보기
               </button>
+              <div className="mode-sw" role="radiogroup" aria-label="게임 난이도" data-ux="Progressive Disclosure · Mode">
+                <button role="radio" aria-checked={!pro} className={!pro ? "on" : ""} onClick={() => setPro(false)}>
+                  🙂 쉬운 모드
+                </button>
+                <button role="radio" aria-checked={pro} className={pro ? "on" : ""} onClick={() => (setPro(true), toast("🎓 고수 모드: 수량 직접 입력 · 공매도 · 전략 카드 · 멘탈 구간 효과가 보여요"))}>
+                  🎓 고수 모드
+                </button>
+              </div>
               {cont && (
                 <button className="btn primary block" onClick={() => go("/play")}>
                   이어하기 · {cont.view.t + 1}/{cont.view.season}주 <Delta x={cont.view.twr - 1} />

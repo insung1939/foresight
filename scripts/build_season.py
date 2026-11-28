@@ -354,8 +354,44 @@ for ch, info in channels.items():
                        "r": rets, "n": picks})
 print(f"고스트 유튜버 {len(out_ch)}명")
 
+# ---------------------------------------------------------------- 7-1. 정합성: 원천과 다시 대조 + 갱신 기록(교수님 '데이터 변경 반영 확인')
+# 무작위 종목·주를 골라 hindsight 원천에서 '그 주 마지막 거래일 종가'를 따로 다시 읽어, 시즌 팩의 주봉과 같은지 본다
+import random as _r  # noqa: E402
+
+_rng = _r.Random(WEEKS[-1].isoformat())
+_sample = [(a, wi) for a in _rng.sample(pool, k=min(12, len(pool))) for wi in _rng.sample(range(max(feed0, len(WEEKS) - 8), len(WEEKS)), k=2)]
+_ok, _miss = 0, []
+with psycopg.connect(url) as conn:
+    conn.execute("set transaction read only")
+    for a, wi in _sample:
+        w0 = WEEKS[wi]
+        row = conn.execute("select close from market.prices where asset_id=%s and trade_date between %s and %s and close is not null "
+                           "order by trade_date desc limit 1", (a, w0, w0 + timedelta(days=6))).fetchone()
+        mine = ser[a][wi]
+        if row is None or (mine is not None and abs(float(row[0]) / mine - 1) < 1e-9):
+            _ok += 1  # 그 주 거래가 없으면(휴장) 직전 종가를 이어 쓰는 규칙 → 일치로 본다
+        else:
+            _miss.append([a, w0.isoformat(), float(row[0]), mine])
+verify = {"n": len(_sample), "ok": _ok, "miss": _miss[:5], "rule": "무작위 12종목 × 최근 8주 중 2주: 원천 '그 주 마지막 거래일 종가' = 시즌 팩 주봉"}
+print(f"원천 대조 {_ok}/{len(_sample)} 일치")
+
+_hist = []
+if _prev.exists():
+    _old = json.loads(_prev.read_text())
+    _hist = _old.get("history") or [{"builtAt": _old.get("builtAt"), "lastWeek": _old["weeks"][-1], "weeks": len(_old["weeks"]), "added": []}]
+    _old_weeks = set(_old["weeks"])
+else:
+    _old_weeks = set()
+history = (_hist + [{
+    "builtAt": datetime.now(KST).isoformat(timespec="seconds"), "lastWeek": WEEKS[-1].isoformat(), "weeks": len(WEEKS),
+    "added": [w.isoformat() for w in WEEKS if w.isoformat() not in _old_weeks], "sourceThrough": source["through"],
+    "verify": f"{_ok}/{len(_sample)}", "assets": len(pool),
+}])[-52:]
+
 pack = {
     "version": 1,
+    "history": history,
+    "verify": verify,
     "builtAt": datetime.now(KST).isoformat(timespec="seconds"),
     "weeks": [w.isoformat() for w in WEEKS],
     "feedFrom": feed0,

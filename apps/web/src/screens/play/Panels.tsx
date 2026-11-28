@@ -1,4 +1,5 @@
 // 플레이 화면의 네 판: 피드 · 시장 · 내 계좌 · 라이벌
+import { usePro } from "../../lib/mode";
 import { useMemo, useState } from "react";
 import { Tuber, rivalLine } from "../../components/Characters";
 import { useRunCtx } from "./ctx";
@@ -170,6 +171,7 @@ export function MarketList({ v, orders, onOpen }: { v: View; orders: Order[]; on
 
 // ---------------------------------------------------------------- 내 계좌
 export function Account({ v, orders, onOpen, onCancel, onOrder }: { v: View; orders: Order[]; onOpen: (k: string) => void; onCancel: (k: string) => void; onOrder: (o: Order) => void }) {
+  const [pro] = usePro();
   const byK = Object.fromEntries(v.assets.map((a) => [a.k, a]));
   const p = preview(v, orders);
   const longV = v.pos.reduce((s, x) => s + (x.qty > 0 ? x.value : 0), 0);
@@ -210,7 +212,7 @@ export function Account({ v, orders, onOpen, onCancel, onOrder }: { v: View; ord
         </dl>
       </section>
 
-      <RulesPanel v={v} />
+      {pro && <RulesPanel v={v} />}
 
       {orders.length > 0 && (
         <section aria-labelledby="po">

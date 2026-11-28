@@ -1,5 +1,6 @@
 // 플레이 화면 위에 뜨는 것들: 종목 바텀시트(매매·개미 비서) · 인생 사건 · 리캡 카드 · 큰 주 결과 · 미션 · 첫 판 안내
 import { Art } from "../../components/Art";
+import { usePro } from "../../lib/mode";
 import { motion } from "motion/react";
 import { useEffect, useLayoutEffect, useState } from "react";
 import { Ant, Orca, Tuber, rivalLine, type CharId } from "../../components/Characters";
@@ -16,6 +17,7 @@ import { MARKET_KO, canBuy, canShort, tradeVerb, flames, maxBuy, maxCover, maxSh
 export function AssetSheet({ v, a, orders, runId, onClose, onOrder, onAsked }: { v: View; a: Asset | null; orders: Order[]; runId: string; onClose: () => void; onOrder: (o: Order) => void; onAsked: (left: number) => void }) {
   const [side, setSide] = useState<"buy" | "sell" | "short">("buy");
   const [qty, setQty] = useState(0);
+  const [pro] = usePro();
   const p = preview(v, orders);
   const held = a ? (p.qty[a.k] ?? 0) : 0; // 공매도면 음수
   const shorted = held < 0;
@@ -48,7 +50,7 @@ export function AssetSheet({ v, a, orders, runId, onClose, onOrder, onAsked }: {
         </span>
       }
       footer={
-        block ? (
+        !pro ? undefined : block ? (
           <p className="inline-alert">{block}</p>
         ) : (
           <button
@@ -81,6 +83,7 @@ export function AssetSheet({ v, a, orders, runId, onClose, onOrder, onAsked }: {
           {pos.short ? `🐻 공매도 ${(-pos.qty).toLocaleString()}주 · 판 값` : `💼 보유 ${pos.qty.toLocaleString()}주 · 평단`} {Math.round(pos.cost).toLocaleString()} · 내 수익 <Delta x={pos.gain} />
         </p>
       )}
+      {!pro && <QuickTrade v={v} a={a} orders={orders} onOrder={(o) => (onOrder(o), onClose())} />}
       <LineChart series={[{ data: a.hist.map((x) => x / a.hist[0]), label: "12주 전 대비", cls: "line-me", bold: true }]} h={260} xLabel={(i) => (i === 0 ? "12주 전" : "지난주")} />
 
       <Glance a={a} />
@@ -124,7 +127,7 @@ export function AssetSheet({ v, a, orders, runId, onClose, onOrder, onAsked }: {
 
       <Assistant v={v} a={a} runId={runId} onAsked={onAsked} />
 
-      <div className="trade">
+      {pro && <div className="trade">
         <div className="seg three" role="tablist" aria-label="사기 · 팔기 · 공매도">
           <button role="tab" aria-selected={side === "buy"} className={side === "buy" ? "on buy" : ""} onClick={() => (setSide("buy"), setQty(0))}>
             {shorted ? "갚기" : "사기"}
@@ -182,14 +185,88 @@ export function AssetSheet({ v, a, orders, runId, onClose, onOrder, onAsked }: {
             </p>
           </>
         )}
-      </div>
+      </div>}
     </Sheet>
+  );
+}
+
+/** 쉬운 모드: 금액 버튼 한 번으로 사고판다(수량 계산은 화면이). 시트 위쪽, 스크롤 없이 보이는 곳 */
+function QuickTrade({ v, a, orders, onOrder }: { v: View; a: Asset; orders: Order[]; onOrder: (o: Order) => void }) {
+  const p = preview(v, orders);
+  const held = p.qty[a.k] ?? 0;
+  const fee = v.fees[a.market].buy;
+  // '100만 원어치'에 가장 가까운 수량(비싼 종목은 내림하면 85만 원처럼 크게 모자라서 반올림)
+  const qtyFor = (won_: number) => Math.min(maxBuy(v, p, a), Math.round(won_ / (a.price * (1 + fee))));
+  const why = held < 0 ? null : canBuy(v, p, a);
+  const unit = v.value >= 20_000_000 ? 1_000_000 : 500_000;
+  const amounts = [unit, unit * 2, unit * 6].filter((x) => x < p.cash * 0.95);
+  return (
+    <div className="qt" data-ux="One-tap Action · Simple Mode">
+      {held < 0 ? (
+        <button className="btn buy block" onClick={() => onOrder({ k: a.k, q: Math.min(-held, maxBuy(v, p, a)) })} disabled={maxBuy(v, p, a) < 1}>
+          🐻 공매도 전부 갚기
+        </button>
+      ) : (
+        <>
+          <p className="qt-h">
+            <b>사기</b> <span className="muted small">현금 {won(p.cash)}</span>
+          </p>
+          {why ? (
+            <p className="inline-alert">{why}</p>
+          ) : (
+            <div className="qt-row">
+              {amounts.map((x) => (
+                <button key={x} className="qt-btn buy" disabled={qtyFor(x) < 1} onClick={() => onOrder({ k: a.k, q: qtyFor(x) })}>
+                  {won(x)}어치
+                </button>
+              ))}
+              <button className="qt-btn buy strong" onClick={() => onOrder({ k: a.k, q: maxBuy(v, p, a) })}>
+                남은 돈 전부
+              </button>
+            </div>
+          )}
+          {held > 0 && (
+            <>
+              <p className="qt-h">
+                <b>팔기</b> <span className="muted small">가진 {held.toLocaleString()}주</span>
+              </p>
+              <div className="qt-row two">
+                <button className="qt-btn sell" disabled={v.skip || held < 2} onClick={() => onOrder({ k: a.k, q: -Math.floor(held / 2) })}>
+                  절반 팔기
+                </button>
+                <button className="qt-btn sell strong" disabled={v.skip} onClick={() => onOrder({ k: a.k, q: -held })}>
+                  전부 팔기
+                </button>
+              </div>
+            </>
+          )}
+        </>
+      )}
+      <p className="muted small center">누르면 주문이 담겨요 · <b>▶ 다음 주</b>를 누르면 그 주 가격으로 사고팔아요</p>
+    </div>
   );
 }
 
 const RULE_KO: Record<string, string> = { stop: "자동 손절", take: "자동 익절", dca: "적립식", cap: "몰빵 방지", margin: "공매도 강제 청산", panic: "패닉셀", close: "정리" };
 
 // ---------------------------------------------------------------- 인생 사건
+// 시나리오의 전문성: 사건마다 '실제로는 어떤가'를 한 줄로(교수님 '전문성·니즈를 정확하게'). 수치·종목 추천 없이 원리만
+const EV_LESSON: Record<string, string> = {
+  payday: "매달 같은 돈을 나눠 넣는 적립식은 '언제 살까' 고민과 타이밍 실수를 줄여 줘요.",
+  leading: "'수익 인증' 리딩방은 불법 투자자문·사기가 많아요. 금융감독원도 여러 번 소비자 경보를 냈어요.",
+  parents: "투자금은 곧 써야 할 돈과 나눠 두는 게 기본이에요. 생활비까지 넣으면 급할 때 손해 보고 팔게 돼요.",
+  bonus: "갑자기 생긴 목돈은 한 번에 넣기보다 나눠 넣으면 '고점에 몰빵' 위험이 줄어요.",
+  trip: "자주 안 볼수록 덜 흔들려요. 짧은 등락에 반응할수록 수수료와 실수가 늘어요.",
+  car: "생활비 몇 달치 비상금이 있어야 급한 일 때문에 주식을 손해 보고 팔지 않아요.",
+  algo: "추천 알고리즘은 본 걸 더 보여 줘요. '지금 안 사면 늦는다'는 놓칠까 두려운 마음(FOMO)을 노린 말이에요.",
+  coin_friend: "성공담은 크게 들리고 실패담은 조용해요(생존 편향). 10배 번 친구 뒤엔 말 안 한 사람이 더 많아요.",
+  tax: "작은 돈도 꾸준히 모이면 커져요. 수익이 수익을 낳는 복리는 시간이 길수록 힘이 세요.",
+  water: "물타기는 평균 단가를 낮추지만, 떨어지는 이유가 있다면 손실만 키울 수 있어요.",
+  vacation: "쉬는 것도 전략이에요. 거래를 줄이면 수수료·세금도 줄어요.",
+  rumor: "출처 모를 '호재 공시' 찌라시는 대부분 거짓이고, 진짜 미공개 정보로 거래하면 불법이에요.",
+  flu: "몸과 마음이 지쳤을 땐 큰 결정을 미루는 것도 좋은 판단이에요.",
+  savings: "목돈은 한 종목보다 여러 곳에 나눠 담으면(분산) 한 번에 크게 잃을 위험이 줄어요.",
+};
 export function EventModal({ ev, busy, onChoose }: { ev: EventCard | null; busy: boolean; onChoose: (i: number) => void }) {
   return (
     <Modal open={!!ev} label={ev?.title ?? "사건"}>
@@ -202,6 +279,7 @@ export function EventModal({ ev, busy, onChoose }: { ev: EventCard | null; busy:
           </motion.div>
           <h2>{ev.title}</h2>
           <p className="ev-body">{ev.body}</p>
+          {EV_LESSON[ev.id] && <p className="ev-lesson">💡 실제로는: {EV_LESSON[ev.id]}</p>}
           <div className="ev-choices">
             {ev.choices.map((c, i) => (
               <button key={i} className="choice" onClick={() => onChoose(i)} disabled={busy} data-autofocus={i === 0 ? "" : undefined}>

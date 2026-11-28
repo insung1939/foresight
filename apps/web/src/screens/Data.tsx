@@ -1,4 +1,5 @@
 // 데이터·분석(#/data): 출처 → 가공 → 게임에 쓰인 곳 → 분석 3가지 → 플레이 통계 → 응답 속도
+import { ArchMap, UpdateLog } from "../components/DataOps";
 import { ReqCheck } from "../components/ReqCheck";
 import { Delta, ErrorState, Loading, TopBar } from "../components/ui";
 import { loadMeta, useAsync } from "../lib/api";
@@ -21,6 +22,8 @@ export default function Data() {
         {res.status === "ready" && (
           <>
             <ReqCheck p95={res.data.perf.find((x) => x.path.endsWith("/turn"))?.p95} />
+            <UpdateLog m={res.data} />
+            <ArchMap />
             <Body m={res.data} />
           </>
         )}

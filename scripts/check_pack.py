@@ -8,6 +8,7 @@
 - 마지막 주가 미래가 아니고, 너무 오래되지 않았나(21일 이내)
 - 종목 순서가 그대로인가(판이 종목을 번호로 가리킨다), 지난 주 종가가 다시 쓰이지 않았나
 - 주간 등락이 말이 안 되게 큰 값(±95% 넘게)이 새로 생기지 않았나 — 시세 수집 오류 신호
+- 원천 대조(무작위 24곳: hindsight 의 그 주 마지막 종가 = 시즌 팩 주봉)가 모두 맞나
 - 검색 색인 문서 수가 줄지 않았나(95% 이상)
 """
 from __future__ import annotations
@@ -70,6 +71,9 @@ def main() -> int:
             bad.append(f"지난 주 종가가 바뀐 종목 {moved}개(원천 데이터가 다시 쓰였을 수 있음)")
         if len(new["assets"]) < 0.9 * len(old["assets"]):
             bad.append(f"종목 수가 크게 줄었어요 {len(old['assets'])} → {len(new['assets'])}")
+    ver = new.get("verify") or {}
+    if ver and ver.get("ok") != ver.get("n"):
+        bad.append(f"원천 대조 불일치 {ver.get('n', 0) - ver.get('ok', 0)}건: {ver.get('miss')}")
     ro, rn = load(a.old, "rag.json"), load(a.new, "rag.json")
     if rn is None:
         bad.append("새 rag.json 이 없어요")
